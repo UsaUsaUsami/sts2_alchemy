@@ -66,3 +66,4 @@ AGENTS.md M0の完了条件（実環境の起動証拠、最小MODが起動し�
 - 筋力6種・敏捷4種はゲーム標準Powerの実付与量を確認。既存の毒・廃棄連動・全体攻撃も回帰検証を通過した。
 - ALCHEMIST_SMOKE_COMPLETE / ALCHEMIST_LOOP_COMPLETEを確認し、MOD由来のFAIL・[ERROR]・Exceptionなし。ログ: `artifacts/smoke/expanded-cards-final.log`。
 - 自動検証で動作は確認したが、28種の採用率、素材ペアごとの選択の偏り、Act通しの難易度は人手試遊が残る。
+- 実機 `mods/Alchemist` へv0.3.0を更新し、DLL・マニフェストのコピー後SHA256一致を確認。旧v0.2.2は `artifacts/backups/20260921-191136-871/Alchemist` に保存した。
