@@ -16,7 +16,7 @@ using MegaCrit.Sts2.Core.ValueProps;
 
 namespace Alchemist;
 
-// Seven formula variants share execution, preview and persistence instead of seven card classes.
+// Formula variants share execution, preview and persistence instead of one class per crafted card.
 public sealed class ForgedCard() : AlchemyCard(2,CardType.Attack,CardRarity.Event,TargetType.AnyEnemy)
 {
     private string formulaId = "greatblade.v1";
@@ -48,6 +48,7 @@ public sealed class ForgedCard() : AlchemyCard(2,CardType.Attack,CardRarity.Even
     protected override IEnumerable<DynamicVar> CanonicalVars => [
         new DamageVar(28,ValueProp.Move),new BlockVar(8,ValueProp.Move),new CardsVar(0),
         new PowerVar<PoisonPower>(0),new PowerVar<VulnerablePower>(0),
+        new PowerVar<StrengthPower>(0),new PowerVar<DexterityPower>(0),new DynamicVar("Hits",0),
         new DynamicVar("ExhaustBlock",0),new DynamicVar("ExhaustDraw",0),new DynamicVar("Fumes",0)];
     public override List<(string,string)> Localization => [
         ("title","錬成カード"),("description",ForgeCatalog.Get("greatblade.v1").Text),
@@ -58,6 +59,8 @@ public sealed class ForgedCard() : AlchemyCard(2,CardType.Attack,CardRarity.Even
         {
             if(Formula.Values.ContainsKey("PoisonPower") || Formula.Values.ContainsKey("Fumes")) yield return HoverTipFactory.FromPower<PoisonPower>();
             if(Formula.Values.ContainsKey("VulnerablePower")) yield return HoverTipFactory.FromPower<VulnerablePower>();
+            if(Formula.Values.ContainsKey("StrengthPower")) yield return HoverTipFactory.FromPower<StrengthPower>();
+            if(Formula.Values.ContainsKey("DexterityPower")) yield return HoverTipFactory.FromPower<DexterityPower>();
             if(Formula.Values.ContainsKey("ExhaustBlock")) yield return HoverTipFactory.FromKeyword(CardKeyword.Exhaust);
         }
     }
@@ -72,10 +75,14 @@ public sealed class ForgedCard() : AlchemyCard(2,CardType.Attack,CardRarity.Even
             await PowerCmd.Apply<VulnerablePower>(c,p.Target!,DynamicVars.Vulnerable.BaseValue,Owner.Creature,this);
         if(DynamicVars.Damage.BaseValue>0)
         {
-            var attack=DamageCmd.Attack(DynamicVars.Damage.BaseValue).FromCard(this,p);
-            if(TargetType==TargetType.AllEnemies) attack.TargetingAllOpponents(CombatState!);
-            else attack.Targeting(p.Target!);
-            await attack.Execute(c);
+            int hits=Math.Max(1,DynamicVars["Hits"].IntValue);
+            for(int i=0;i<hits;i++)
+            {
+                var attack=DamageCmd.Attack(DynamicVars.Damage.BaseValue).FromCard(this,p);
+                if(TargetType==TargetType.AllEnemies) attack.TargetingAllOpponents(CombatState!);
+                else attack.Targeting(p.Target!);
+                await attack.Execute(c);
+            }
         }
         if(DynamicVars.Poison.BaseValue>0)
         {
@@ -84,6 +91,8 @@ public sealed class ForgedCard() : AlchemyCard(2,CardType.Attack,CardRarity.Even
         }
         if(DynamicVars.Block.BaseValue>0) await CreatureCmd.GainBlock(Owner.Creature,DynamicVars.Block,p);
         if(DynamicVars.Cards.BaseValue>0) await CardPileCmd.Draw(c,DynamicVars.Cards.BaseValue,Owner);
+        if(DynamicVars.Strength.BaseValue>0) await PowerCmd.Apply<StrengthPower>(c,Owner.Creature,DynamicVars.Strength.BaseValue,Owner.Creature,this);
+        if(DynamicVars.Dexterity.BaseValue>0) await PowerCmd.Apply<DexterityPower>(c,Owner.Creature,DynamicVars.Dexterity.BaseValue,Owner.Creature,this);
         if(DynamicVars["ExhaustBlock"].BaseValue>0) await PowerCmd.Apply<FeelNoPainPower>(c,Owner.Creature,DynamicVars["ExhaustBlock"].BaseValue,Owner.Creature,this);
         if(DynamicVars["ExhaustDraw"].BaseValue>0) await PowerCmd.Apply<DarkEmbracePower>(c,Owner.Creature,DynamicVars["ExhaustDraw"].BaseValue,Owner.Creature,this);
         if(DynamicVars["Fumes"].BaseValue>0) await PowerCmd.Apply<NoxiousFumesPower>(c,Owner.Creature,DynamicVars["Fumes"].BaseValue,Owner.Creature,this);

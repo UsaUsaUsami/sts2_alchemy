@@ -57,3 +57,12 @@ AGENTS.md M0の完了条件（実環境の起動証拠、最小MODが起動し�
 - ALCHEMIST_SMOKE_COMPLETE / ALCHEMIST_LOOP_COMPLETEを確認し、MOD由来のFAIL・[ERROR]・Exceptionなし。ログ: `artifacts/smoke/workshop-gallery-v022.log`。
 - 自動検証では標準カードノードの生成と操作経路を確認した。実画面でのカード間隔、スクロール量、マウスでの選びやすさは人手確認が残る。
 - 実機 `mods/Alchemist` へv0.2.2を更新し、DLL・マニフェストのコピー後SHA256一致を確認。旧v0.2.1は `artifacts/backups/20260921-184351-560/Alchemist` に保存した。
+
+## 2026-09-21: v0.3.0 カード28種の検証
+
+- ルール検証184項目成功。28個の安定ID、全素材ペアの候補、全レシピの素材2個消費、プレビュー、7種以上の多段・複数の筋力/敏捷候補を検査。Releaseビルドは警告0・エラー0。
+- 実ゲームv0.111.0 / BaseLib3.4.5の隔離headlessランで265チェック成功。追加16種を含む全formulaの表示、保存、複製、強化、強化取消、戦闘内使用を確認した。
+- 多段攻撃7種は敵HPを十分に増やした状態で、基礎ダメージ×ヒット数以上のHP減少を全対象について確認。弱体を先に与える連撃は増幅後の値となる。
+- 筋力6種・敏捷4種はゲーム標準Powerの実付与量を確認。既存の毒・廃棄連動・全体攻撃も回帰検証を通過した。
+- ALCHEMIST_SMOKE_COMPLETE / ALCHEMIST_LOOP_COMPLETEを確認し、MOD由来のFAIL・[ERROR]・Exceptionなし。ログ: `artifacts/smoke/expanded-cards-final.log`。
+- 自動検証で動作は確認したが、28種の採用率、素材ペアごとの選択の偏り、Act通しの難易度は人手試遊が残る。

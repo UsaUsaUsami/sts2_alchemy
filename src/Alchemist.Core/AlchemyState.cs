@@ -9,7 +9,7 @@ public sealed record Recipe(string Id, Material First, Material Second, string N
 
 public static class Recipes
 {
-    // Twelve curated M1 recipes cover all ten pairs; full base x material grammar remains M3.
+    // Curated M1 recipes cover all ten pairs with multiple build directions; full base x material grammar remains M3.
     public static readonly Recipe[] All = [
         new("iron_guard.v1", Material.Iron, Material.Iron, "鍛鉄の護り", "1コスト / スキル / 自身\n16ブロック、1枚ドロー。強化後21ブロック。", "守りと循環", "大きく守りながら、切り札を引きに行く。"),
         new("herbal_edge.v1", Material.Iron, Material.Herb, "薬刃", "1コスト / アタック / 敵1体\n12ダメージ、弱体2。強化後16ダメージ、弱体3。", "攻撃の準備", "弱体を付け、大剣や全体攻撃の火力を伸ばす。"),
