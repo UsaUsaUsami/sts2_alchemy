@@ -33,7 +33,7 @@ public sealed class MaterialBox : CustomRelicModel
     {
         var cs = Owner.Creature.CombatState!;
         int cap = cs.Encounter?.RoomType switch { RoomType.Elite => 3, RoomType.Boss => 4, _ => 2 };
-        Combat = new(cs.Enemies.Where(e => e.CombatId.HasValue).Select(e => e.CombatId!.Value), cap);
+        Combat = new(cs.Enemies.Where(e => e.CombatId.HasValue).Select(e => e.CombatId!.Value), cap, Inventory.NextCombatMaterial);
         return Task.CompletedTask;
     }
     public override Task BeforeSideTurnStart(PlayerChoiceContext context, CombatSide side, IReadOnlyList<Creature> participants, ICombatState cs)
@@ -50,5 +50,14 @@ public sealed class MaterialBox : CustomRelicModel
         }
         return Task.CompletedTask;
     }
-    public override Task AfterCombatEnd(CombatRoom room) { Combat = null; return Task.CompletedTask; }
+    public override Task AfterCombatEnd(CombatRoom room)
+    {
+        if (Combat is not null)
+        {
+            Inventory.NextCombatMaterial = Combat.NextPhase;
+            Inventory.Revision++;
+        }
+        Combat = null;
+        return Task.CompletedTask;
+    }
 }

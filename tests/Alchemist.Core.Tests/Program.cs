@@ -19,6 +19,10 @@ Check(combat.UseFurnace() && combat.UseFurnace() && !combat.UseFurnace(),"furnac
 combat.FurnaceActive = true;
 Check(!combat.UseFurnace(),"reapplication cannot reset furnace");
 Check(new HarvestCombat([1],2).FurnaceUsed == 0,"new combat resets furnace");
+var continuous = new HarvestCombat([1],2,Material.Powder);
+Check(continuous.Phase==Material.Powder,"combat starts from saved material");
+continuous.BeginTurn(2);
+Check(continuous.Phase==Material.Ether && continuous.NextPhase==Material.Iron,"continuous phase advances and wraps");
 var inventory = new AlchemyState();
 Check(inventory.Total == 0,"empty initial inventory");
 for (int i=0;i<10;i++) inventory.Grant($"kill{i}",Material.Iron);
@@ -49,6 +53,19 @@ var empty = new AlchemyState();
 Reject(()=>empty.Commit(recipe,"empty",()=>deck++,()=>deck--),"insufficient ingredients do not deliver");
 Check(deck==2 && empty.Total==0,"no negative inventory");
 Check(AlchemyState.Load(inventory.Save()).Committed.Contains("async"),"save preserves craft receipts");
+var upgradeStock=new AlchemyState();
+upgradeStock.Grant("ui",Material.Iron);upgradeStock.Grant("up",Material.Powder);
+int upgraded=0;
+upgradeStock.CommitUpgrade(Material.Iron,Material.Powder,"upgrade1",()=>upgraded++);
+upgradeStock.CommitUpgrade(Material.Iron,Material.Powder,"upgrade1",()=>upgraded++);
+Check(upgraded==1 && upgradeStock.Total==0,"upgrade consumes materials once");
+var failedUpgrade=new AlchemyState();failedUpgrade.Grant("fi",Material.Herb);failedUpgrade.Grant("fe",Material.Ether);
+Reject(()=>failedUpgrade.CommitUpgrade(Material.Herb,Material.Ether,"bad",()=>throw new InvalidOperationException()),"failed upgrade throws");
+Check(failedUpgrade.Total==2,"failed upgrade preserves materials");
+var phaseSave=new AlchemyState { NextCombatMaterial=Material.Ether };
+phaseSave.WorkshopNodes[0]=["2,4","5,9"];
+var loadedPhase=AlchemyState.Load(phaseSave.Save());
+Check(loadedPhase.NextCombatMaterial==Material.Ether && loadedPhase.WorkshopNodes[0].SequenceEqual(["2,4","5,9"]),"phase and workshop map survive save");
 var pending = new AlchemyState(); for(int i=0;i<12;i++) pending.Grant($"p{i}",Material.Iron);
 var reload = AlchemyState.Load(pending.Save());
 Check(reload.Pending.Count==2 && !reload.CanCraft(recipe),"pending saved and blocks storage abuse");
@@ -78,4 +95,7 @@ foreach(var f in ForgeCatalog.All)
     Check(created==1 && stock.Total==0,"formula consumes exactly two "+f.Id);
 }
 Reject(()=>ForgeCatalog.Get("unknown.v99"),"unknown formula not reset");
+var planned=WorkshopPlanner.Select(Enumerable.Range(1,15).Select(r=>new WorkshopCandidate(r%7,r)),3,15);
+Check(planned.Count==3 && planned.All(p=>p.Row>=3&&p.Row<=12) && planned.Select(p=>p.Row).Distinct().Count()==3,"workshops spread through valid rows");
+Check(WorkshopPlanner.Select([new(1,4)],3,15).Count==1,"workshop planner handles candidate shortage");
 Console.WriteLine($"{passed} checks passed.");

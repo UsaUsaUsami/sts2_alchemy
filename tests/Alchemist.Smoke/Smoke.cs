@@ -21,6 +21,10 @@ using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Saves;
 using MegaCrit.Sts2.Core.Models.Powers;
+using MegaCrit.Sts2.Core.Map;
+using MegaCrit.Sts2.Core.Models.Acts;
+using MegaCrit.Sts2.Core.Random;
+using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 
 [ModInitializer(nameof(Initialize))]
 public static class Smoke
@@ -58,6 +62,18 @@ public static class Smoke
                     Check(restored.IsUpgraded && restored.Id==mutable.Id,"upgraded card save "+canonical.Id);
                 }
                 Check(ResourceLoader.Exists(box.PackedIconPath),"relic portrait");
+                bool mapsOk=true;
+                for(int seed=0;seed<100;seed++)
+                {
+                    var map=new StandardActMap(new Rng((ulong)seed),ModelDb.Act<Overgrowth>(),false,false);
+                    var candidates=map.GetAllMapPoints().Where(p=>p.PointType==MapPointType.Unknown).Select(p=>new WorkshopCandidate(p.coord.col,p.coord.row)).ToArray();
+                    int rests=map.GetAllMapPoints().Count(p=>p.PointType==MapPointType.RestSite);
+                    var chosen=WorkshopPlanner.Select(candidates,rests,map.GetRowCount()-1);
+                    mapsOk &= chosen.Count==Math.Min(rests,candidates.Count(p=>p.Row>=3&&p.Row<=map.GetRowCount()-4));
+                    mapsOk &= chosen.All(p=>candidates.Contains(p) && map.StartingMapPoint.BFS_FindPath(map.GetPoint(new MapCoord(p.Col,p.Row))!).Any());
+                    mapsOk &= chosen.Count==0 || chosen[0].Row<=map.GetRowCount()/2+1;
+                }
+                Check(mapsOk,"workshop placement valid across 100 real maps");
                 foreach(var f in ForgeCatalog.All)
                 {
                     var card=run.CreateCard<ForgedCard>(player);
@@ -96,6 +112,13 @@ public static class Smoke
             RunManager.Instance.SetUpNewSingleplayer(run,false);
             await (Task)AccessTools.Method(typeof(NGame),"StartRun").Invoke(NGame.Instance,[run])!;
             GD.Print("ALCHEMIST_LOOP run started");
+            await Until(()=>player.GetRelic<MaterialBox>()!.Inventory.WorkshopNodes.ContainsKey(run.CurrentActIndex),"workshops planned");
+            var plannedNodes=player.GetRelic<MaterialBox>()!.Inventory.WorkshopNodes[run.CurrentActIndex];
+            int restCount=run.Map.GetAllMapPoints().Count(p=>p.PointType==MapPointType.RestSite);
+            int remainingCandidates=run.Map.GetAllMapPoints().Count(p=>p.PointType==MapPointType.Unknown && p.coord.row>=3 && p.coord.row<=run.Map.GetRowCount()-4);
+            Check(plannedNodes.Count==Math.Min(restCount-plannedNodes.Count,remainingCandidates+plannedNodes.Count),"workshop frequency follows rest sites");
+            await Task.Delay(100);
+            Check(NMapScreen.Instance is not null && Descendants<Label>(NMapScreen.Instance).Count(x=>x.Text=="工房")==plannedNodes.Count,"workshops visible on map in advance");
             await RunManager.Instance.EnterRoomDebug(RoomType.Monster,model:ModelDb.Encounter<BowlbugsWeak>().ToMutable(),showTransition:false);
             var box=player.GetRelic<MaterialBox>()!;
             await Until(()=>box.Combat != null && player.PlayerCombatState?.Hand.Cards.Count>0,"first battle ready");
@@ -103,14 +126,13 @@ public static class Smoke
             await CreatureCmd.Kill(player.Creature.CombatState!.Enemies.ToArray(),true);
             await Until(()=>!CombatManager.Instance.IsInProgress && run.CurrentRoom is CombatRoom {IsPreFinished:true},"battle victory");
             Check(box.Inventory.Counts[0]==2,"real death hooks harvest two iron");
-            WorkshopUi.Tick(NRun.Instance!,1);
-            WorkshopUi.Open();
+            var coordParts=plannedNodes[0].Split(',').Select(int.Parse).ToArray();
+            await RunManager.Instance.EnterMapCoordDebug(new MapCoord(coordParts[0],coordParts[1]),RoomType.RestSite,MapPointType.RestSite,showTransition:false);
+            await Until(()=>WorkshopUi.IsOpen,"map workshop opens");
             var uiOverlay=(Control?)AccessTools.Field(typeof(WorkshopUi),"overlay").GetValue(null);
             Check(uiOverlay is not null && uiOverlay.GetChildren().OfType<PanelContainer>().Any(),"workshop responsive frame created");
             var labels=Descendants<Label>(uiOverlay!).Select(x=>x.Text).ToArray();
-            Check(labels.Any(x=>x.Contains("素材ボックス")) && labels.Any(x=>x.Contains("容量")),"workshop material sidebar visible");
-            AccessTools.Field(typeof(WorkshopUi),"workshop").SetValue(null,true);
-            AccessTools.Method(typeof(WorkshopUi),"Refresh").Invoke(null,null);
+            Check(labels.Any(x=>x.Contains("錬金工房")) && labels.Any(x=>x.Contains("容量")),"workshop material sidebar visible");
             labels=Descendants<Label>(uiOverlay!).Select(x=>x.Text).ToArray();
             var buttons=Descendants<Button>(uiOverlay!).ToArray();
             Check(labels.Any(x=>x.Contains("完成カードを選ぶ")) && buttons.Any(x=>x.Text.Contains("作成可能のみ")),"workshop card gallery visible");
@@ -124,9 +146,18 @@ public static class Smoke
             Check(labels.Any(x=>x.Contains("このカードを錬成しますか")) && buttons.Any(x=>x.Text=="このカードを作る") && Descendants<NGridCardHolder>(uiOverlay!).Count()==1,"selected card confirmation visible");
             await (Task)AccessTools.Method(typeof(WorkshopUi),"Craft").Invoke(null,[Recipes.All[0]])!;
             Check(player.Deck.Cards.Count(c=>c is IronGuard)==1 && box.Inventory.Total==0,"real workshop crafts and consumes");
-            AccessTools.Method(typeof(WorkshopUi),"Close").Invoke(null,null);
+            box.Inventory.Grant("upgrade-iron",Alchemist.Core.Material.Iron);
+            box.Inventory.Grant("upgrade-powder",Alchemist.Core.Material.Powder);
+            AccessTools.Field(typeof(WorkshopUi),"upgradeMode").SetValue(null,true);
+            AccessTools.Method(typeof(WorkshopUi),"Refresh").Invoke(null,null);
+            Check(Descendants<Label>(uiOverlay!).Any(x=>x.Text.Contains("強化するカード")),"upgrade gallery visible");
+            var strike=player.Deck.Cards.OfType<StrikeIronclad>().First(c=>c.IsUpgradable);
+            AccessTools.Method(typeof(WorkshopUi),"UpgradeCard").Invoke(null,[strike]);
+            Check(strike.IsUpgraded && box.Inventory.Total==0,"workshop upgrade consumes materials and upgrades card");
+            await (Task)AccessTools.Method(typeof(WorkshopUi),"LeaveMapWorkshop").Invoke(null,null)!;
             await RunManager.Instance.EnterRoomDebug(RoomType.Monster,model:ModelDb.Encounter<BowlbugsWeak>().ToMutable(),showTransition:false);
             await Until(()=>box.Combat != null && player.PlayerCombatState?.Hand.Cards.Count>0,"second battle ready");
+            Check(box.Combat!.Phase==Alchemist.Core.Material.Herb,"next battle continues material rotation");
             var card=player.PlayerCombatState!.AllCards.OfType<IronGuard>().Single();
             int before=player.Creature.Block;
             await CardCmd.AutoPlay(new ThrowingPlayerChoiceContext(),card,null,skipCardPileVisuals:true);

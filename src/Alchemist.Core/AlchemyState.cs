@@ -33,6 +33,8 @@ public sealed class AlchemyState
     public HashSet<string> Received { get; set; } = [];
     public HashSet<string> Committed { get; set; } = [];
     public int WorkshopClosedFloor { get; set; } = -1;
+    public Material NextCombatMaterial { get; set; } = Material.Iron;
+    public Dictionary<int,List<string>> WorkshopNodes { get; set; } = [];
     public int Total => Counts.Sum();
     public int Revision { get; set; }
 
@@ -97,12 +99,25 @@ public sealed class AlchemyState
         }
         catch { Counts = before; rollbackCard(); throw; }
     }
+    public bool CanSpend(Material first, Material second) => Pending.Count == 0
+        && Counts[(int)first] >= (first == second ? 2 : 1) && Counts[(int)second] >= 1;
+    public void CommitUpgrade(Material first, Material second, string operation, Action upgrade)
+    {
+        if (Committed.Contains(operation)) return;
+        if (!CanSpend(first,second)) throw new InvalidOperationException("強化に必要な素材が不足しているか、未受領素材があります。");
+        upgrade();
+        Counts[(int)first]--;
+        Counts[(int)second]--;
+        Committed.Add(operation);
+        Revision++;
+    }
     public string Save() => JsonSerializer.Serialize(this);
     public static AlchemyState Load(string json)
     {
         var s = JsonSerializer.Deserialize<AlchemyState>(json) ?? throw new InvalidDataException("錬金術のセーブが空です。");
         if (s.Schema != 1 || s.Counts is not { Length: 4 } || s.Counts.Any(n => n < 0 || n > Capacity)
-            || s.Total > Capacity || s.Pending is null || s.Received is null || s.Committed is null
+            || s.Total > Capacity || s.Pending is null || s.Received is null || s.Committed is null || s.WorkshopNodes is null
+            || !Enum.IsDefined(s.NextCombatMaterial)
             || s.Pending.Any(p => p is null || !Enum.IsDefined(p.Material) || !s.Received.Contains(p.Id))
             || s.Pending.Select(p => p.Id).Distinct().Count() != s.Pending.Count)
             throw new InvalidDataException("非対応または破損した錬金術セーブです。データは初期化しません。");
@@ -110,14 +125,16 @@ public sealed class AlchemyState
     }
 }
 
-public sealed class HarvestCombat(IEnumerable<uint> initialEnemies, int cap)
+public sealed class HarvestCombat(IEnumerable<uint> initialEnemies, int cap, Material startingMaterial = Material.Iron)
 {
     private readonly HashSet<uint> eligible = initialEnemies.ToHashSet();
     private readonly HashSet<uint> harvested = [];
     public int Turn { get; private set; } = 1;
     public int FurnaceUsed { get; private set; }
     public bool FurnaceActive { get; set; }
-    public Material Phase => (Material)((Turn - 1) % 4);
+    public Material StartingMaterial { get; } = startingMaterial;
+    public Material Phase => (Material)(((int)StartingMaterial + Turn - 1) % 4);
+    public Material NextPhase => (Material)(((int)Phase + 1) % 4);
     public void BeginTurn(int turn) { if (turn > Turn) Turn = turn; }
     public Material? Kill(uint enemy)
     {
@@ -129,5 +146,23 @@ public sealed class HarvestCombat(IEnumerable<uint> initialEnemies, int cap)
         if (!FurnaceActive || FurnaceUsed >= 2) return false;
         FurnaceUsed++;
         return true;
+    }
+}
+
+public readonly record struct WorkshopCandidate(int Col, int Row);
+public static class WorkshopPlanner
+{
+    public static IReadOnlyList<WorkshopCandidate> Select(IEnumerable<WorkshopCandidate> source, int desiredCount, int maxRow)
+    {
+        var candidates=source.Where(p=>p.Row>=3 && p.Row<=maxRow-3).Distinct().OrderBy(p=>p.Row).ThenBy(p=>p.Col).ToList();
+        int count=Math.Min(Math.Max(0,desiredCount),candidates.Count);
+        var result=new List<WorkshopCandidate>(count);
+        for(int i=0;i<count;i++)
+        {
+            double target=(i+1d)*(maxRow+1d)/(count+1d);
+            var chosen=candidates.Where(p=>!result.Contains(p)).OrderBy(p=>Math.Abs(p.Row-target)).ThenBy(p=>p.Col).First();
+            result.Add(chosen);
+        }
+        return result.OrderBy(p=>p.Row).ToArray();
     }
 }

@@ -8,6 +8,7 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes;
 using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
+using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
 
@@ -25,9 +26,12 @@ public static class WorkshopUi
     private static double elapsed;
     private static bool busy;
     private static bool workshop;
+    private static bool mapWorkshop;
+    private static bool upgradeMode;
     private static string status = "";
     private static bool craftableOnly;
     private static Recipe? selectedRecipe;
+    private static CardModel? selectedUpgrade;
     private static readonly List<CardModel> previewCards = [];
     public static bool IsOpen => GodotObject.IsInstanceValid(overlay);
     public static bool IsBusy => busy;
@@ -38,9 +42,8 @@ public static class WorkshopUi
         return state?.Players.Count == 1 && state.Players[0].Character is AlchemistCharacter
             ? state.Players[0].GetRelic<MaterialBox>() : null;
     }
-    public static bool CanEnterWorkshop(MaterialBox b) => !CombatManager.Instance.IsInProgress
-        && b.Owner.RunState.CurrentRoom is CombatRoom { IsPreFinished: true }
-        && b.Inventory.WorkshopClosedFloor != b.Owner.RunState.TotalFloor;
+    public static bool CanEnterWorkshop(MaterialBox b) => mapWorkshop && !CombatManager.Instance.IsInProgress
+        && WorkshopMap.IsCurrentWorkshop();
 
     public static void Tick(NRun node, double delta)
     {
@@ -57,7 +60,7 @@ public static class WorkshopUi
             workshop = false;
             launcher = new Button { Position = new(16, 125), Size = new(330, 76) };
             launcher.AddThemeFontSizeOverride("font_size", 20);
-            launcher.Pressed += () => { if (!IsOpen) Open(); };
+            launcher.Pressed += () => { if (!IsOpen) { mapWorkshop=false; Open(); } };
             node.AddChild(launcher);
         }
         var combat = box.Combat;
@@ -71,6 +74,7 @@ public static class WorkshopUi
         if (box is null || !GodotObject.IsInstanceValid(runNode) || IsOpen) return;
         workshop = false;
         selectedRecipe = null;
+        selectedUpgrade = null;
         status = "";
         overlay = new Control { MouseFilter = Control.MouseFilterEnum.Stop };
         overlay.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
@@ -103,6 +107,18 @@ public static class WorkshopUi
         content.AddThemeConstantOverride("separation", 14);
         scroll.AddChild(content);
         runNode!.AddChild(overlay);
+        Refresh();
+    }
+    public static void OpenMapWorkshop()
+    {
+        box=CurrentBox();
+        runNode=NRun.Instance;
+        if(box is null || !GodotObject.IsInstanceValid(runNode)) return;
+        mapWorkshop=true;
+        Open();
+        workshop=true;
+        upgradeMode=false;
+        craftableOnly=false;
         Refresh();
     }
     private static StyleBoxFlat Box(Color color, Color border, int width, int radius)
@@ -178,6 +194,47 @@ public static class WorkshopUi
         else if (clickable) Text("選んで詳細を確認",16,wrapper,new Color("aebbc0"));
         return wrapper;
     }
+    private static (Core.Material First,Core.Material Second) UpgradeCost(CardModel card) => card.Type switch
+    {
+        CardType.Attack => (Core.Material.Iron,Core.Material.Powder),
+        CardType.Skill => (Core.Material.Herb,Core.Material.Ether),
+        _ => (Core.Material.Powder,Core.Material.Ether)
+    };
+    private static CardModel UpgradePreview(CardModel source)
+    {
+        var preview=CardModel.FromSerializable(source.ToSerializable());
+        preview.Owner=box!.Owner;
+        preview.UpgradeInternal();
+        previewCards.Add(preview);
+        return preview;
+    }
+    private static Control DeckCardDisplay(CardModel card,float scale,bool clickable,bool upgraded=false)
+    {
+        var wrapper=new VBoxContainer { CustomMinimumSize=clickable?new(235,340):new(330,480) };
+        wrapper.Alignment=BoxContainer.AlignmentMode.Center;
+        var stage=new Control { CustomMinimumSize=clickable?new(225,285):new(320,405) };
+        wrapper.AddChild(stage);
+        var shown=upgraded?UpgradePreview(card):card;
+        var node=NCard.Create(shown);
+        var holder=node is null?null:NGridCardHolder.Create(node);
+        if(holder is not null)
+        {
+            stage.AddChild(holder);
+            holder.Position=stage.CustomMinimumSize/2;
+            holder.Scale=Vector2.One*scale;
+            holder.SetClickable(clickable);
+            if(clickable) holder.Connect(NCardHolder.SignalName.Pressed,Callable.From<NCardHolder>(_=>{selectedUpgrade=card;Refresh();}));
+            node!.UpdateVisuals(PileType.Deck,upgraded?CardPreviewMode.Upgrade:CardPreviewMode.Normal);
+        }
+        if(clickable)
+        {
+            var cost=UpgradeCost(card);
+            bool affordable=box!.Inventory.CanSpend(cost.First,cost.Second);
+            Text($"{Recipes.Name(cost.First)} ＋ {Recipes.Name(cost.Second)}",17,wrapper,affordable?new Color("f2d18b"):new Color("90989c"));
+            if(!affordable) Text("素材不足",15,wrapper,new Color("d88b82"));
+        }
+        return wrapper;
+    }
     private static void RecipeGallery(IEnumerable<Recipe> recipes)
     {
         var grid = new GridContainer { Columns = 3, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
@@ -204,6 +261,32 @@ public static class WorkshopUi
         if (!canCraft) Text("不足："+Missing(recipe),20,details,new Color("d88b82"));
         Button(canCraft ? "このカードを作る" : "素材が足りません",()=>_ = Craft(recipe),!canCraft,details);
         Button("一覧へ戻る",()=> { selectedRecipe=null; Refresh(); },parent:details);
+    }
+    private static void UpgradeGallery()
+    {
+        var cards=box!.Owner.Deck.Cards.Where(c=>c.IsUpgradable).ToArray();
+        Text("強化するカードを選ぶ",32,content,new Color("f2d18b"));
+        Text("アタックは鉄＋火薬、スキルは薬草＋エーテル、パワーは火薬＋エーテルを消費します。",19);
+        var grid=new GridContainer { Columns=3,SizeFlagsHorizontal=Control.SizeFlags.ExpandFill };
+        grid.AddThemeConstantOverride("h_separation",10);grid.AddThemeConstantOverride("v_separation",16);
+        content!.AddChild(grid);
+        foreach(var card in cards) grid.AddChild(DeckCardDisplay(card,0.62f,true));
+        if(cards.Length==0) Text("強化できるカードはありません。",22);
+    }
+    private static void UpgradeConfirmation(CardModel card)
+    {
+        var cost=UpgradeCost(card);
+        bool can=card.IsUpgradable && box!.Owner.Deck.Cards.Contains(card) && box.Inventory.CanSpend(cost.First,cost.Second);
+        Text("このカードを強化しますか？",32,content,new Color("f2d18b"));
+        var row=new HBoxContainer(); row.AddThemeConstantOverride("separation",12); content!.AddChild(row);
+        var current=new VBoxContainer(); row.AddChild(current); Text("現在",21,current); current.AddChild(DeckCardDisplay(card,0.72f,false));
+        Text("→",34,row,new Color("f2d18b"));
+        var upgraded=new VBoxContainer(); row.AddChild(upgraded); Text("強化後",21,upgraded); upgraded.AddChild(DeckCardDisplay(card,0.72f,false,true));
+        var actions=new VBoxContainer { SizeFlagsHorizontal=Control.SizeFlags.ExpandFill }; row.AddChild(actions);
+        Text($"必要素材\n{Recipes.Name(cost.First)} ＋ {Recipes.Name(cost.Second)}",22,actions);
+        if(!can) Text("素材が不足しています。",19,actions,new Color("d88b82"));
+        Button(can?"このカードを強化する":"強化できません",()=>UpgradeCard(card),!can,actions);
+        Button("一覧へ戻る",()=>{selectedUpgrade=null;Refresh();},parent:actions);
     }
     private static void Refresh()
     {
@@ -234,7 +317,12 @@ public static class WorkshopUi
         }
         if (workshop)
         {
-            if (selectedRecipe is not null) Confirmation(selectedRecipe);
+            var modes=new HBoxContainer(); sidebar.AddChild(modes);
+            Button("カード錬成",()=>{upgradeMode=false;selectedUpgrade=null;Refresh();},!upgradeMode,modes);
+            Button("既存カード強化",()=>{upgradeMode=true;selectedRecipe=null;Refresh();},upgradeMode,modes);
+            if(upgradeMode && selectedUpgrade is not null) UpgradeConfirmation(selectedUpgrade);
+            else if(upgradeMode) UpgradeGallery();
+            else if (selectedRecipe is not null) Confirmation(selectedRecipe);
             else
             {
                 Text("完成カードを選ぶ",32,content,new Color("f2d18b"));
@@ -244,19 +332,14 @@ public static class WorkshopUi
                 RecipeGallery(recipes);
                 if (recipes.Length==0) Text("現在の素材で作れるカードはありません。左の素材数を確認してください。",22);
             }
-            Button("工房を退出する",()=>
-            {
-                box.Inventory.WorkshopClosedFloor = box.Owner.RunState.TotalFloor;
-                Close();
-            },parent:sidebar);
-            Text("退出後、この戦闘では再入場できません。",16,sidebar,new Color("aebbc0"));
+            Button("工房を退出する",()=>_ = LeaveMapWorkshop(),parent:sidebar);
+            Text("退出するとマップへ戻ります。",16,sidebar,new Color("aebbc0"));
         }
         else
         {
             Text("素材の使い道",32,content,new Color("f2d18b"));
             Text("敵を倒した時の素材相に応じて素材を獲得します。現在・次・次々の相は、戦闘中に左上のボタンで確認できます。",22);
-            Text("試作版では、戦闘勝利後に工房へ入れます。",20);
-            Button("工房へ入る",()=> { workshop = true; craftableOnly = false; selectedRecipe = null; Refresh(); },!CanEnterWorkshop(box));
+            Text("工房はマップ上の専用ノードから利用できます。",20);
             Button("閉じる",Close,parent:sidebar);
         }
     }
@@ -273,6 +356,27 @@ public static class WorkshopUi
         overlay = null;
         content = null;
         sidebar = null;
+        mapWorkshop = false;
+    }
+    private static async Task LeaveMapWorkshop()
+    {
+        if(busy) return;
+        Close();
+        await RunManager.Instance.EnterRoom(new MapRoom());
+    }
+    private static void UpgradeCard(CardModel card)
+    {
+        if(box is null || busy || !workshop || !CanEnterWorkshop(box) || !card.IsUpgradable || !box.Owner.Deck.Cards.Contains(card)) return;
+        busy=true;
+        try
+        {
+            var cost=UpgradeCost(card);
+            box.Inventory.CommitUpgrade(cost.First,cost.Second,Guid.NewGuid().ToString("N"),()=>CardCmd.Upgrade(card,CardPreviewStyle.EventLayout));
+            status=$"{card.Title}を強化しました。";
+            selectedUpgrade=null;
+        }
+        catch(Exception ex) { status=$"強化できませんでした：{ex.Message}"; GD.PushError(ex.ToString()); }
+        finally { busy=false;if(IsOpen)Refresh(); }
     }
     private static CardModel Canonical(Recipe recipe) => recipe.Id switch {
         "iron_guard.v1" => ModelDb.Card<IronGuard>(), "herbal_edge.v1" => ModelDb.Card<HerbalEdge>(),

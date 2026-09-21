@@ -67,3 +67,13 @@ AGENTS.md M0の完了条件（実環境の起動証拠、最小MODが起動し�
 - ALCHEMIST_SMOKE_COMPLETE / ALCHEMIST_LOOP_COMPLETEを確認し、MOD由来のFAIL・[ERROR]・Exceptionなし。ログ: `artifacts/smoke/expanded-cards-final.log`。
 - 自動検証で動作は確認したが、28種の採用率、素材ペアごとの選択の偏り、Act通しの難易度は人手試遊が残る。
 - 実機 `mods/Alchemist` へv0.3.0を更新し、DLL・マニフェストのコピー後SHA256一致を確認。旧v0.2.2は `artifacts/backups/20260921-191136-871/Alchemist` に保存した。
+
+## 2026-09-21: v0.4.0 工房ノード・カード強化・素材相継続の検証
+
+- ルール検証192項目成功。任意開始相と循環、工房座標と次開始相の保存、強化時の素材消費・二重実行防止・失敗時ロールバック、配置候補不足を検査した。ReleaseビルドとSmokeビルドは警告0・エラー0。
+- 実ゲームv0.111.0 / BaseLib3.4.5の隔離headlessランで271チェック成功。実際の `StandardActMap` を100シード生成し、工房数、配置可能行、「？」のみを候補とすること、開始点からの到達性、前半への配置を検査した。
+- ラン開始後の実マップで、工房数が元の休憩所数と同程度であること、全工房に「工房」ラベルが事前表示されることを確認した。通常休憩所は置換していない。
+- 工房へ入り、攻撃カードを鉄＋火薬で強化し、素材が一度だけ減ってカードが強化済みになることを確認した。錬成と次戦闘での作成カード使用も回帰検証を通過した。
+- 最初の戦闘を鉄相で終えた後、次の戦闘が薬草相から始まることを確認した。`ALCHEMIST_SMOKE_COMPLETE` / `ALCHEMIST_LOOP_COMPLETE` を確認し、MOD由来のFAILは0件。ログ: `artifacts/smoke/workshop-map-upgrade-final.log`。
+- 終了時にGodot headlessのRID解放警告が出るが、全テスト完了後のエンジン終了処理でありMODの失敗スタックはない。マウス操作感、長い日本語の折返し、Act通しの出現体感と素材経済は人手試遊が残る。
+- 実機 `mods/Alchemist` へv0.4.0を更新し、DLL・マニフェストのコピー後SHA256一致を確認。旧v0.3.0は `artifacts/backups/20260921-195612-272/Alchemist` に保存した。

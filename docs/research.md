@@ -28,8 +28,15 @@
 ## 未検証項目
 
 - BaseLib v3.4.6/v3.4.7への追従可否（API diffの直接確認はしていない）。
-- 工房ノード・素材ボックスの実機UI操作（今回のプレイでは実際に開いた形跡をログから確認できていない。詳細は[[test-results]]）。
+- 工房のマウス操作感・日本語レイアウトと、Act通しでの素材経済（自動UI経路は確認済み。詳細は[[test-results]]）。
 - マルチプレイ・他キャラクターへの副作用確認。
+
+## 2026-09-21: v0.4.0 マップ・強化API確認
+
+- 対象は実機v0.111.0 / BaseLib v3.4.5。ローカル対象版DLLと隔離実行で `RunManager.GenerateMap` 後の `RunState.Map`、`MapPoint.PointType`、`NMapScreen.SetMap`、`NNormalMapPoint._Ready` を確認した。生成後に選択済み座標を適用し、マップノードへ専用ラベルを追加できる。
+- 工房の安定した入退室経路として `RestSiteRoom.EnterInternal` と `MapRoom` を確認した。工房座標だけ部屋ロールを休憩所へ固定し、通常の休憩所にはパッチを適用しない。
+- 既存カード強化は `CardCmd.Upgrade(card, EventLayout)` でマスターデッキのカードへ適用できる。カード型は `CardType.Attack / Skill / Power` から取得でき、強化済みカードは候補から除外できる。
+- `MaterialBox` のシリアライズ対象状態で次戦闘の開始相とActごとの工房座標が保存・復元されることを確認した。
 
 ## 2026-09-21: v0.2.0 カード生成APIの再確認
 
