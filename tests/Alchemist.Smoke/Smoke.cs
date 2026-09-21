@@ -16,6 +16,7 @@ using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Models.Encounters;
 using MegaCrit.Sts2.Core.Nodes;
+using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Saves;
@@ -104,7 +105,23 @@ public static class Smoke
             Check(box.Inventory.Counts[0]==2,"real death hooks harvest two iron");
             WorkshopUi.Tick(NRun.Instance!,1);
             WorkshopUi.Open();
+            var uiOverlay=(Control?)AccessTools.Field(typeof(WorkshopUi),"overlay").GetValue(null);
+            Check(uiOverlay is not null && uiOverlay.GetChildren().OfType<PanelContainer>().Any(),"workshop responsive frame created");
+            var labels=Descendants<Label>(uiOverlay!).Select(x=>x.Text).ToArray();
+            Check(labels.Any(x=>x.Contains("素材ボックス")) && labels.Any(x=>x.Contains("容量")),"workshop material sidebar visible");
             AccessTools.Field(typeof(WorkshopUi),"workshop").SetValue(null,true);
+            AccessTools.Method(typeof(WorkshopUi),"Refresh").Invoke(null,null);
+            labels=Descendants<Label>(uiOverlay!).Select(x=>x.Text).ToArray();
+            var buttons=Descendants<Button>(uiOverlay!).ToArray();
+            Check(labels.Any(x=>x.Contains("完成カードを選ぶ")) && buttons.Any(x=>x.Text.Contains("作成可能のみ")),"workshop card gallery visible");
+            Check(Descendants<NGridCardHolder>(uiOverlay!).Count()==Recipes.All.Count(),"all completed cards rendered");
+            var previewCards=(List<CardModel>)AccessTools.Field(typeof(WorkshopUi),"previewCards").GetValue(null)!;
+            Check(previewCards.Count==Recipes.All.Count() && previewCards.All(c=>!run.ContainsCard(c)),"card previews do not enter run state");
+            AccessTools.Field(typeof(WorkshopUi),"selectedRecipe").SetValue(null,Recipes.All[0]);
+            AccessTools.Method(typeof(WorkshopUi),"Refresh").Invoke(null,null);
+            labels=Descendants<Label>(uiOverlay!).Select(x=>x.Text).ToArray();
+            buttons=Descendants<Button>(uiOverlay!).ToArray();
+            Check(labels.Any(x=>x.Contains("このカードを錬成しますか")) && buttons.Any(x=>x.Text=="このカードを作る") && Descendants<NGridCardHolder>(uiOverlay!).Count()==1,"selected card confirmation visible");
             await (Task)AccessTools.Method(typeof(WorkshopUi),"Craft").Invoke(null,[Recipes.All[0]])!;
             Check(player.Deck.Cards.Count(c=>c is IronGuard)==1 && box.Inventory.Total==0,"real workshop crafts and consumes");
             AccessTools.Method(typeof(WorkshopUi),"Close").Invoke(null,null);
@@ -130,5 +147,13 @@ public static class Smoke
             GD.Print("ALCHEMIST_LOOP_COMPLETE");
         }
         catch(Exception ex) { GD.PushError("ALCHEMIST_LOOP_FAIL "+ex); }
+    }
+    private static IEnumerable<T> Descendants<T>(Node node) where T : Node
+    {
+        foreach(var child in node.GetChildren())
+        {
+            if(child is T match) yield return match;
+            foreach(var nested in Descendants<T>(child)) yield return nested;
+        }
     }
 }

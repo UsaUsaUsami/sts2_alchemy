@@ -6,6 +6,8 @@ using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes;
+using MegaCrit.Sts2.Core.Nodes.Cards;
+using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
 
@@ -17,6 +19,7 @@ public static class WorkshopUi
     private static NRun? runNode;
     private static Button? launcher;
     private static Control? overlay;
+    private static VBoxContainer? sidebar;
     private static VBoxContainer? content;
     private static MaterialBox? box;
     private static double elapsed;
@@ -24,6 +27,8 @@ public static class WorkshopUi
     private static bool workshop;
     private static string status = "";
     private static bool craftableOnly;
+    private static Recipe? selectedRecipe;
+    private static readonly List<CardModel> previewCards = [];
     public static bool IsOpen => GodotObject.IsInstanceValid(overlay);
     public static bool IsBusy => busy;
 
@@ -65,45 +70,162 @@ public static class WorkshopUi
     {
         if (box is null || !GodotObject.IsInstanceValid(runNode) || IsOpen) return;
         workshop = false;
+        selectedRecipe = null;
         status = "";
         overlay = new Control { MouseFilter = Control.MouseFilterEnum.Stop };
         overlay.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         var shade = new ColorRect { Color = new(0.015f,0.025f,0.03f,0.96f), MouseFilter = Control.MouseFilterEnum.Stop };
         shade.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         overlay.AddChild(shade);
-        var scroll = new ScrollContainer { Position = new(130,85), Size = new(1130,810) };
-        overlay.AddChild(scroll);
-        content = new VBoxContainer { CustomMinimumSize = new(1050,0) };
-        content.AddThemeConstantOverride("separation", 12);
+        var frame = new PanelContainer();
+        frame.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        frame.OffsetLeft = 70; frame.OffsetTop = 55; frame.OffsetRight = -70; frame.OffsetBottom = -55;
+        frame.AddThemeStyleboxOverride("panel", Box(new Color("182027"), new Color("8b7045"), 2, 18));
+        overlay.AddChild(frame);
+        var margin = new MarginContainer();
+        foreach (var side in new[] { "margin_left", "margin_top", "margin_right", "margin_bottom" }) margin.AddThemeConstantOverride(side, 24);
+        frame.AddChild(margin);
+        var columns = new HBoxContainer();
+        columns.AddThemeConstantOverride("separation", 24);
+        margin.AddChild(columns);
+        var leftPanel = new PanelContainer { CustomMinimumSize = new(315,0) };
+        leftPanel.AddThemeStyleboxOverride("panel", Box(new Color("10171d"), new Color("3d4a52"), 1, 12));
+        columns.AddChild(leftPanel);
+        var leftMargin = new MarginContainer();
+        foreach (var side in new[] { "margin_left", "margin_top", "margin_right", "margin_bottom" }) leftMargin.AddThemeConstantOverride(side, 18);
+        leftPanel.AddChild(leftMargin);
+        sidebar = new VBoxContainer();
+        sidebar.AddThemeConstantOverride("separation", 12);
+        leftMargin.AddChild(sidebar);
+        var scroll = new ScrollContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, SizeFlagsVertical = Control.SizeFlags.ExpandFill };
+        columns.AddChild(scroll);
+        content = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, CustomMinimumSize = new(720,0) };
+        content.AddThemeConstantOverride("separation", 14);
         scroll.AddChild(content);
         runNode!.AddChild(overlay);
         Refresh();
     }
-    private static void Text(string text, int size = 23)
+    private static StyleBoxFlat Box(Color color, Color border, int width, int radius)
+    {
+        var style = new StyleBoxFlat { BgColor = color, BorderColor = border };
+        style.SetBorderWidthAll(width);
+        style.SetCornerRadiusAll(radius);
+        return style;
+    }
+    private static Label Text(string text, int size = 23, Container? parent = null, Color? color = null)
     {
         var label = new Label { Text = text, AutowrapMode = TextServer.AutowrapMode.WordSmart };
         label.AddThemeFontSizeOverride("font_size",size);
-        content!.AddChild(label);
+        if (color is Color tint) label.AddThemeColorOverride("font_color",tint);
+        (parent ?? content)!.AddChild(label);
+        return label;
     }
-    private static void Button(string text, Action action, bool disabled = false)
+    private static Button Button(string text, Action action, bool disabled = false, Container? parent = null)
     {
         var b = new Button { Text = text, Disabled = disabled || busy, CustomMinimumSize = new(0,50) };
         b.AddThemeFontSizeOverride("font_size",22);
         b.Pressed += () => { if (!busy) action(); };
-        content!.AddChild(b);
+        (parent ?? content)!.AddChild(b);
+        return b;
+    }
+    private static void Divider(Container parent)
+    {
+        var line = new HSeparator();
+        line.AddThemeConstantOverride("separation", 8);
+        parent.AddChild(line);
+    }
+    private static string MaterialSummary() => string.Join("\n", Enum.GetValues<Core.Material>()
+        .Select(m => $"{Recipes.Name(m),-5}  {box!.Inventory.Counts[(int)m]} 個"));
+    private static string Missing(Recipe recipe) => string.Join("、", new[] { recipe.First,recipe.Second }
+        .GroupBy(m=>m).Select(g=>(Material:g.Key,Count:g.Count()-box!.Inventory.Counts[(int)g.Key]))
+        .Where(x=>x.Count>0).Select(x=>$"{Recipes.Name(x.Material)} {x.Count}個"));
+    private static CardModel CreatePreviewCard(Recipe recipe)
+    {
+        var card = (recipe.FormulaId is null ? Canonical(recipe) : ModelDb.Card<ForgedCard>()).ToMutable();
+        card.Owner = box!.Owner;
+        if (card is ForgedCard forged) forged.AlchemistFormula = recipe.FormulaId!;
+        card.AfterCreated();
+        previewCards.Add(card);
+        return card;
+    }
+    private static void ClearPreviewCards()
+    {
+        foreach (var card in previewCards) card.Owner = null!;
+        previewCards.Clear();
+    }
+    private static Control CardDisplay(Recipe recipe, float scale, bool clickable)
+    {
+        var wrapper = new VBoxContainer { CustomMinimumSize = clickable ? new(235,350) : new(390,510) };
+        wrapper.Alignment = BoxContainer.AlignmentMode.Center;
+        var stage = new Control { CustomMinimumSize = clickable ? new(225,285) : new(380,420) };
+        wrapper.AddChild(stage);
+        var node = NCard.Create(CreatePreviewCard(recipe));
+        var holder = node is null ? null : NGridCardHolder.Create(node);
+        if (holder is not null)
+        {
+            stage.AddChild(holder);
+            holder.Position = stage.CustomMinimumSize / 2;
+            holder.Scale = Vector2.One * scale;
+            holder.SetClickable(clickable);
+            if (clickable)
+                holder.Connect(NCardHolder.SignalName.Pressed, Callable.From<NCardHolder>(_=> { selectedRecipe = recipe; Refresh(); }));
+            node!.UpdateVisuals(PileType.None, CardPreviewMode.Normal);
+        }
+        bool canCraft = box!.Inventory.CanCraft(recipe);
+        Text($"{Recipes.Name(recipe.First)} ＋ {Recipes.Name(recipe.Second)}",18,wrapper,
+            canCraft ? new Color("f2d18b") : new Color("90989c"));
+        if (!canCraft) Text("不足："+Missing(recipe),16,wrapper,new Color("d88b82"));
+        else if (clickable) Text("選んで詳細を確認",16,wrapper,new Color("aebbc0"));
+        return wrapper;
+    }
+    private static void RecipeGallery(IEnumerable<Recipe> recipes)
+    {
+        var grid = new GridContainer { Columns = 3, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        grid.AddThemeConstantOverride("h_separation",10);
+        grid.AddThemeConstantOverride("v_separation",16);
+        content!.AddChild(grid);
+        foreach (var recipe in recipes) grid.AddChild(CardDisplay(recipe,0.62f,true));
+    }
+    private static void Confirmation(Recipe recipe)
+    {
+        bool canCraft = box!.Inventory.CanCraft(recipe);
+        Text("このカードを錬成しますか？",32,content,new Color("f2d18b"));
+        var row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation",28);
+        content!.AddChild(row);
+        row.AddChild(CardDisplay(recipe,0.9f,false));
+        var details = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        details.AddThemeConstantOverride("separation",12);
+        row.AddChild(details);
+        Text($"{recipe.Name}　【{recipe.Role}】",28,details,new Color("f2d18b"));
+        Text(recipe.Plan,20,details,new Color("aebbc0"));
+        Text(recipe.Preview,21,details);
+        Text($"必要素材：{Recipes.Name(recipe.First)} ＋ {Recipes.Name(recipe.Second)}",22,details);
+        if (!canCraft) Text("不足："+Missing(recipe),20,details,new Color("d88b82"));
+        Button(canCraft ? "このカードを作る" : "素材が足りません",()=>_ = Craft(recipe),!canCraft,details);
+        Button("一覧へ戻る",()=> { selectedRecipe=null; Refresh(); },parent:details);
     }
     private static void Refresh()
     {
-        if (box is null || content is null) return;
+        if (box is null || content is null || sidebar is null) return;
+        ClearPreviewCards();
+        foreach (var child in sidebar.GetChildren()) { sidebar.RemoveChild(child); child.QueueFree(); }
         foreach (var child in content.GetChildren()) { content.RemoveChild(child); child.QueueFree(); }
-        Text(workshop ? "錬金工房 / 試作" : "素材ボックス", 36);
-        Text($"容量 {box.Inventory.Total}/10   —   " + string.Join("    ",Enum.GetValues<Core.Material>().Select(m=>$"{Recipes.Name(m)} {box.Inventory.Counts[(int)m]}")));
-        Text("鉄：物理・防御  /  薬草：弱体・脱力  /  火薬：全体攻撃  /  エーテル：ドロー",18);
-        Text("入手元：戦闘開始時の敵を撃破。死亡が確定した時の素材相を参照します。",18);
-        if (status.Length > 0) Text(status);
+        Text(workshop ? "錬金工房" : "素材ボックス", 34, sidebar, new Color("f2d18b"));
+        Text($"容量  {box.Inventory.Total} / {AlchemyState.Capacity}", 24, sidebar);
+        Divider(sidebar);
+        Text(MaterialSummary(), 22, sidebar);
+        Divider(sidebar);
+        Text("鉄：物理・防御\n薬草：毒・弱体\n火薬：高火力・全体\nエーテル：ドロー・循環",17,sidebar,new Color("aebbc0"));
+        if (status.Length > 0)
+        {
+            Divider(sidebar);
+            Text(status,19,sidebar,new Color("8fd6a5"));
+        }
         if (box.Inventory.Pending.Count > 0 && !CombatManager.Instance.IsInProgress)
         {
-            Text($"未受領 {box.Inventory.Pending.Count}個：{Recipes.Name(box.Inventory.Pending[0].Material)}\n次の部屋へ進む前に受け取りを解決してください。");
+            Text("未受領素材",32,content,new Color("f2d18b"));
+            Text($"{Recipes.Name(box.Inventory.Pending[0].Material)}　（残り {box.Inventory.Pending.Count}個）\n次の部屋へ進む前に受け取りを決めてください。",23);
             if (box.Inventory.Total < AlchemyState.Capacity) Button("受け取る",()=>Resolve(true));
             else foreach (var material in Enum.GetValues<Core.Material>().Where(m=>box.Inventory.Counts[(int)m]>0))
                 Button($"{Recipes.Name(material)}を1個手放して交換",()=>Resolve(true,material));
@@ -112,27 +234,30 @@ public static class WorkshopUi
         }
         if (workshop)
         {
-            Text("通常素材2個を消費してマスターデッキに1枚追加。材料がある限り繰り返せます。",19);
-            Text("主役を選ぶ：弱体＋大剣 ／ 猛毒培養槽＋防御 ／ 循環錬成炉＋廃棄。全10組み合わせにレシピがあります。",19);
-            Button(craftableOnly ? "今作れるものを表示中 → 全レシピを見る" : "全レシピを表示中 → 今作れるものだけ見る",()=>{craftableOnly=!craftableOnly;Refresh();});
-            var recipes = Recipes.All.Where(r=>!craftableOnly || box.Inventory.CanCraft(r)).OrderByDescending(box.Inventory.CanCraft).ThenBy(r=>r.Role=="デッキの軸"?0:r.Role=="切り札"?1:2);
-            foreach (var recipe in recipes)
+            if (selectedRecipe is not null) Confirmation(selectedRecipe);
+            else
             {
-                Text($"【{recipe.Role}】{recipe.Name} — {Recipes.Name(recipe.First)} ＋ {Recipes.Name(recipe.Second)}\n{recipe.Plan}\n{recipe.Preview}",21);
-                if(!box.Inventory.CanCraft(recipe)) Text("不足："+string.Join("、",new[]{recipe.First,recipe.Second}.GroupBy(m=>m).Select(g=>(Material:g.Key,Count:g.Count()-box.Inventory.Counts[(int)g.Key])).Where(x=>x.Count>0).Select(x=>$"{Recipes.Name(x.Material)} {x.Count}個")),18);
-                Button("この内容で錬成する",()=>_ = Craft(recipe),!box.Inventory.CanCraft(recipe));
+                Text("完成カードを選ぶ",32,content,new Color("f2d18b"));
+                Text("カードを選ぶと大きく表示し、効果を確認してから錬成できます。",19);
+                Button(craftableOnly ? "作成可能のみ表示　｜　全カードへ" : "全カード表示　｜　作成可能のみへ",()=>{craftableOnly=!craftableOnly;Refresh();});
+                var recipes = Recipes.All.Where(r=>!craftableOnly || box.Inventory.CanCraft(r)).OrderByDescending(box.Inventory.CanCraft).ThenBy(r=>r.Role=="デッキの軸"?0:r.Role=="切り札"?1:2).ToArray();
+                RecipeGallery(recipes);
+                if (recipes.Length==0) Text("現在の素材で作れるカードはありません。左の素材数を確認してください。",22);
             }
-            Button("工房を退出する（この戦闘後は再入場不可）",()=>
+            Button("工房を退出する",()=>
             {
                 box.Inventory.WorkshopClosedFloor = box.Owner.RunState.TotalFloor;
                 Close();
-            });
+            },parent:sidebar);
+            Text("退出後、この戦闘では再入場できません。",16,sidebar,new Color("aebbc0"));
         }
         else
         {
-            Text("試作版の工房は戦闘勝利後に入れます。専用マップノードは今後追加予定です。",20);
-            Button("開発用工房に入る",()=> { workshop = true; Refresh(); },!CanEnterWorkshop(box));
-            Button("閉じる",Close);
+            Text("素材の使い道",32,content,new Color("f2d18b"));
+            Text("敵を倒した時の素材相に応じて素材を獲得します。現在・次・次々の相は、戦闘中に左上のボタンで確認できます。",22);
+            Text("試作版では、戦闘勝利後に工房へ入れます。",20);
+            Button("工房へ入る",()=> { workshop = true; craftableOnly = false; selectedRecipe = null; Refresh(); },!CanEnterWorkshop(box));
+            Button("閉じる",Close,parent:sidebar);
         }
     }
     private static void Resolve(bool accept, Core.Material? exchange = null)
@@ -143,9 +268,11 @@ public static class WorkshopUi
     private static void Close()
     {
         if (busy) return;
+        ClearPreviewCards();
         overlay?.QueueFree();
         overlay = null;
         content = null;
+        sidebar = null;
     }
     private static CardModel Canonical(Recipe recipe) => recipe.Id switch {
         "iron_guard.v1" => ModelDb.Card<IronGuard>(), "herbal_edge.v1" => ModelDb.Card<HerbalEdge>(),
@@ -178,6 +305,7 @@ public static class WorkshopUi
                 }
             });
             status = $"{recipe.Name}をデッキに追加しました。";
+            selectedRecipe = null;
         }
         catch (Exception ex) { status = $"錬成できませんでした：{ex.Message}"; GD.PushError(ex.ToString()); }
         finally { busy = false; if (IsOpen) Refresh(); }
