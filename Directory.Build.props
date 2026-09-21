@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <GameRoot Condition="'$(GameRoot)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2</GameRoot>
+    <GameData>$(GameRoot)\data_sts2_windows_x86_64</GameData>
+    <BaseLibPath>$(MSBuildThisFileDirectory).tools\BaseLib-3.4.5\BaseLib.dll</BaseLibPath>
+  </PropertyGroup>
+</Project>

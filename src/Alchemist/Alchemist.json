@@ -1,0 +1,12 @@
+{
+  "id": "Alchemist",
+  "name": "錬金術師 — 採取と工房（試作）",
+  "author": "syouh",
+  "description": "素材相とカード錬成を試す単独プレイ用MOD。外見はゲーム内の仮素材を参照。",
+  "version": "0.2.0",
+  "has_pck": false,
+  "has_dll": true,
+  "affects_gameplay": true,
+  "min_game_version": "0.111.0",
+  "dependencies": [{"id":"BaseLib","min_version":"3.4.5"}]
+}
