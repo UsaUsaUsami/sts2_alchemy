@@ -205,6 +205,28 @@ Phase 2着手前に、上記3点（レシピの3・4素材化、素材のカー�
 
 **実機検証**：`scripts/smoke.ps1 -Name v011-material-economy-2 -Frames 30000`で隔離実機スモークを実行。新規55レシピを含む`ForgeCatalog.All`全78種を1枚ずつ実戦闘で生成・強化・複製・セーブ復元・自動プレイし、通常戦・エリート・ボスいずれの報酬にも標準カード報酬が含まれないこと、炉の起動・報酬選択のいずれも素材が2個ずつ増えること、満杯時の保留・交換が2個分とも個別に解決できることを確認した。867件PASS、失敗0、`ALCHEMIST_SMOKE_COMPLETE`・`ALCHEMIST_LOOP_COMPLETE`両到達（詳細は`docs/test-results.md`）。初回は新規55種の分だけ戦闘部屋の作り直しが増え、既定のフレーム数（12000）では完了前にタイムアウトしたため、30000へ増やして再実行した。
 
+## 2026-09-22: v0.12.0 素材のカード風表示と商人での素材購入
+
+**背景**：Phase 1の未決事項だった残り2点（素材のカード風表示、商人での素材購入）に着手。前回の確認で、素材のカード風表示は「表示だけ変更・データはCounts数値のまま」の低リスク案、商人は「キャラ専用カード枠を素材購入枠に置き換え」を採用方針として選んでいた。
+
+### 素材のカード風表示
+
+`src/Alchemist/MaterialCards.cs`を新設し、`MaterialCard`（`AlchemyCard`のサブクラス、`CardType.Status`・`CardRarity.Token`・`TargetType.Self`）を基底に、鉄・薬草・火薬・エーテルと希少素材3種の計7つの小さなカードクラスを追加した。いずれも`OnPlay`は何もしない（実際にプレイされることはない）。`ForgedCard`が78種のフォーミュラを1クラス＋動的ローカライズで賄っているのに対し、素材は種類が固定7種のみで内容も個体ごとに変わらないため、`CardLoc`で素材ごとに固定のタイトル・説明を持つ単純なクラスを7つ書く方式を選んだ（Harmonyでの動的Description差し替えパッチは不要）。
+
+`WorkshopUi.Refresh()`の素材ボックスサイドバーに、既存の数値サマリーの下へ`MaterialCardRow()`を追加した。所持数が1以上の素材ごとに、レシピプレビューと同じ「`ToMutable()`→`Owner`設定→`AfterCreated()`→`previewCards`へ登録」という使い捨てプレビューの手順（既存の`CreatePreviewCard`と同一パターン）でカードを1枚mountし、個数を添えて並べる。`AlchemyState.Counts`/`RareCounts`は変更していない。既存の数値サマリー（テキスト一覧）は表示・文言とも変更していないため、これに依存する既存のUIテストは影響を受けない。
+
+### 商人での素材購入
+
+**採用しなかった案**：当初想定していた「`MerchantInventory`のキャラ専用カード枠4つを素材購入枠に置き換える」実装は、調査の結果見送った。理由：`MerchantCardEntry.OnTryPurchase`は`CardFactory.CreateForMerchant`（`RunState.CreateCard`を伴う）でカードを生成し、購入成立時に`CardPileCmd.Add(...,PileType.Deck)`で無条件にデッキへ追加する。これを「デッキ追加ではなく素材加算」に差し替えるには、sealedクラスの購入メソッドをHarmonyでprefixし、ゲーム側が生成した`CardModel`インスタンスの後処理（`RunState`からの登録解除など）まで安全に行う必要があり、経済の中核（ゴールド消費・購入成立）に関わる箇所を実機未検証のまま書き換えるリスクが高いと判断した。
+
+**採用した実装**：`MerchantInventory`・`MerchantCardEntry`・商人の標準UIには一切手を入れず、`WorkshopUi`（工房・素材ボックスの表示に使っている、シーン資産不要の自作Godot Control）に「商人で素材を買う」という新しいモードを追加した。プレイヤーが商人の部屋（`MerchantRoom`）にいる時だけ、既存の「素材・工房」ランチャーから開く素材ボックス画面に「商人で素材を買う」ボタンが現れる。押すと素材4種を1個25Gの固定価格で購入できる画面になり、`PlayerCmd.LoseGold`でゴールドを減らした後`AlchemyState.Grant`で素材を1個加算する（採取・報酬受領とは別の経路で、`GrantHarvest`の2倍化は適用されない＝1回の購入で1個）。所持ゴールドが続く限り何度でも購入できる（工房の錬成が「資源がある限り複数回可能」なのと同じ考え方）。無色カードの購入は既存の商人UIがそのまま提供しており、変更していない。キャラ専用カード枠4つも変更しておらず、Ironcladのカードを売る状態のままである（本来の要望は「キャラ専用カード枠の置き換え」だったが、上記の理由で見送った）。
+
+**実機検証**：初回の`scripts/smoke.ps1 -Name v012-cards-and-shop -Frames 30000`は`ALCHEMIST_LOOP_FAIL System.Exception: all completed cards rendered`で失敗した。原因はゲーム側の不具合ではなく、既存テストの前提（レシピギャラリーの`NGridCardHolder`数＝`Recipes.All.Count()`）が、サイドバーに追加した`MaterialCardRow`の分だけずれたこと。加えて`MaterialCard`が`CardType.Status`＋`CardRarity.Token`という、このプレビュー描画経路（`NCard.Create`＋`MountCard`）では未検証の組み合わせだった点も念のため、実績のある`CardType.Skill`＋`CardRarity.Event`（`ForgedCard`・5種の基礎レシピと同じ）に合わせて修正した。テスト側は、レシピギャラリーの枚数チェックを`content`（カードギャラリー領域）に限定し、`uiOverlay`全体を見るチェックには所持素材種類数分の加算を行うよう修正。`tests/Alchemist.Smoke/Smoke.cs`に商人の部屋限定で購入ボタンが現れること・押すとゴールドが25減り素材が1個だけ増えること・素材ボックスにカード風の表示（`NGridCardHolder`）が描画されること・商人の部屋を離れると購入ボタンが消えることを検証するケースを追加した。
+
+再実行（`v012-cards-and-shop-3`）で875件PASS、失敗0、`ALCHEMIST_SMOKE_COMPLETE`・`ALCHEMIST_LOOP_COMPLETE`両到達。
+
+**未決**：無色カードとの価格バランス（無色コモン相当50G・アンコモン75G・レア150G）に対し素材1個25Gが妥当かは通しプレイ未検証。キャラ専用カード枠をどう扱うか（Ironcladカードのまま残すか、別途廃止するか）は本セッションでは未決のまま。
+
 ## 2026-09-22: v0.9.1 カード・素材の双方向錬成UI
 
 従来の完成カード一覧を「カードから探す」として維持し、「素材から作る」を追加する。素材側は通常素材2枠を順に埋め、`Recipes.FindAll`で順不同の該当候補を表示する。同種2個も許可し、所持数を超える配置はできない。スロットは入力プレビューに限定し、カード確定前に素材・乱数・ラン状態を変更しない。確定操作は従来の`CommitAsync`へ合流するため、消費・カード追加・失敗時ロールバックは両UIで同じになる。

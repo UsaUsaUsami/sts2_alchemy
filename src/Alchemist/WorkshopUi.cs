@@ -4,6 +4,7 @@ using HarmonyLib;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Entities.Gold;
 using MegaCrit.Sts2.Core.Entities.UI;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes;
@@ -35,6 +36,7 @@ public static class WorkshopUi
     private static bool craftableOnly;
     private static bool materialCraftMode;
     private static bool browsing;
+    private static bool merchantMode;
     private static string? offerId;
     private static TaskCompletionSource<bool>? offerResult;
     private static Recipe? selectedRecipe;
@@ -73,8 +75,8 @@ public static class WorkshopUi
             node.AddChild(launcher);
         }
         var combat = box.Combat;
-        launcher!.Text = combat is null ? $"素材・工房  {box.Inventory.Total}/10"
-            : $"素材 {box.Inventory.Total}/10  炉 {combat.FurnaceUsed}/2\n{Recipes.Name(combat.Phase)} → {Recipes.Name((Core.Material)(((int)combat.Phase+1)%4))} → {Recipes.Name((Core.Material)(((int)combat.Phase+2)%4))}";
+        launcher!.Text = combat is null ? $"素材・工房  {box.Inventory.Total}/{AlchemyState.Capacity}"
+            : $"素材 {box.Inventory.Total}/{AlchemyState.Capacity}  炉 {combat.FurnaceUsed}/2\n{Recipes.Name(combat.Phase)} → {Recipes.Name((Core.Material)(((int)combat.Phase+1)%4))} → {Recipes.Name((Core.Material)(((int)combat.Phase+2)%4))}";
         // Unresolved reward slots are reached from the rewards screen button, so only overflow receipts
         // open this screen on their own.
         if (box.Inventory.Pending.Count > 0 && !CombatManager.Instance.IsInProgress && !IsOpen) Open();
@@ -85,6 +87,7 @@ public static class WorkshopUi
         if (box is null || !GodotObject.IsInstanceValid(runNode) || IsOpen) return;
         workshop = false;
         browsing = false;
+        merchantMode = false;
         selectedRecipe = null;
         selectedUpgrade = null;
         selectedRareCard = null;
@@ -204,6 +207,39 @@ public static class WorkshopUi
     {
         foreach (var card in previewCards) card.Owner = null!;
         previewCards.Clear();
+    }
+    private static CardModel CreateMaterialPreviewCard(CardModel canonical)
+    {
+        var card = canonical.ToMutable();
+        card.Owner = box!.Owner;
+        card.AfterCreated();
+        previewCards.Add(card);
+        return card;
+    }
+    // A row of small material cards next to the numeric summary: same visual identity as the crafted
+    // cards, but AlchemyState.Counts/RareCounts stay the only real inventory. These are mounted through
+    // the same preview-only pattern as recipe cards, so they never enter a pile or RunState.
+    private static void MaterialCardRow()
+    {
+        var owned = Enum.GetValues<Core.Material>().Where(m => box!.Inventory.Counts[(int)m] > 0).ToArray();
+        var ownedRare = Enum.GetValues<RareMaterial>().Where(m => box!.Inventory.RareCounts[(int)m] > 0).ToArray();
+        if (owned.Length == 0 && ownedRare.Length == 0) return;
+        var row = new HBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        row.AddThemeConstantOverride("separation", 4);
+        sidebar!.AddChild(row);
+        foreach (var m in owned) MaterialCardSlot(row, MaterialCards.Canonical(m), Recipes.Name(m), box!.Inventory.Counts[(int)m]);
+        foreach (var m in ownedRare) MaterialCardSlot(row, MaterialCards.Canonical(m), RareMaterials.Get(m).Name, box!.Inventory.RareCounts[(int)m]);
+    }
+    private static void MaterialCardSlot(Container parent, CardModel canonical, string name, int count)
+    {
+        var wrapper = new VBoxContainer { CustomMinimumSize = new(68, 96) };
+        wrapper.Alignment = BoxContainer.AlignmentMode.Center;
+        var stage = new Control { CustomMinimumSize = new(64, 80) };
+        wrapper.AddChild(stage);
+        var holder = MountCard(stage, CreateMaterialPreviewCard(canonical), 0.28f, false);
+        if (holder is not null) UpdateCardWhenReady(holder, PileType.None, CardPreviewMode.Normal);
+        Text($"{name} ×{count}", 14, wrapper, new Color("f2d18b"));
+        parent.AddChild(wrapper);
     }
     // NCardHolder tweens its own scale between SmallScale and HoverScale, so the display scale belongs on
     // a parent node. Setting holder.Scale directly leaves every hovered card stuck at SmallScale afterwards.
@@ -457,6 +493,7 @@ public static class WorkshopUi
         Text($"容量  {box.Inventory.Total} / {AlchemyState.Capacity}", 24, sidebar);
         Divider(sidebar);
         Text(MaterialSummary(), 22, sidebar);
+        MaterialCardRow();
         Divider(sidebar);
         Text("鉄：物理・防御\n薬草：毒・弱体\n火薬：高火力・全体\nエーテル：ドロー・循環",17,sidebar,new Color("aebbc0"));
         if (status.Length > 0)
@@ -515,14 +552,69 @@ public static class WorkshopUi
             else RecipeBrowser("レシピ一覧","素材の組み合わせと完成カードを確認できます。錬成はマップ上の工房で行います。");
             Button("素材ボックスへ戻る",()=>{browsing=false;selectedRecipe=null;Refresh();},parent:sidebar);
         }
+        else if (merchantMode)
+        {
+            MerchantMaterialShop();
+            Button("素材ボックスへ戻る",()=>{merchantMode=false;Refresh();},parent:sidebar);
+        }
         else
         {
             Text("素材の使い道",32,content,new Color("f2d18b"));
             Text("《炉の起動》でカードを廃棄した時の素材相に応じて素材を獲得します。現在・次・次々の相は、戦闘中に左上のボタンで確認できます。",22);
             Text("工房はマップ上の専用ノードから利用できます。",20);
             Button("レシピ一覧を見る",()=>{browsing=true;craftableOnly=false;Refresh();},parent:sidebar);
+            if (InMerchantRoom) Button("商人で素材を買う",()=>{merchantMode=true;Refresh();},parent:sidebar);
             Button("閉じる",Close,parent:sidebar);
         }
+    }
+    // Buying materials does not reuse the game's own character-card merchant slots: those are backed by
+    // CardFactory/RunState.CreateCard and complete a purchase by adding the created card straight to the
+    // deck (MerchantCardEntry.OnTryPurchase), which has no hook for redirecting into a material grant
+    // without patching that core purchase path. This panel is the same kind of custom, scene-free overlay
+    // WorkshopUi already uses everywhere else, gated to the merchant room instead of the workshop node.
+    private const int MaterialShopCost = 25;
+    private static bool InMerchantRoom => box?.Owner.RunState.CurrentRoom is MerchantRoom;
+    private static void MerchantMaterialShop()
+    {
+        Text("商人で素材を買う",32,content,new Color("f2d18b"));
+        if (!InMerchantRoom)
+        {
+            Text("商人のいる部屋でのみ購入できます。",22,content,new Color("d88b82"));
+            return;
+        }
+        Text($"所持ゴールド　{box!.Owner.Gold}G",20);
+        Text($"素材1個につき{MaterialShopCost}Gの固定価格。所持ゴールドが続く限り何度でも購入できます。",19);
+        var grid = new GridContainer { Columns = 2, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        grid.AddThemeConstantOverride("h_separation",10);grid.AddThemeConstantOverride("v_separation",16);
+        content!.AddChild(grid);
+        foreach (var material in Enum.GetValues<Core.Material>()) MerchantMaterialSlot(grid,material);
+    }
+    private static void MerchantMaterialSlot(Container parent, Core.Material material)
+    {
+        var wrapper = new VBoxContainer { CustomMinimumSize = new(160,235) };
+        wrapper.Alignment = BoxContainer.AlignmentMode.Center;
+        var stage = new Control { CustomMinimumSize = new(150,190) };
+        wrapper.AddChild(stage);
+        var holder = MountCard(stage, CreateMaterialPreviewCard(MaterialCards.Canonical(material)), 0.62f, false);
+        if (holder is not null) UpdateCardWhenReady(holder, PileType.None, CardPreviewMode.Normal);
+        bool afford = box!.Owner.Gold >= MaterialShopCost;
+        Text($"{Recipes.Name(material)}　{MaterialShopCost}G",20,wrapper,afford?new Color("f2d18b"):new Color("90989c"));
+        Button(afford?"購入する":"ゴールド不足",()=>_=BuyMaterial(material),!afford,wrapper);
+        parent.AddChild(wrapper);
+    }
+    private static async Task BuyMaterial(Core.Material material)
+    {
+        if (box is null || busy || !InMerchantRoom || box.Owner.Gold < MaterialShopCost) return;
+        busy = true;
+        Refresh();
+        try
+        {
+            await PlayerCmd.LoseGold(MaterialShopCost, box.Owner, GoldLossType.Spent);
+            box.Inventory.Grant($"shop:{Guid.NewGuid():N}", material);
+            status = $"{Recipes.Name(material)}を購入しました。";
+        }
+        catch (Exception ex) { status = $"購入できませんでした：{ex.Message}"; GD.PushError(ex.ToString()); }
+        finally { busy = false; if (IsOpen) Refresh(); }
     }
     private static IEnumerable<MaterialChoice> OwnedMaterials() =>
         Enum.GetValues<Core.Material>().Select(MaterialChoice.Normal).Where(m=>box!.Inventory.Count(m)>0)

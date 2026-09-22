@@ -207,13 +207,21 @@ public static class Smoke
             await Until(()=>WorkshopUi.IsOpen,"map workshop opens");
             Check(run.CurrentRoom is RestSiteRoom { Options.Count: 0 },"workshop node offers no resting or upgrading");
             var uiOverlay=(Control?)AccessTools.Field(typeof(WorkshopUi),"overlay").GetValue(null);
+            // MaterialCardRow mounts card-style visuals for owned materials in the sidebar, distinct from
+            // the recipe gallery in content; card-count checks below scope to content to avoid conflating
+            // the two now that both use NGridCardHolder.
+            var uiContent=(Control?)AccessTools.Field(typeof(WorkshopUi),"content").GetValue(null);
             Check(uiOverlay is not null && uiOverlay.GetChildren().OfType<PanelContainer>().Any(),"workshop responsive frame created");
             var labels=Descendants<Label>(uiOverlay!).Select(x=>x.Text).ToArray();
             Check(labels.Any(x=>x.Contains("錬金工房")) && labels.Any(x=>x.Contains("容量")),"workshop material sidebar visible");
             labels=Descendants<Label>(uiOverlay!).Select(x=>x.Text).ToArray();
             var buttons=Descendants<Button>(uiOverlay!).ToArray();
             Check(labels.Any(x=>x.Contains("完成カードを選ぶ")) && buttons.Any(x=>x.Text.Contains("作成可能のみ")),"workshop card gallery visible");
-            Check(Descendants<NGridCardHolder>(uiOverlay!).Count()==Recipes.All.Count(),"all completed cards rendered");
+            Check(Descendants<NGridCardHolder>(uiContent!).Count()==Recipes.All.Count(),"all completed cards rendered");
+            int ownedMaterialTypes=Enum.GetValues<Alchemist.Core.Material>().Count(m=>box.Inventory.Counts[(int)m]>0)
+                +Enum.GetValues<RareMaterial>().Count(m=>box.Inventory.RareCounts[(int)m]>0);
+            Check(Descendants<NGridCardHolder>(uiOverlay!).Count()==Recipes.All.Count()+ownedMaterialTypes,
+                "the sidebar's MaterialCardRow adds one card per owned material type on top of the gallery");
             await Task.Delay(200);
             var descriptionField=AccessTools.Field(typeof(NCard),"_descriptionLabel");
             var recipeNodes=Descendants<NCard>(uiOverlay!).ToArray();
@@ -225,7 +233,7 @@ public static class Smoke
             // belongs on the parent node instead.
             Check(Descendants<NGridCardHolder>(uiOverlay!).All(h=>h.Scale.IsEqualApprox(NCardHolder.smallScale)),"card holders keep their own hover scale");
             var previewCards=(List<CardModel>)AccessTools.Field(typeof(WorkshopUi),"previewCards").GetValue(null)!;
-            Check(previewCards.Count==Recipes.All.Count() && previewCards.All(c=>!run.ContainsCard(c)),"card previews do not enter run state");
+            Check(previewCards.Count==Recipes.All.Count()+ownedMaterialTypes && previewCards.All(c=>!run.ContainsCard(c)),"card previews do not enter run state");
             AccessTools.Field(typeof(WorkshopUi),"materialCraftMode").SetValue(null,true);
             AccessTools.Method(typeof(WorkshopUi),"Refresh").Invoke(null,null);
             buttons=Descendants<Button>(uiOverlay!).ToArray();
@@ -235,14 +243,14 @@ public static class Smoke
             AccessTools.Method(typeof(WorkshopUi),"AddCraftMaterial").Invoke(null,[Alchemist.Core.Material.Iron]);
             labels=Descendants<Label>(uiOverlay!).Select(x=>x.Text).ToArray();
             Check(labels.Any(x=>x.Contains("鉄 ＋ 鉄 から作れるカード"))
-                && Descendants<NGridCardHolder>(uiOverlay!).Count()==Recipes.FindAll(Alchemist.Core.Material.Iron,Alchemist.Core.Material.Iron).Count(),
+                && Descendants<NGridCardHolder>(uiContent!).Count()==Recipes.FindAll(Alchemist.Core.Material.Iron,Alchemist.Core.Material.Iron).Count(),
                 "two selected materials reveal every matching recipe without consuming them");
             Check(box.Inventory.Counts[(int)Alchemist.Core.Material.Iron]==2,"placing materials in the grid is a preview, not consumption");
             AccessTools.Field(typeof(WorkshopUi),"selectedRecipe").SetValue(null,Recipes.All[0]);
             AccessTools.Method(typeof(WorkshopUi),"Refresh").Invoke(null,null);
             labels=Descendants<Label>(uiOverlay!).Select(x=>x.Text).ToArray();
             buttons=Descendants<Button>(uiOverlay!).ToArray();
-            Check(labels.Any(x=>x.Contains("このカードを錬成しますか")) && buttons.Any(x=>x.Text=="このカードを作る") && Descendants<NGridCardHolder>(uiOverlay!).Count()==1,"selected card confirmation visible");
+            Check(labels.Any(x=>x.Contains("このカードを錬成しますか")) && buttons.Any(x=>x.Text=="このカードを作る") && Descendants<NGridCardHolder>(uiContent!).Count()==1,"selected card confirmation visible");
             await (Task)AccessTools.Method(typeof(WorkshopUi),"Craft").Invoke(null,[Recipes.All[0]])!;
             Check(player.Deck.Cards.Count(c=>c is IronGuard)==1 && box.Inventory.Total==0,"real workshop crafts and consumes");
             box.Inventory.Grant("upgrade-iron",Alchemist.Core.Material.Iron);
@@ -354,6 +362,40 @@ public static class Smoke
                 && !reloadedBox.Inventory.Settled,"a half-claimed boss reward survives serialization");
             AccessTools.Method(typeof(WorkshopUi),"DeclineOffer").Invoke(null,[bossSlots[1].OfferId]);
             Check(box.Inventory.Offers.Count==0 && box.Inventory.Settled,"declining clears the remaining slot");
+            // Merchant material purchase: a custom panel gated to the shop room, not the game's own
+            // character-card slots (those complete a purchase by adding straight to the deck).
+            if(WorkshopUi.IsOpen) AccessTools.Method(typeof(WorkshopUi),"Close").Invoke(null,null);
+            var shopRoom=(MerchantRoom)await RunManager.Instance.EnterRoomDebug(RoomType.Shop,showTransition:false);
+            Check(shopRoom.RoomType==RoomType.Shop,"merchant room entered");
+            await Task.Delay(300);
+            WorkshopUi.Open();
+            await Until(()=>WorkshopUi.IsOpen,"material box opens over the merchant room");
+            var shopOverlay=(Control?)AccessTools.Field(typeof(WorkshopUi),"overlay").GetValue(null);
+            Check(Descendants<Button>(shopOverlay!).Any(b=>b.Text.Contains("商人で素材を買う")),"merchant purchase entry visible while in the shop room");
+            AccessTools.Field(typeof(WorkshopUi),"merchantMode").SetValue(null,true);
+            await PlayerCmd.GainGold(500,player);
+            AccessTools.Method(typeof(WorkshopUi),"Refresh").Invoke(null,null);
+            var shopLabels=Descendants<Label>(shopOverlay!).Select(x=>x.Text).ToArray();
+            var shopButtons=Descendants<Button>(shopOverlay!).ToArray();
+            Check(Enum.GetValues<Alchemist.Core.Material>().All(m=>shopLabels.Any(t=>t.Contains($"{Recipes.Name(m)}　25G"))),
+                "all four materials are priced and offered");
+            Check(shopButtons.Count(b=>b.Text=="購入する")==4,"enough gold makes every material purchasable");
+            int goldBefore=player.Gold;
+            int ironBefore=box.Inventory.Counts[(int)Alchemist.Core.Material.Iron];
+            await (Task)AccessTools.Method(typeof(WorkshopUi),"BuyMaterial").Invoke(null,[Alchemist.Core.Material.Iron])!;
+            Check(player.Gold==goldBefore-25 && box.Inventory.Counts[(int)Alchemist.Core.Material.Iron]==ironBefore+1,
+                "buying a material spends gold once and grants exactly one unit");
+            Check(Descendants<NGridCardHolder>(shopOverlay!).Any(),"material box renders card-style visuals for owned materials");
+            AccessTools.Field(typeof(WorkshopUi),"merchantMode").SetValue(null,false);
+            AccessTools.Method(typeof(WorkshopUi),"Close").Invoke(null,null);
+            await RunManager.Instance.EnterRoomDebug(RoomType.Monster,model:ModelDb.Encounter<BowlbugsWeak>().ToMutable(),showTransition:false);
+            await Until(()=>box.Combat != null && player.PlayerCombatState?.Hand.Cards.Count>0,"post-shop battle ready");
+            await Clear("post-shop battle");
+            WorkshopUi.Open();
+            await Until(()=>WorkshopUi.IsOpen,"material box opens outside the merchant room");
+            var nonShopOverlay=(Control?)AccessTools.Field(typeof(WorkshopUi),"overlay").GetValue(null);
+            Check(!Descendants<Button>(nonShopOverlay!).Any(b=>b.Text.Contains("商人で素材を買う")),"merchant purchase entry hidden away from the shop room");
+            AccessTools.Method(typeof(WorkshopUi),"Close").Invoke(null,null);
             foreach(var f in ForgeCatalog.All)
             {
                 await RunManager.Instance.EnterRoomDebug(RoomType.Monster,model:ModelDb.Encounter<BowlbugsWeak>().ToMutable(),showTransition:false);
