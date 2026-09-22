@@ -178,10 +178,8 @@ public sealed class AlchemyState
     }
 }
 
-public sealed class HarvestCombat(IEnumerable<uint> initialEnemies, int cap, Material startingMaterial = Material.Iron)
+public sealed class HarvestCombat(Material startingMaterial = Material.Iron)
 {
-    private readonly HashSet<uint> eligible = initialEnemies.ToHashSet();
-    private readonly HashSet<uint> harvested = [];
     public int Turn { get; private set; } = 1;
     public int FurnaceUsed { get; private set; }
     public bool FurnaceActive { get; set; }
@@ -189,11 +187,6 @@ public sealed class HarvestCombat(IEnumerable<uint> initialEnemies, int cap, Mat
     public Material Phase => (Material)(((int)StartingMaterial + Turn - 1) % 4);
     public Material NextPhase => (Material)(((int)Phase + 1) % 4);
     public void BeginTurn(int turn) { if (turn > Turn) Turn = turn; }
-    public Material? Kill(uint enemy)
-    {
-        if (harvested.Count >= cap || !eligible.Contains(enemy) || !harvested.Add(enemy)) return null;
-        return Phase;
-    }
     public bool UseFurnace()
     {
         if (!FurnaceActive || FurnaceUsed >= 2) return false;

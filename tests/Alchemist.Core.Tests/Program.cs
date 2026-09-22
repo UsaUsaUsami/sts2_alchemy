@@ -3,23 +3,19 @@ using Alchemist.Core;
 int passed = 0;
 void Check(bool ok, string name) { if (!ok) throw new Exception(name); passed++; Console.WriteLine($"PASS {name}"); }
 void Reject(Action action, string name) { try { action(); } catch (InvalidOperationException) { Check(true,name); return; } catch (InvalidDataException) { Check(true,name); return; } catch (ArgumentException) { Check(true,name); return; } throw new Exception(name); }
-var combat = new HarvestCombat([1,2,3,4], 3);
+var combat = new HarvestCombat();
 Check(combat.Phase == Material.Iron,"turn one iron");
 foreach (int turn in Enumerable.Range(2,4)) { combat.BeginTurn(turn); Check(combat.Phase == (Material)((turn-1)%4),$"phase turn {turn}"); }
 combat.BeginTurn(5); combat.BeginTurn(3);
 Check(combat.Turn == 5,"duplicate and old turn ignored");
 combat.BeginTurn(6);
-Check(combat.Kill(1) == Material.Herb && combat.Kill(2) == Material.Herb,"simultaneous/enemy-turn kills share phase");
-Check(combat.Kill(1) is null,"death redelivery/revival cannot harvest twice");
-Check(combat.Kill(99) is null,"summoned enemy excluded");
-Check(combat.Kill(3) == Material.Herb && combat.Kill(4) is null,"harvest cap enforced");
 Check(!combat.UseFurnace(),"inactive furnace denied");
 combat.FurnaceActive = true;
 Check(combat.UseFurnace() && combat.UseFurnace() && !combat.UseFurnace(),"furnace shared cap two");
 combat.FurnaceActive = true;
 Check(!combat.UseFurnace(),"reapplication cannot reset furnace");
-Check(new HarvestCombat([1],2).FurnaceUsed == 0,"new combat resets furnace");
-var continuous = new HarvestCombat([1],2,Material.Powder);
+Check(new HarvestCombat().FurnaceUsed == 0,"new combat resets furnace");
+var continuous = new HarvestCombat(Material.Powder);
 Check(continuous.Phase==Material.Powder,"combat starts from saved material");
 continuous.BeginTurn(2);
 Check(continuous.Phase==Material.Ether && continuous.NextPhase==Material.Iron,"continuous phase advances and wraps");
@@ -163,7 +159,7 @@ Check(guaranteed.Count>0 && guaranteed.All(p=>p.Row>=WorkshopPlanner.EarliestRow
 int midEnd=WorkshopPlanner.MidBandEndRow(15);
 Check(Routes(plainGraph,new(0,0)).All(route=>route.Any(p=>guaranteed.Contains(p) && p.Row<=midEnd))
    && Routes(plainGraph,new(0,0)).All(route=>route.Any(p=>guaranteed.Contains(p) && p.Row>midEnd)),"every route meets a mid and a late workshop");
-Check(WorkshopPlanner.PerAct is >=1 and <=2,"one to two workshops per act");
+Check(WorkshopPlanner.PerAct==2,"two workshop bands per act");
 // Rows 6 and 11 hold a merchant in column 1; the cut must route around it, never through it.
 var blockedGraph=Layered((col,row)=>col==1 && row is 6 or 11 ? WorkshopCut.Blocked : 1);
 var aroundBlocked=WorkshopPlanner.SelectGuaranteed(blockedGraph,new(0,0),new(0,15),15).Coords;

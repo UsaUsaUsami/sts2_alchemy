@@ -29,6 +29,7 @@ using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Nodes.Rewards;
 using MegaCrit.Sts2.Core.Nodes.Screens;
 using MegaCrit.Sts2.Core.Nodes.Screens.Overlays;
+using MegaCrit.Sts2.Core.TestSupport;
 
 [ModInitializer(nameof(Initialize))]
 public static class Smoke
@@ -190,9 +191,10 @@ public static class Smoke
             var box=player.GetRelic<MaterialBox>()!;
             await Until(()=>box.Combat != null && player.PlayerCombatState?.Hand.Cards.Count>0,"first battle ready");
             Check(box.Combat!.Phase==Alchemist.Core.Material.Iron,"real battle starts iron");
-            await CreatureCmd.Kill(player.Creature.CombatState!.Enemies.ToArray(),true);
-            await Until(()=>!CombatManager.Instance.IsInProgress && run.CurrentRoom is CombatRoom {IsPreFinished:true},"battle victory");
-            Check(box.Inventory.Counts[0]==2,"real death hooks harvest two iron");
+            await Clear("first battle");
+            Check(box.Inventory.Total==0,"enemy deaths grant no materials");
+            box.Inventory.Grant("workshop-fixture-iron-1",Alchemist.Core.Material.Iron);
+            box.Inventory.Grant("workshop-fixture-iron-2",Alchemist.Core.Material.Iron);
             var coordParts=plannedNodes[0].Split(',').Select(int.Parse).ToArray();
             await RunManager.Instance.EnterMapCoordDebug(new MapCoord(coordParts[0],coordParts[1]),RoomType.RestSite,MapPointType.RestSite,showTransition:false);
             await Until(()=>WorkshopUi.IsOpen,"map workshop opens");
@@ -233,7 +235,7 @@ public static class Smoke
             int before=player.Creature.Block;
             await CardCmd.AutoPlay(new ThrowingPlayerChoiceContext(),card,null,skipCardPileVisuals:true);
             Check(player.Creature.Block==before+16,"crafted card usable next battle");
-            // AGENTS.md 4.4: the reward slot is additional to kill harvesting and to the normal rewards.
+            // Material reward slots are additional to furnace harvesting and to the normal rewards.
             // Passing an encounter model would override the room type with that encounter's own, so the room
             // type alone selects the elite and boss encounters here.
             var eliteRoom=(CombatRoom)await RunManager.Instance.EnterRoomDebug(RoomType.Elite,showTransition:false);
@@ -287,9 +289,9 @@ public static class Smoke
             _ = bossSet.Offer();
             await Until(()=>GodotObject.IsInstanceValid(NOverlayStack.Instance)
                 && Descendants<NRewardButton>(NOverlayStack.Instance).Any(b=>b.Reward is MaterialReward),"rewards screen shows the material slots");
-            Check(Descendants<NRewardButton>(NOverlayStack.Instance).Count(b=>b.Reward is MaterialReward)==MaterialOffers.BossSlots,
+            Check(Descendants<NRewardButton>(NOverlayStack.Instance!).Count(b=>b.Reward is MaterialReward)==MaterialOffers.BossSlots,
                 "both boss slots appear as reward buttons");
-            var rewardsScreen=NOverlayStack.Instance.GetChildren().OfType<NRewardsScreen>().Last();
+            var rewardsScreen=NOverlayStack.Instance!.GetChildren().OfType<NRewardsScreen>().Last();
             var choosingBoss=WorkshopUi.ChooseOffer(box,bossSlots[0].OfferId);
             await Until(()=>WorkshopUi.IsOpen,"boss material choice opens");
             var bossOverlay=(Control?)AccessTools.Field(typeof(WorkshopUi),"overlay").GetValue(null);
@@ -323,6 +325,30 @@ public static class Smoke
                     Check(hitTargets.All(enemy=>999-enemy.CurrentHp>=f.Values["Damage"]*hits),"all multihit strikes land "+f.Id);
                 Check(forged.Pile?.Type==(f.Exhaust?PileType.Exhaust:f.Kind==ForgeKind.Power?PileType.None:PileType.Discard) || f.Kind==ForgeKind.Power,"formula executes "+f.Id);
             }
+            var furnace=player.Creature.CombatState!.CreateCard<PortableFurnace>(player);
+            var sacrifices=new CardModel[] {
+                player.Creature.CombatState.CreateCard<StrikeIronclad>(player),
+                player.Creature.CombatState.CreateCard<DefendIronclad>(player)
+            };
+            await CardPileCmd.AddGeneratedCardsToCombat([furnace,..sacrifices],PileType.Hand,player);
+            await CardCmd.AutoPlay(new ThrowingPlayerChoiceContext(),furnace,null,skipCardPileVisuals:true);
+            var activations=player.PlayerCombatState!.Hand.Cards.OfType<FurnaceActivation>().Take(2).ToArray();
+            Check(activations.Length==2,"portable furnace creates two activations");
+            var selector=new TestCardSelector();
+            using(CardSelectCmd.UseSelector(selector))
+            {
+                for(int i=0;i<2;i++)
+                {
+                    var phase=box.Combat!.Phase;
+                    int beforeMaterial=box.Inventory.Counts[(int)phase];
+                    selector.PrepareToSelect([sacrifices[i]]);
+                    await CardCmd.AutoPlay(new ThrowingPlayerChoiceContext(),activations[i],null,skipCardPileVisuals:true);
+                    Check(sacrifices[i].Pile?.Type==PileType.Exhaust,"furnace activation exhausts the selected card");
+                    Check(box.Inventory.Counts[(int)phase]==beforeMaterial+1,
+                        "successful furnace exhaust grants the current-phase material immediately");
+                }
+            }
+            Check(box.Combat!.FurnaceUsed==2,"furnace harvesting is capped at two per combat");
             GD.Print("ALCHEMIST_LOOP_COMPLETE");
         }
         catch(Exception ex) { GD.PushError("ALCHEMIST_LOOP_FAIL "+ex); }

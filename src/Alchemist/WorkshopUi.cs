@@ -389,7 +389,7 @@ public static class WorkshopUi
         else
         {
             Text("素材の使い道",32,content,new Color("f2d18b"));
-            Text("敵を倒した時の素材相に応じて素材を獲得します。現在・次・次々の相は、戦闘中に左上のボタンで確認できます。",22);
+            Text("《炉の起動》でカードを廃棄した時の素材相に応じて素材を獲得します。現在・次・次々の相は、戦闘中に左上のボタンで確認できます。",22);
             Text("工房はマップ上の専用ノードから利用できます。",20);
             Button("レシピ一覧を見る",()=>{browsing=true;craftableOnly=false;Refresh();},parent:sidebar);
             Button("閉じる",Close,parent:sidebar);
