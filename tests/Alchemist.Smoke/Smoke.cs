@@ -222,6 +222,18 @@ public static class Smoke
             Check(Descendants<NGridCardHolder>(uiOverlay!).All(h=>h.Scale.IsEqualApprox(NCardHolder.smallScale)),"card holders keep their own hover scale");
             var previewCards=(List<CardModel>)AccessTools.Field(typeof(WorkshopUi),"previewCards").GetValue(null)!;
             Check(previewCards.Count==Recipes.All.Count() && previewCards.All(c=>!run.ContainsCard(c)),"card previews do not enter run state");
+            AccessTools.Field(typeof(WorkshopUi),"materialCraftMode").SetValue(null,true);
+            AccessTools.Method(typeof(WorkshopUi),"Refresh").Invoke(null,null);
+            buttons=Descendants<Button>(uiOverlay!).ToArray();
+            Check(Descendants<Label>(uiOverlay!).Any(x=>x.Text.Contains("素材から錬成")) && buttons.Any(x=>x.Text.Contains("空きスロット")),
+                "material-first crafting grid opens with two empty slots");
+            AccessTools.Method(typeof(WorkshopUi),"AddCraftMaterial").Invoke(null,[Alchemist.Core.Material.Iron]);
+            AccessTools.Method(typeof(WorkshopUi),"AddCraftMaterial").Invoke(null,[Alchemist.Core.Material.Iron]);
+            labels=Descendants<Label>(uiOverlay!).Select(x=>x.Text).ToArray();
+            Check(labels.Any(x=>x.Contains("鉄 ＋ 鉄 から作れるカード"))
+                && Descendants<NGridCardHolder>(uiOverlay!).Count()==Recipes.FindAll(Alchemist.Core.Material.Iron,Alchemist.Core.Material.Iron).Count(),
+                "two selected materials reveal every matching recipe without consuming them");
+            Check(box.Inventory.Counts[(int)Alchemist.Core.Material.Iron]==2,"placing materials in the grid is a preview, not consumption");
             AccessTools.Field(typeof(WorkshopUi),"selectedRecipe").SetValue(null,Recipes.All[0]);
             AccessTools.Method(typeof(WorkshopUi),"Refresh").Invoke(null,null);
             labels=Descendants<Label>(uiOverlay!).Select(x=>x.Text).ToArray();

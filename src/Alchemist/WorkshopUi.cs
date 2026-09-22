@@ -33,12 +33,14 @@ public static class WorkshopUi
     private static bool rareMode;
     private static string status = "";
     private static bool craftableOnly;
+    private static bool materialCraftMode;
     private static bool browsing;
     private static string? offerId;
     private static TaskCompletionSource<bool>? offerResult;
     private static Recipe? selectedRecipe;
     private static CardModel? selectedUpgrade;
     private static ForgedCard? selectedRareCard;
+    private static readonly List<Core.Material> craftInputs = [];
     private static readonly List<CardModel> previewCards = [];
     public static bool IsOpen => GodotObject.IsInstanceValid(overlay);
     public static bool IsBusy => busy;
@@ -86,6 +88,8 @@ public static class WorkshopUi
         selectedRecipe = null;
         selectedUpgrade = null;
         selectedRareCard = null;
+        materialCraftMode = false;
+        craftInputs.Clear();
         status = "";
         overlay = new Control { MouseFilter = Control.MouseFilterEnum.Stop };
         overlay.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
@@ -148,6 +152,8 @@ public static class WorkshopUi
         upgradeMode=false;
         rareMode=false;
         craftableOnly=false;
+        materialCraftMode=false;
+        craftInputs.Clear();
         Refresh();
     }
     private static StyleBoxFlat Box(Color color, Color border, int width, int radius)
@@ -305,6 +311,49 @@ public static class WorkshopUi
         content!.AddChild(grid);
         foreach (var recipe in recipes) grid.AddChild(CardDisplay(recipe,0.62f,true));
     }
+    private static void MaterialCrafting()
+    {
+        Text("素材から錬成",32,content,new Color("f2d18b"));
+        Text("素材を2個置くと、その組み合わせから作れるカードが表示されます。順番は問いません。",19);
+        var slots=new HBoxContainer();slots.AddThemeConstantOverride("separation",18);content!.AddChild(slots);
+        for(int i=0;i<2;i++)
+        {
+            int index=i;
+            string label=i<craftInputs.Count ? Recipes.Name(craftInputs[i]) : "空きスロット";
+            Button(label,()=>RemoveCraftMaterial(index),i>=craftInputs.Count,slots);
+            if(i==0) Text("＋",30,slots,new Color("f2d18b"));
+        }
+        Text("入れる素材を選ぶ（同じ素材を2個置くこともできます）",20);
+        var materials=new GridContainer { Columns=4,SizeFlagsHorizontal=Control.SizeFlags.ExpandFill };
+        materials.AddThemeConstantOverride("h_separation",10);content.AddChild(materials);
+        foreach(var material in Enum.GetValues<Core.Material>())
+        {
+            int selected=craftInputs.Count(x=>x==material);
+            int owned=box!.Inventory.Counts[(int)material];
+            Button($"{Recipes.Name(material)}\n所持 {owned} / 配置 {selected}",()=>AddCraftMaterial(material),
+                craftInputs.Count>=2 || selected>=owned,materials);
+        }
+        if(craftInputs.Count==0) return;
+        Button("素材をすべて戻す",()=>{craftInputs.Clear();Refresh();});
+        if(craftInputs.Count<2)
+        {
+            Text("もう1個素材を置いてください。",22,content,new Color("aebbc0"));
+            return;
+        }
+        var recipes=Recipes.FindAll(craftInputs[0],craftInputs[1]).ToArray();
+        Text($"{Recipes.Name(craftInputs[0])} ＋ {Recipes.Name(craftInputs[1])} から作れるカード",26,content,new Color("f2d18b"));
+        RecipeGallery(recipes);
+    }
+    private static void AddCraftMaterial(Core.Material material)
+    {
+        if(craftInputs.Count>=2 || craftInputs.Count(x=>x==material)>=box!.Inventory.Counts[(int)material]) return;
+        craftInputs.Add(material);Refresh();
+    }
+    private static void RemoveCraftMaterial(int index)
+    {
+        if(index<0 || index>=craftInputs.Count) return;
+        craftInputs.RemoveAt(index);Refresh();
+    }
     private static void Confirmation(Recipe recipe)
     {
         bool canCraft = box!.Inventory.CanCraft(recipe);
@@ -445,7 +494,14 @@ public static class WorkshopUi
             else if(upgradeMode && selectedUpgrade is not null) UpgradeConfirmation(selectedUpgrade);
             else if(upgradeMode) UpgradeGallery();
             else if (selectedRecipe is not null) Confirmation(selectedRecipe);
-            else RecipeBrowser("完成カードを選ぶ","カードを選ぶと大きく表示し、効果を確認してから錬成できます。");
+            else
+            {
+                var craftModes=new HBoxContainer();content!.AddChild(craftModes);
+                Button("カードから探す",()=>{materialCraftMode=false;craftInputs.Clear();Refresh();},!materialCraftMode,craftModes);
+                Button("素材から作る",()=>{materialCraftMode=true;craftableOnly=false;Refresh();},materialCraftMode,craftModes);
+                if(materialCraftMode) MaterialCrafting();
+                else RecipeBrowser("完成カードを選ぶ","カードを選ぶと大きく表示し、効果を確認してから錬成できます。");
+            }
             Button("工房を退出する",()=>_ = LeaveMapWorkshop(),parent:sidebar);
             Text("退出するとマップへ戻ります。",16,sidebar,new Color("aebbc0"));
         }
@@ -592,6 +648,7 @@ public static class WorkshopUi
             });
             status = $"{recipe.Name}をデッキに追加しました。";
             selectedRecipe = null;
+            if(materialCraftMode) craftInputs.Clear();
         }
         catch (Exception ex) { status = $"錬成できませんでした：{ex.Message}"; GD.PushError(ex.ToString()); }
         finally { busy = false; if (IsOpen) Refresh(); }
