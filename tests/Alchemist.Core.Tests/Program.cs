@@ -147,12 +147,29 @@ foreach(var f in ForgeCatalog.All)
 {
     Check(f.Values.All(x=>x.Value>=0) && f.Cost>=1,"no energy generation or zero-cost cycle "+f.Id);
     Check(!f.Preview.Contains('{') && f.Preview.Contains(f.Describe(true)),"full shared preview "+f.Id);
-    var stock=new AlchemyState(); stock.Grant("x",f.First);stock.Grant("y",f.Second);
+    var stock=new AlchemyState();
+    for(int i=0;i<f.Materials.Count;i++) stock.Grant($"m{i}",f.Materials[i]);
     var r=Recipes.All.Single(r=>r.FormulaId==f.Id);int created=0;
     await stock.CommitAsync(r,f.Id,()=>{created++;return Task.CompletedTask;},()=>created--);
-    Check(created==1 && stock.Total==0,"formula consumes exactly two "+f.Id);
+    Check(created==1 && stock.Total==0,$"formula consumes exactly {f.Materials.Count} "+f.Id);
 }
 Reject(()=>ForgeCatalog.Get("unknown.v99"),"unknown formula not reset");
+// Recipe.Materials generalizes past pairs (commons 2 / uncommons 3 / rares 4); exercised directly here
+// since the catalog itself still only fills the two-material tier.
+var triple = new Recipe("test.triple.v0", [Material.Iron, Material.Iron, Material.Herb], "test", "");
+var quad = new Recipe("test.quad.v0", [Material.Powder, Material.Powder, Material.Ether, Material.Ether], "test", "");
+var threeStock = new AlchemyState(); threeStock.Grant("t0",Material.Herb); threeStock.Grant("t1",Material.Iron); threeStock.Grant("t2",Material.Iron);
+Check(threeStock.CanCraft(triple),"a three-material recipe can craft regardless of grant order");
+var shortStock = new AlchemyState(); shortStock.Grant("s0",Material.Iron); shortStock.Grant("s1",Material.Herb);
+Check(!shortStock.CanCraft(triple),"a three-material recipe needs all three units, not just distinct types");
+var fourStock = new AlchemyState();
+for(int i=0;i<2;i++) fourStock.Grant($"f{i}",Material.Powder);
+for(int i=0;i<2;i++) fourStock.Grant($"e{i}",Material.Ether);
+Check(fourStock.CanCraft(quad),"a four-material recipe can require two of one type and two of another");
+fourStock.Grant("extra",Material.Ether);
+Check(fourStock.CanCraft(quad) && fourStock.Total==5,"surplus materials do not block a smaller requirement");
+Check(Recipes.FindAll([Material.Herb,Material.Iron,Material.Iron]).SequenceEqual(Recipes.FindAll([Material.Iron,Material.Herb,Material.Iron])),
+    "FindAll matches the material multiset regardless of order");
 // A layered map: rows 1..14 have three columns each, every point feeding all three of the next row.
 List<CutNode> Layered(Func<int,int,int> cost)
 {

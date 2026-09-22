@@ -4,21 +4,25 @@ namespace Alchemist.Core;
 
 public enum Material { Iron, Herb, Powder, Ether }
 public sealed record Harvest(string Id, MaterialChoice Material);
-public sealed record Recipe(string Id, Material First, Material Second, string Name, string Preview,
+// Materials is unordered and allows repeats (e.g. two Iron): recipes key on the material multiset, not on
+// slot position. Commons consume 2, uncommons 3, rares 4 (AGENTS.md 4.8 base grammar, extended past pairs).
+public sealed record Recipe(string Id, IReadOnlyList<Material> Materials, string Name, string Preview,
     string Role = "基礎強化", string Plan = "", string? FormulaId = null);
 
 public static class Recipes
 {
     // Curated M1 recipes cover all ten pairs with multiple build directions; full base x material grammar remains M3.
     public static readonly Recipe[] All = [
-        new("iron_guard.v1", Material.Iron, Material.Iron, "鍛鉄の護り", "1コスト / スキル / 自身\n16ブロック、1枚ドロー。強化後21ブロック。", "守りと循環", "大きく守りながら、切り札を引きに行く。"),
-        new("herbal_edge.v1", Material.Iron, Material.Herb, "薬刃", "1コスト / アタック / 敵1体\n12ダメージ、弱体2。強化後16ダメージ、弱体3。", "攻撃の準備", "弱体を付け、大剣や全体攻撃の火力を伸ばす。"),
-        new("blast.v1", Material.Powder, Material.Powder, "炸裂弾", "1コスト / アタック / 敵全体\n14ダメージ。強化後19。", "集団戦", "廃棄せず繰り返せる全体攻撃。"),
-        new("ether_lens.v1", Material.Ether, Material.Ether, "エーテルレンズ", "1コスト / スキル / 自身\n3枚ドロー、8ブロック。強化後12ブロック。", "守りと循環", "手札を増やし、パワーや切り札を早く引く。"),
-        new("herbal_guard.v1", Material.Herb, Material.Herb, "薬草の被膜", "1コスト / スキル / 自身\n12ブロック、敵全体に脱力2。強化後16ブロック。", "守りと循環", "敵全体の攻撃を弱め、毒が回る時間を作る。"),
-        ..ForgeCatalog.All.Select(f=>new Recipe(f.Id,f.First,f.Second,f.Name,f.Preview,f.Role,f.Plan,f.Id))];
-    public static IEnumerable<Recipe> FindAll(Material a, Material b) => All.Where(r =>
-        r.First == a && r.Second == b || r.First == b && r.Second == a);
+        new("iron_guard.v1", [Material.Iron, Material.Iron], "鍛鉄の護り", "1コスト / スキル / 自身\n16ブロック、1枚ドロー。強化後21ブロック。", "守りと循環", "大きく守りながら、切り札を引きに行く。"),
+        new("herbal_edge.v1", [Material.Iron, Material.Herb], "薬刃", "1コスト / アタック / 敵1体\n12ダメージ、弱体2。強化後16ダメージ、弱体3。", "攻撃の準備", "弱体を付け、大剣や全体攻撃の火力を伸ばす。"),
+        new("blast.v1", [Material.Powder, Material.Powder], "炸裂弾", "1コスト / アタック / 敵全体\n14ダメージ。強化後19。", "集団戦", "廃棄せず繰り返せる全体攻撃。"),
+        new("ether_lens.v1", [Material.Ether, Material.Ether], "エーテルレンズ", "1コスト / スキル / 自身\n3枚ドロー、8ブロック。強化後12ブロック。", "守りと循環", "手札を増やし、パワーや切り札を早く引く。"),
+        new("herbal_guard.v1", [Material.Herb, Material.Herb], "薬草の被膜", "1コスト / スキル / 自身\n12ブロック、敵全体に脱力2。強化後16ブロック。", "守りと循環", "敵全体の攻撃を弱め、毒が回る時間を作る。"),
+        ..ForgeCatalog.All.Select(f=>new Recipe(f.Id,f.Materials,f.Name,f.Preview,f.Role,f.Plan,f.Id))];
+    private static bool SameMultiset(IReadOnlyList<Material> a, IReadOnlyList<Material> b)
+        => a.Count == b.Count && a.OrderBy(m => m).SequenceEqual(b.OrderBy(m => m));
+    public static IEnumerable<Recipe> FindAll(IReadOnlyList<Material> materials) => All.Where(r => SameMultiset(r.Materials, materials));
+    public static IEnumerable<Recipe> FindAll(Material a, Material b) => FindAll([a, b]);
     public static Recipe? Find(Material a, Material b) => FindAll(a,b).FirstOrDefault();
     public static string Name(Material m) => m switch {
         Material.Iron => "鉄", Material.Herb => "薬草", Material.Powder => "火薬", Material.Ether => "エーテル", _ => throw new ArgumentOutOfRangeException(nameof(m)) };
@@ -134,7 +138,9 @@ public sealed class AlchemyState
     /// Unresolved receipts and reward slots both block spending, so materials cannot be burned while the
     /// player still owes a decision on what they are about to receive.
     public bool Settled => Pending.Count == 0 && Offers.Count == 0;
-    public bool CanCraft(Recipe r) => Settled && Counts[(int)r.First] >= (r.First == r.Second ? 2 : 1) && Counts[(int)r.Second] >= 1;
+    private bool HasMaterials(IReadOnlyList<Material> materials)
+        => materials.GroupBy(m => m).All(g => Counts[(int)g.Key] >= g.Count());
+    public bool CanCraft(Recipe r) => Settled && HasMaterials(r.Materials);
     public void Commit(Recipe r, string operation, Action addCard, Action rollbackCard)
     {
         if (Committed.Contains(operation)) return;
@@ -143,8 +149,7 @@ public sealed class AlchemyState
         try
         {
             addCard();
-            Counts[(int)r.First]--;
-            Counts[(int)r.Second]--;
+            foreach (var m in r.Materials) Counts[(int)m]--;
             Committed.Add(operation);
             Revision++;
         }
@@ -163,8 +168,7 @@ public sealed class AlchemyState
         try
         {
             await addCard();
-            Counts[(int)r.First]--;
-            Counts[(int)r.Second]--;
+            foreach (var m in r.Materials) Counts[(int)m]--;
             Committed.Add(operation);
             Revision++;
         }

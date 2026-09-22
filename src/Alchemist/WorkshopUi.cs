@@ -188,7 +188,7 @@ public static class WorkshopUi
     private static string MaterialSummary() => string.Join("\n", Enum.GetValues<Core.Material>()
         .Select(m => $"{Recipes.Name(m),-5}  {box!.Inventory.Counts[(int)m]} 個")
         .Concat(Enum.GetValues<RareMaterial>().Select(m=>$"{RareMaterials.Get(m).Name,-5}  {box!.Inventory.RareCounts[(int)m]} 個")));
-    private static string Missing(Recipe recipe) => string.Join("、", new[] { recipe.First,recipe.Second }
+    private static string Missing(Recipe recipe) => string.Join("、", recipe.Materials
         .GroupBy(m=>m).Select(g=>(Material:g.Key,Count:g.Count()-box!.Inventory.Counts[(int)g.Key]))
         .Where(x=>x.Count>0).Select(x=>$"{Recipes.Name(x.Material)} {x.Count}個"));
     private static CardModel CreatePreviewCard(Recipe recipe)
@@ -251,7 +251,7 @@ public static class WorkshopUi
             UpdateCardWhenReady(holder,PileType.None,CardPreviewMode.Normal);
         }
         bool canCraft = box!.Inventory.CanCraft(recipe);
-        Text($"{Recipes.Name(recipe.First)} ＋ {Recipes.Name(recipe.Second)}",18,wrapper,
+        Text(string.Join(" ＋ ", recipe.Materials.Select(Recipes.Name)),18,wrapper,
             canCraft ? new Color("f2d18b") : new Color("90989c"));
         if (!canCraft) Text("不足："+Missing(recipe),16,wrapper,new Color("d88b82"));
         else if (clickable) Text("選んで詳細を確認",16,wrapper,new Color("aebbc0"));
@@ -311,19 +311,23 @@ public static class WorkshopUi
         content!.AddChild(grid);
         foreach (var recipe in recipes) grid.AddChild(CardDisplay(recipe,0.62f,true));
     }
+    // Commons take 2 materials, uncommons 3, rares 4 (AlchemyState.Recipes); the slot row exposes all of
+    // them and a recipe only appears once the placed count exactly matches its material count.
+    private const int MinCraftSlots = 2;
+    private const int MaxCraftSlots = 4;
     private static void MaterialCrafting()
     {
         Text("素材から錬成",32,content,new Color("f2d18b"));
-        Text("素材を2個置くと、その組み合わせから作れるカードが表示されます。順番は問いません。",19);
+        Text($"素材を{MinCraftSlots}〜{MaxCraftSlots}個置くと、その組み合わせから作れるカードが表示されます。順番は問いません。",19);
         var slots=new HBoxContainer();slots.AddThemeConstantOverride("separation",18);content!.AddChild(slots);
-        for(int i=0;i<2;i++)
+        for(int i=0;i<MaxCraftSlots;i++)
         {
             int index=i;
             string label=i<craftInputs.Count ? Recipes.Name(craftInputs[i]) : "空きスロット";
             Button(label,()=>RemoveCraftMaterial(index),i>=craftInputs.Count,slots);
-            if(i==0) Text("＋",30,slots,new Color("f2d18b"));
+            if(i<MaxCraftSlots-1) Text("＋",30,slots,new Color("f2d18b"));
         }
-        Text("入れる素材を選ぶ（同じ素材を2個置くこともできます）",20);
+        Text($"入れる素材を選ぶ（同じ素材を複数個置くこともできます、最大{MaxCraftSlots}個）",20);
         var materials=new GridContainer { Columns=4,SizeFlagsHorizontal=Control.SizeFlags.ExpandFill };
         materials.AddThemeConstantOverride("h_separation",10);content.AddChild(materials);
         foreach(var material in Enum.GetValues<Core.Material>())
@@ -331,22 +335,22 @@ public static class WorkshopUi
             int selected=craftInputs.Count(x=>x==material);
             int owned=box!.Inventory.Counts[(int)material];
             Button($"{Recipes.Name(material)}\n所持 {owned} / 配置 {selected}",()=>AddCraftMaterial(material),
-                craftInputs.Count>=2 || selected>=owned,materials);
+                craftInputs.Count>=MaxCraftSlots || selected>=owned,materials);
         }
         if(craftInputs.Count==0) return;
         Button("素材をすべて戻す",()=>{craftInputs.Clear();Refresh();});
-        if(craftInputs.Count<2)
+        if(craftInputs.Count<MinCraftSlots)
         {
             Text("もう1個素材を置いてください。",22,content,new Color("aebbc0"));
             return;
         }
-        var recipes=Recipes.FindAll(craftInputs[0],craftInputs[1]).ToArray();
-        Text($"{Recipes.Name(craftInputs[0])} ＋ {Recipes.Name(craftInputs[1])} から作れるカード",26,content,new Color("f2d18b"));
+        var recipes=Recipes.FindAll(craftInputs).ToArray();
+        Text($"{string.Join(" ＋ ", craftInputs.Select(Recipes.Name))} から作れるカード",26,content,new Color("f2d18b"));
         RecipeGallery(recipes);
     }
     private static void AddCraftMaterial(Core.Material material)
     {
-        if(craftInputs.Count>=2 || craftInputs.Count(x=>x==material)>=box!.Inventory.Counts[(int)material]) return;
+        if(craftInputs.Count>=MaxCraftSlots || craftInputs.Count(x=>x==material)>=box!.Inventory.Counts[(int)material]) return;
         craftInputs.Add(material);Refresh();
     }
     private static void RemoveCraftMaterial(int index)
@@ -368,7 +372,7 @@ public static class WorkshopUi
         Text($"{recipe.Name}　【{recipe.Role}】",28,details,new Color("f2d18b"));
         Text(recipe.Plan,20,details,new Color("aebbc0"));
         Text(recipe.Preview,21,details);
-        Text($"必要素材：{Recipes.Name(recipe.First)} ＋ {Recipes.Name(recipe.Second)}",22,details);
+        Text($"必要素材：{string.Join(" ＋ ", recipe.Materials.Select(Recipes.Name))}",22,details);
         if (!canCraft) Text("不足："+Missing(recipe),20,details,new Color("d88b82"));
         if (workshop) Button(canCraft ? "このカードを作る" : "素材が足りません",()=>_ = Craft(recipe),!canCraft,details);
         else Text("錬成はマップ上の工房で行います。",20,details,new Color("aebbc0"));
