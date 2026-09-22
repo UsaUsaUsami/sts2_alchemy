@@ -4,6 +4,7 @@ using HarmonyLib;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Entities.UI;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes;
 using MegaCrit.Sts2.Core.Nodes.Cards;
@@ -29,6 +30,7 @@ public static class WorkshopUi
     private static bool workshop;
     private static bool mapWorkshop;
     private static bool upgradeMode;
+    private static bool rareMode;
     private static string status = "";
     private static bool craftableOnly;
     private static bool browsing;
@@ -36,6 +38,7 @@ public static class WorkshopUi
     private static TaskCompletionSource<bool>? offerResult;
     private static Recipe? selectedRecipe;
     private static CardModel? selectedUpgrade;
+    private static ForgedCard? selectedRareCard;
     private static readonly List<CardModel> previewCards = [];
     public static bool IsOpen => GodotObject.IsInstanceValid(overlay);
     public static bool IsBusy => busy;
@@ -82,6 +85,7 @@ public static class WorkshopUi
         browsing = false;
         selectedRecipe = null;
         selectedUpgrade = null;
+        selectedRareCard = null;
         status = "";
         overlay = new Control { MouseFilter = Control.MouseFilterEnum.Stop };
         overlay.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
@@ -142,6 +146,7 @@ public static class WorkshopUi
         Open();
         workshop=true;
         upgradeMode=false;
+        rareMode=false;
         craftableOnly=false;
         Refresh();
     }
@@ -175,7 +180,8 @@ public static class WorkshopUi
         parent.AddChild(line);
     }
     private static string MaterialSummary() => string.Join("\n", Enum.GetValues<Core.Material>()
-        .Select(m => $"{Recipes.Name(m),-5}  {box!.Inventory.Counts[(int)m]} 個"));
+        .Select(m => $"{Recipes.Name(m),-5}  {box!.Inventory.Counts[(int)m]} 個")
+        .Concat(Enum.GetValues<RareMaterial>().Select(m=>$"{RareMaterials.Get(m).Name,-5}  {box!.Inventory.RareCounts[(int)m]} 個")));
     private static string Missing(Recipe recipe) => string.Join("、", new[] { recipe.First,recipe.Second }
         .GroupBy(m=>m).Select(g=>(Material:g.Key,Count:g.Count()-box!.Inventory.Counts[(int)g.Key]))
         .Where(x=>x.Count>0).Select(x=>$"{Recipes.Name(x.Material)} {x.Count}個"));
@@ -208,6 +214,23 @@ public static class WorkshopUi
         holder.SetClickable(clickable);
         return holder;
     }
+    private static void UpdateCardWhenReady(NGridCardHolder holder,PileType pile,CardPreviewMode preview)
+    {
+        var cardNode=holder.CardNode!;
+        cardNode.Visibility=ModelVisibility.Visible;
+        cardNode.UpdateVisuals(pile,preview);
+        // NCard scenes come from a pool. On the first frame some nested labels are not ready yet and keep
+        // the scene's diagnostic placeholder until another refresh (upgrade/reload). Refresh once after the
+        // node has entered the tree so every recipe gets its real description immediately.
+        Callable.From(()=>
+        {
+            if(GodotObject.IsInstanceValid(cardNode))
+            {
+                cardNode.Visibility=ModelVisibility.Visible;
+                cardNode.UpdateVisuals(pile,preview);
+            }
+        }).CallDeferred();
+    }
     private static Control CardDisplay(Recipe recipe, float scale, bool clickable)
     {
         var wrapper = new VBoxContainer { CustomMinimumSize = clickable ? new(235,350) : new(390,510) };
@@ -219,7 +242,7 @@ public static class WorkshopUi
         {
             if (clickable)
                 holder.Connect(NCardHolder.SignalName.Pressed, Callable.From<NCardHolder>(_=> { selectedRecipe = recipe; Refresh(); }));
-            holder.CardNode!.UpdateVisuals(PileType.None, CardPreviewMode.Normal);
+            UpdateCardWhenReady(holder,PileType.None,CardPreviewMode.Normal);
         }
         bool canCraft = box!.Inventory.CanCraft(recipe);
         Text($"{Recipes.Name(recipe.First)} ＋ {Recipes.Name(recipe.Second)}",18,wrapper,
@@ -252,7 +275,7 @@ public static class WorkshopUi
         if(holder is not null)
         {
             if(clickable) holder.Connect(NCardHolder.SignalName.Pressed,Callable.From<NCardHolder>(_=>{selectedUpgrade=card;Refresh();}));
-            holder.CardNode!.UpdateVisuals(PileType.Deck,upgraded?CardPreviewMode.Upgrade:CardPreviewMode.Normal);
+            UpdateCardWhenReady(holder,PileType.Deck,upgraded?CardPreviewMode.Upgrade:CardPreviewMode.Normal);
         }
         if(clickable)
         {
@@ -328,6 +351,49 @@ public static class WorkshopUi
         Button(can?"このカードを強化する":"強化できません",()=>UpgradeCard(card),!can,actions);
         Button("一覧へ戻る",()=>{selectedUpgrade=null;Refresh();},parent:actions);
     }
+    private static void RareGallery()
+    {
+        var cards=box!.Owner.Deck.Cards.OfType<ForgedCard>().Where(c=>c.AlchemistRareModifier.Length==0).ToArray();
+        Text("希少加工する錬成カードを選ぶ",32,content,new Color("d8b4ff"));
+        Text("希少素材を1個消費し、カードに解除不能の特殊効果を1つ刻みます。1枚につき1回までです。",19);
+        var grid=new GridContainer { Columns=3,SizeFlagsHorizontal=Control.SizeFlags.ExpandFill };
+        grid.AddThemeConstantOverride("h_separation",10);grid.AddThemeConstantOverride("v_separation",16);
+        content!.AddChild(grid);
+        foreach(var card in cards) grid.AddChild(RareCardDisplay(card));
+        if(cards.Length==0) Text("加工できる未加工の錬成カードがありません。",22);
+    }
+    private static Control RareCardDisplay(ForgedCard card)
+    {
+        var wrapper=new VBoxContainer { CustomMinimumSize=new(235,340),Alignment=BoxContainer.AlignmentMode.Center };
+        var stage=new Control { CustomMinimumSize=new(225,285) };wrapper.AddChild(stage);
+        var holder=MountCard(stage,card,0.62f,true);
+        if(holder is not null)
+        {
+            holder.Connect(NCardHolder.SignalName.Pressed,Callable.From<NCardHolder>(_=>{selectedRareCard=card;Refresh();}));
+            UpdateCardWhenReady(holder,PileType.Deck,CardPreviewMode.Normal);
+        }
+        Text("選んで希少効果を確認",16,wrapper,new Color("d8b4ff"));
+        return wrapper;
+    }
+    private static void RareConfirmation(ForgedCard card)
+    {
+        bool valid=box!.Owner.Deck.Cards.Contains(card) && card.AlchemistRareModifier.Length==0;
+        Text("刻む希少効果を選ぶ",32,content,new Color("d8b4ff"));
+        Text($"対象：{card.Title}\n加工後は取り外し・上書きできません。",21);
+        foreach(var rare in RareMaterials.All)
+        {
+            bool meaningful=rare.Material switch
+            {
+                RareMaterial.Mercury => !card.Keywords.Contains(CardKeyword.Retain),
+                RareMaterial.VoidCrystal => card.Formula.Cost>0 || !card.Keywords.Contains(CardKeyword.Exhaust),
+                _ => true
+            };
+            bool can=valid && meaningful && box.Inventory.CanApplyRare(rare.Material);
+            string owned=$"所持 {box.Inventory.RareCounts[(int)rare.Material]}個";
+            Button($"{rare.Name}【{rare.EffectName}】　{rare.Description}\n{owned}",()=>ApplyRare(card,rare),!can);
+        }
+        Button("カード一覧へ戻る",()=>{selectedRareCard=null;Refresh();});
+    }
     private static void Refresh()
     {
         if (box is null || content is null || sidebar is null) return;
@@ -348,10 +414,10 @@ public static class WorkshopUi
         if (box.Inventory.Pending.Count > 0 && !CombatManager.Instance.IsInProgress)
         {
             Text("未受領素材",32,content,new Color("f2d18b"));
-            Text($"{Recipes.Name(box.Inventory.Pending[0].Material)}　（残り {box.Inventory.Pending.Count}個）\n次の部屋へ進む前に受け取りを決めてください。",23);
+            Text($"{RareMaterials.Name(box.Inventory.Pending[0].Material)}　（残り {box.Inventory.Pending.Count}個）\n次の部屋へ進む前に受け取りを決めてください。",23);
             if (box.Inventory.Total < AlchemyState.Capacity) Button("受け取る",()=>Resolve(true));
-            else foreach (var material in Enum.GetValues<Core.Material>().Where(m=>box.Inventory.Counts[(int)m]>0))
-                Button($"{Recipes.Name(material)}を1個手放して交換",()=>Resolve(true,material));
+            else foreach (var material in OwnedMaterials())
+                Button($"{RareMaterials.Name(material)}を1個手放して交換",()=>Resolve(true,material));
             Button("この素材の受け取りを辞退",()=>Resolve(false));
             return;
         }
@@ -363,7 +429,7 @@ public static class WorkshopUi
             if (box.Inventory.Total >= AlchemyState.Capacity)
                 Text("素材ボックスが満杯です。受け取ると、交換か辞退を続けて選びます。",20,content,new Color("d8c082"));
             foreach (var material in offer.Candidates)
-                Button($"{Recipes.Name(material)}　—　{MaterialHint(material)}",()=>TakeOffer(offer.Id,material));
+                Button($"{RareMaterials.Name(material)}　—　{MaterialHint(material)}",()=>TakeOffer(offer.Id,material));
             Button("この報酬枠を辞退する",()=>DeclineOffer(offer.Id));
             Text("辞退した枠は戻りません。次の部屋へ進む前に決めてください。",18,content,new Color("aebbc0"));
             return;
@@ -371,9 +437,12 @@ public static class WorkshopUi
         if (workshop)
         {
             var modes=new HBoxContainer(); sidebar.AddChild(modes);
-            Button("カード錬成",()=>{upgradeMode=false;selectedUpgrade=null;Refresh();},!upgradeMode,modes);
-            Button("既存カード強化",()=>{upgradeMode=true;selectedRecipe=null;Refresh();},upgradeMode,modes);
-            if(upgradeMode && selectedUpgrade is not null) UpgradeConfirmation(selectedUpgrade);
+            Button("カード錬成",()=>{upgradeMode=false;rareMode=false;selectedUpgrade=null;selectedRareCard=null;Refresh();},!upgradeMode&&!rareMode,modes);
+            Button("既存カード強化",()=>{upgradeMode=true;rareMode=false;selectedRecipe=null;selectedRareCard=null;Refresh();},upgradeMode,modes);
+            Button("希少加工",()=>{upgradeMode=false;rareMode=true;selectedRecipe=null;selectedUpgrade=null;Refresh();},rareMode,modes);
+            if(rareMode && selectedRareCard is not null) RareConfirmation(selectedRareCard);
+            else if(rareMode) RareGallery();
+            else if(upgradeMode && selectedUpgrade is not null) UpgradeConfirmation(selectedUpgrade);
             else if(upgradeMode) UpgradeGallery();
             else if (selectedRecipe is not null) Confirmation(selectedRecipe);
             else RecipeBrowser("完成カードを選ぶ","カードを選ぶと大きく表示し、効果を確認してから錬成できます。");
@@ -389,26 +458,31 @@ public static class WorkshopUi
         else
         {
             Text("素材の使い道",32,content,new Color("f2d18b"));
-            Text("敵を倒した時の素材相に応じて素材を獲得します。現在・次・次々の相は、戦闘中に左上のボタンで確認できます。",22);
+            Text("《炉の起動》でカードを廃棄した時の素材相に応じて素材を獲得します。現在・次・次々の相は、戦闘中に左上のボタンで確認できます。",22);
             Text("工房はマップ上の専用ノードから利用できます。",20);
             Button("レシピ一覧を見る",()=>{browsing=true;craftableOnly=false;Refresh();},parent:sidebar);
             Button("閉じる",Close,parent:sidebar);
         }
     }
-    private static void Resolve(bool accept, Core.Material? exchange = null)
+    private static IEnumerable<MaterialChoice> OwnedMaterials() =>
+        Enum.GetValues<Core.Material>().Select(MaterialChoice.Normal).Where(m=>box!.Inventory.Count(m)>0)
+        .Concat(Enum.GetValues<RareMaterial>().Select(MaterialChoice.Rare).Where(m=>box!.Inventory.Count(m)>0));
+    private static void Resolve(bool accept, MaterialChoice? exchange = null)
     {
         box!.Inventory.Resolve(accept,exchange);
         Refresh();
     }
-    private static string MaterialHint(Core.Material material) => material switch
+    private static string MaterialHint(MaterialChoice material) => material.Class == MaterialClass.Rare
+        ? RareMaterials.Get(material.RareMaterial).Description
+        : material.NormalMaterial switch
     {
         Core.Material.Iron => "物理・防御", Core.Material.Herb => "毒・弱体",
         Core.Material.Powder => "高火力・全体", _ => "ドロー・循環"
     };
-    private static void TakeOffer(string id, Core.Material material)
+    private static void TakeOffer(string id, MaterialChoice material)
     {
         if (box is null || busy) return;
-        try { box.Inventory.TakeOffer(id,material); status = $"{Recipes.Name(material)}を受け取りました。"; }
+        try { box.Inventory.TakeOffer(id,material); status = $"{RareMaterials.Name(material)}を受け取りました。"; }
         catch (Exception ex) { status = $"受け取れませんでした：{ex.Message}"; GD.PushError(ex.ToString()); }
         FinishOffer(id);
     }
@@ -468,6 +542,22 @@ public static class WorkshopUi
             selectedUpgrade=null;
         }
         catch(Exception ex) { status=$"強化できませんでした：{ex.Message}"; GD.PushError(ex.ToString()); }
+        finally { busy=false;if(IsOpen)Refresh(); }
+    }
+    private static void ApplyRare(ForgedCard card,RareMaterialDefinition rare)
+    {
+        if(box is null || busy || !workshop || !CanEnterWorkshop(box) || !box.Owner.Deck.Cards.Contains(card)
+            || card.AlchemistRareModifier.Length>0) return;
+        busy=true;
+        string before=card.AlchemistRareModifier;
+        try
+        {
+            box.Inventory.CommitRare(rare.Material,Guid.NewGuid().ToString("N"),
+                ()=>card.AlchemistRareModifier=rare.Id,()=>card.AlchemistRareModifier=before);
+            status=$"{card.Title}に{rare.Name}の「{rare.EffectName}」を刻みました。";
+            selectedRareCard=null;
+        }
+        catch(Exception ex) { status=$"希少加工できませんでした：{ex.Message}";GD.PushError(ex.ToString()); }
         finally { busy=false;if(IsOpen)Refresh(); }
     }
     private static CardModel Canonical(Recipe recipe) => recipe.Id switch {

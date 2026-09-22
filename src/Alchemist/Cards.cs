@@ -26,7 +26,7 @@ public abstract class AlchemyCard(int cost, CardType type, CardRarity rarity, Ta
 public sealed class PortableFurnace() : AlchemyCard(1, CardType.Power, CardRarity.Basic, TargetType.Self)
 {
     public override List<(string, string)> Localization => new CardLoc("携帯錬金炉",
-        "この戦闘で初めて使用した時、[gold]炉の起動[/gold]を2枚手札に加える。\n炉の起動は戦闘全体で2回まで。恒久素材は生成しない。");
+        "この戦闘で初めて使用した時、[gold]炉の起動[/gold]を2枚手札に加える。\n炉の起動は戦闘全体で2回まで。廃棄した時の素材相を採取する。");
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
     {
         var combat = Owner.GetRelic<MaterialBox>()?.Combat;
@@ -42,16 +42,19 @@ public sealed class FurnaceActivation() : AlchemyCard(0, CardType.Skill, CardRar
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust, CardKeyword.Retain];
     public override List<(string, string)> Localization => new CardLoc("炉の起動",
-        "手札1枚を廃棄する。現在相の効果を得る。\n鉄：4ブロック。薬草：敵全体に脱力1。\n火薬：敵全体に3ダメージ。エーテル：1枚ドロー。\n戦闘全体で2回まで。素材は生成しない。");
+        "手札1枚を廃棄し、現在相の素材を1個得る。さらに現在相の効果を得る。\n鉄：4ブロック。薬草：敵全体に脱力1。\n火薬：敵全体に3ダメージ。エーテル：1枚ドロー。\n戦闘全体で2回まで。");
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
     {
-        var combat = Owner.GetRelic<MaterialBox>()?.Combat;
+        var box = Owner.GetRelic<MaterialBox>();
+        var combat = box?.Combat;
         if (combat is null || !combat.FurnaceActive || combat.FurnaceUsed >= 2) return;
         var card = (await CardSelectCmd.FromHand(choiceContext, Owner,
             new CardSelectorPrefs(CardSelectorPrefs.ExhaustSelectionPrompt, 1), null, this)).FirstOrDefault();
-        if (card is null || !combat.UseFurnace()) return;
+        if (card is null) return;
         var phase = combat.Phase;
         await CardCmd.Exhaust(choiceContext, card);
+        if (!combat.UseFurnace()) return;
+        box!.GrantFromFurnace(phase);
         switch (phase)
         {
             case Material.Iron: await CreatureCmd.GainBlock(Owner.Creature, 4, ValueProp.Unpowered, cardPlay); break;

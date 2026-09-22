@@ -3,23 +3,19 @@ using Alchemist.Core;
 int passed = 0;
 void Check(bool ok, string name) { if (!ok) throw new Exception(name); passed++; Console.WriteLine($"PASS {name}"); }
 void Reject(Action action, string name) { try { action(); } catch (InvalidOperationException) { Check(true,name); return; } catch (InvalidDataException) { Check(true,name); return; } catch (ArgumentException) { Check(true,name); return; } throw new Exception(name); }
-var combat = new HarvestCombat([1,2,3,4], 3);
+var combat = new HarvestCombat();
 Check(combat.Phase == Material.Iron,"turn one iron");
 foreach (int turn in Enumerable.Range(2,4)) { combat.BeginTurn(turn); Check(combat.Phase == (Material)((turn-1)%4),$"phase turn {turn}"); }
 combat.BeginTurn(5); combat.BeginTurn(3);
 Check(combat.Turn == 5,"duplicate and old turn ignored");
 combat.BeginTurn(6);
-Check(combat.Kill(1) == Material.Herb && combat.Kill(2) == Material.Herb,"simultaneous/enemy-turn kills share phase");
-Check(combat.Kill(1) is null,"death redelivery/revival cannot harvest twice");
-Check(combat.Kill(99) is null,"summoned enemy excluded");
-Check(combat.Kill(3) == Material.Herb && combat.Kill(4) is null,"harvest cap enforced");
 Check(!combat.UseFurnace(),"inactive furnace denied");
 combat.FurnaceActive = true;
 Check(combat.UseFurnace() && combat.UseFurnace() && !combat.UseFurnace(),"furnace shared cap two");
 combat.FurnaceActive = true;
 Check(!combat.UseFurnace(),"reapplication cannot reset furnace");
-Check(new HarvestCombat([1],2).FurnaceUsed == 0,"new combat resets furnace");
-var continuous = new HarvestCombat([1],2,Material.Powder);
+Check(new HarvestCombat().FurnaceUsed == 0,"new combat resets furnace");
+var continuous = new HarvestCombat(Material.Powder);
 Check(continuous.Phase==Material.Powder,"combat starts from saved material");
 continuous.BeginTurn(2);
 Check(continuous.Phase==Material.Ether && continuous.NextPhase==Material.Iron,"continuous phase advances and wraps");
@@ -72,22 +68,27 @@ Check(reload.Pending.Count==2 && !reload.CanCraft(recipe),"pending saved and blo
 // Elite and boss reward slots (AGENTS.md 4.4), counted apart from the kill cap.
 Check(MaterialOffers.EliteSlots==1 && MaterialOffers.BossSlots==2 && MaterialOffers.CandidateCount==3,
     "one elite slot, two boss slots, three candidates each");
-var eliteRoll=MaterialOffers.Roll(9876543210,"12:4:reward0");
-Check(eliteRoll.Length==3 && eliteRoll.Distinct().Count()==3 && eliteRoll.All(Enum.IsDefined),
+var eliteRoll=MaterialOffers.RollMixed(9876543210,"12:4:reward0");
+Check(eliteRoll.Length==3 && eliteRoll.Distinct().Count()==3 && eliteRoll.All(m=>m.IsValid),
     "a slot offers three distinct materials");
-Check(eliteRoll.SequenceEqual(MaterialOffers.Roll(9876543210,"12:4:reward0")),"same seed and slot reroll identically");
-Check(!eliteRoll.SequenceEqual(MaterialOffers.Roll(9876543211,"12:4:reward0"))
-   || !eliteRoll.SequenceEqual(MaterialOffers.Roll(9876543210,"12:4:reward1")),"seed and slot both affect the roll");
+Check(eliteRoll.SequenceEqual(MaterialOffers.RollMixed(9876543210,"12:4:reward0")),"same seed and slot reroll identically");
+Check(!eliteRoll.SequenceEqual(MaterialOffers.RollMixed(9876543211,"12:4:reward0"))
+   || !eliteRoll.SequenceEqual(MaterialOffers.RollMixed(9876543210,"12:4:reward1")),"seed and slot both affect the roll");
 Check(Enumerable.Range(0,400).SelectMany(i=>MaterialOffers.Roll((ulong)i,"r")).Distinct().Count()==4,
     "every material can appear across seeds");
+var rareRoll=MaterialOffers.RollRare(123,"boss:rare");
+Check(rareRoll.Length==3 && rareRoll.All(x=>x.Class==MaterialClass.Rare) && rareRoll.Distinct().Count()==3,
+    "boss guaranteed slot contains three distinct rare materials");
+Check(Enumerable.Range(0,400).Count(i=>MaterialOffers.RollMixed((ulong)i,"elite").Any(x=>x.Class==MaterialClass.Rare)) is >70 and <130,
+    "mixed slots include one rare candidate at about twenty-five percent");
 var offers=new AlchemyState();
 Check(offers.Offer("boss0",eliteRoll) && !offers.Offer("boss0",eliteRoll),"a slot is recorded once");
 Reject(()=>offers.Offer("bad",[Material.Iron,Material.Iron,Material.Herb]),"duplicate candidates rejected");
 Reject(()=>offers.Offer("bad",[Material.Iron,Material.Herb]),"wrong candidate count rejected");
 Check(!offers.Settled && !offers.CanCraft(Recipes.All[0]),"an open slot blocks crafting");
-Reject(()=>offers.TakeOffer("boss0",Enum.GetValues<Material>().Except(eliteRoll).Single()),"material outside the candidates rejected");
+Reject(()=>offers.TakeOffer("boss0",MaterialChoice.Rare(RareMaterial.Stardust)),"material outside the candidates rejected");
 offers.TakeOffer("boss0",eliteRoll[1]);
-Check(offers.Counts[(int)eliteRoll[1]]==1 && offers.Total==1 && offers.Settled,"taking a slot grants exactly one material");
+Check(offers.Count(eliteRoll[1])==1 && offers.Total==1 && offers.Settled,"taking a slot grants exactly one material");
 Reject(()=>offers.TakeOffer("boss0",eliteRoll[0]),"a slot cannot be taken twice");
 Check(!offers.Offer("boss0",eliteRoll),"a resolved slot is never re-offered");
 offers.Offer("boss1",eliteRoll); offers.DeclineOffer("boss1");
@@ -98,8 +99,8 @@ for(int i=0;i<10;i++) fullBox.Grant($"f{i}",Material.Iron);
 fullBox.Offer("eliteFull",eliteRoll); fullBox.TakeOffer("eliteFull",eliteRoll[0]);
 Check(fullBox.Total==10 && fullBox.Pending.Count==1 && fullBox.Offers.Count==0,
     "a full box defers the chosen material to the shared receipt path");
-fullBox.Resolve(true,Material.Iron);
-Check(fullBox.Counts[(int)eliteRoll[0]]==(eliteRoll[0]==Material.Iron?10:1) && fullBox.Settled,"deferred choice resolves by exchange");
+fullBox.Resolve(true,MaterialChoice.Normal(Material.Iron));
+Check(fullBox.Count(eliteRoll[0])==(eliteRoll[0]==MaterialChoice.Normal(Material.Iron)?10:1) && fullBox.Settled,"deferred choice resolves by exchange");
 var savedOffers=new AlchemyState();
 savedOffers.Offer("keep0",eliteRoll); savedOffers.Offer("keep1",MaterialOffers.Roll(7,"keep1"));
 var reloadedOffers=AlchemyState.Load(savedOffers.Save());
@@ -109,8 +110,15 @@ Check(!reloadedOffers.Offer("keep0",eliteRoll),"reloaded slots are not re-offere
 var migrated=AlchemyState.Load("{\"Schema\":1,\"Counts\":[1,0,0,0]}");
 Check(migrated.Schema==AlchemyState.CurrentSchema && migrated.Offers.Count==0 && migrated.Total==1,
     "schema 1 saves migrate without losing materials");
+var migratedOffer=AlchemyState.Load("{\"Schema\":2,\"Offers\":[{\"Id\":\"x\",\"Candidates\":[0,1,2]}]}");
+Check(migratedOffer.Offers.Single().Candidates.All(x=>x.Class==MaterialClass.Normal),"schema 2 offers migrate to typed candidates");
 Reject(()=>AlchemyState.Load("{\"Schema\":2,\"Offers\":[{\"Id\":\"x\",\"Candidates\":[0,0,1]}]}"),"corrupt candidates rejected");
 Reject(()=>AlchemyState.Load("{\"Schema\":2,\"Received\":[\"x\"],\"Offers\":[{\"Id\":\"x\",\"Candidates\":[0,1,2]}]}"),"slot both received and open rejected");
+var rareStock=new AlchemyState();rareStock.GrantRare("rare",RareMaterial.Stardust);
+string applied="";
+rareStock.CommitRare(RareMaterial.Stardust,"apply",()=>applied="rare.stardust",()=>applied="");
+Check(applied=="rare.stardust" && rareStock.RareCounts[(int)RareMaterial.Stardust]==0,"rare processing consumes exactly one material");
+Reject(()=>rareStock.CommitRare(RareMaterial.Stardust,"again",()=>applied="bad",()=>applied="rare.stardust"),"missing rare material is rejected");
 Check(Recipes.All.Length==28 && Recipes.All.Select(r=>r.Id).Distinct().Count()==28,"twenty-eight stable recipe ids");
 foreach(var a in Enum.GetValues<Material>()) foreach(var b in Enum.GetValues<Material>())
 {
@@ -163,7 +171,7 @@ Check(guaranteed.Count>0 && guaranteed.All(p=>p.Row>=WorkshopPlanner.EarliestRow
 int midEnd=WorkshopPlanner.MidBandEndRow(15);
 Check(Routes(plainGraph,new(0,0)).All(route=>route.Any(p=>guaranteed.Contains(p) && p.Row<=midEnd))
    && Routes(plainGraph,new(0,0)).All(route=>route.Any(p=>guaranteed.Contains(p) && p.Row>midEnd)),"every route meets a mid and a late workshop");
-Check(WorkshopPlanner.PerAct is >=1 and <=2,"one to two workshops per act");
+Check(WorkshopPlanner.PerAct==2,"two workshop bands per act");
 // Rows 6 and 11 hold a merchant in column 1; the cut must route around it, never through it.
 var blockedGraph=Layered((col,row)=>col==1 && row is 6 or 11 ? WorkshopCut.Blocked : 1);
 var aroundBlocked=WorkshopPlanner.SelectGuaranteed(blockedGraph,new(0,0),new(0,15),15).Coords;

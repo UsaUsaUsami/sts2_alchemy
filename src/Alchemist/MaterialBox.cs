@@ -30,16 +30,14 @@ public sealed class MaterialBox : CustomRelicModel
     public const string RewardLocKey = "materialReward";
     public const string RewardIconPath = "res://images/relics/burning_blood.png";
     public override List<(string,string)> Localization => new RelicLoc("素材ボックス",
-        "鉄→薬草→火薬→エーテルの順に素材相が循環する。戦闘開始時の敵を倒すと現在相の素材を得る。\n容量10。撃破採取は通常戦2個、エリート3個、ボス4個まで。\nこれとは別に、エリートの報酬で1枠、ボスの報酬で2枠、3候補から素材を1個選べる。\n画面左の「素材・工房」から確認する。", "倒す時機が、次の一枚を決める。",
+        "鉄→薬草→火薬→エーテルの順に素材相が循環する。[gold]炉の起動[/gold]でカードを廃棄すると現在相の素材を1個得る。\n炉の起動は戦闘全体で2回まで。容量10。\nエリート報酬は1枠、ボス報酬は2枠。ボスの片方は希少素材確定。希少素材は工房で錬成カードへ恒久加工できる。\n画面左の「素材・工房」から確認する。", "廃棄する時機が、次の一枚を決める。",
         (RewardLocKey, "素材を選ぶ"));
     [SavedProperty]
     public string AlchemistState { get => Inventory.Save(); set => state = AlchemyState.Load(value); }
     protected override void AfterCloned() { base.AfterCloned(); state = null; Combat = null; }
     public override Task BeforeCombatStart()
     {
-        var cs = Owner.Creature.CombatState!;
-        int cap = cs.Encounter?.RoomType switch { RoomType.Elite => 3, RoomType.Boss => 4, _ => 2 };
-        Combat = new(cs.Enemies.Where(e => e.CombatId.HasValue).Select(e => e.CombatId!.Value), cap, Inventory.NextCombatMaterial);
+        Combat = new(Inventory.NextCombatMaterial);
         return Task.CompletedTask;
     }
     public override Task BeforeSideTurnStart(PlayerChoiceContext context, CombatSide side, IReadOnlyList<Creature> participants, ICombatState cs)
@@ -47,14 +45,12 @@ public sealed class MaterialBox : CustomRelicModel
         if (side == CombatSide.Player) Combat?.BeginTurn(cs.RoundNumber);
         return Task.CompletedTask;
     }
-    public override Task AfterDeath(PlayerChoiceContext context, Creature creature, bool wasRemovalPrevented, float length)
+    public bool GrantFromFurnace(Material material)
     {
-        if (!wasRemovalPrevented && creature.IsDead && creature.CombatId is uint id && Combat?.Kill(id) is Material material)
-        {
-            Inventory.Grant($"{Owner.RunState.TotalFloor}:{Owner.RunState.CurrentRoom?.Id}:{id}", material);
-            InvokeDisplayAmountChanged();
-        }
-        return Task.CompletedTask;
+        if (Combat is null || Combat.FurnaceUsed is < 1 or > 2) return false;
+        bool granted = Inventory.Grant($"{Owner.RunState.TotalFloor}:{Owner.RunState.CurrentRoom?.Id}:furnace{Combat.FurnaceUsed}", material);
+        if (granted) InvokeDisplayAmountChanged();
+        return granted;
     }
     public override Task AfterCombatEnd(CombatRoom room)
     {
@@ -66,9 +62,8 @@ public sealed class MaterialBox : CustomRelicModel
         Combat = null;
         return Task.CompletedTask;
     }
-    // AGENTS.md 4.4: elites and bosses often field one creature, so the kill cap alone cannot fill their
-    // quota. These slots are counted separately from the kill cap and never replace the normal gold,
-    // card, relic or potion rewards.
+    // These slots are additional to furnace harvesting and never replace the normal gold, card, relic
+    // or potion rewards.
     private string OfferId(AbstractRoom room, int slot) => $"{Owner.RunState.TotalFloor}:{room.Id}:reward{slot}";
     public override bool TryModifyRewards(Player player, List<Reward> rewards, AbstractRoom? room)
     {
@@ -85,7 +80,13 @@ public sealed class MaterialBox : CustomRelicModel
             string id = OfferId(room, slot);
             // Already taken or declined: a re-entered rewards screen must not offer the slot again.
             if (Inventory.Received.Contains(id)) continue;
-            if (!Inventory.HasOffer(id)) Inventory.Offer(id, MaterialOffers.Roll(Owner.RunState.Rng.Seed, id));
+            if (!Inventory.HasOffer(id))
+            {
+                var candidates = room.RoomType == RoomType.Boss && slot == 1
+                    ? MaterialOffers.RollRare(Owner.RunState.Rng.Seed,id)
+                    : MaterialOffers.RollMixed(Owner.RunState.Rng.Seed,id);
+                Inventory.Offer(id,candidates);
+            }
             if (rewards.OfType<MaterialReward>().Any(r => r.OfferId == id)) continue;
             rewards.Add(new MaterialReward(player, this, id));
             modified = true;

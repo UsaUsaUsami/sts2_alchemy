@@ -25,7 +25,7 @@ public sealed class AlchemistCharacter : PlaceholderCharacterModel
         ModelDb.Card<PortableFurnace>()];
     public override IReadOnlyList<RelicModel> StartingRelics => [ModelDb.Relic<MaterialBox>()];
     public override List<(string, string)> Localization => new CharacterLoc(
-        "錬金術師", "錬金術師", "敵を倒す時機を見極め、素材を採取する。\n工房で素材をカードへ錬成する旅人。\n【試作版：外見は仮】",
+        "錬金術師", "錬金術師", "カードを廃棄する時機を見極め、素材を採取する。\n工房で素材をカードへ錬成する旅人。\n【試作版：外見は仮】",
         "彼ら", "彼ら", "彼らの", "彼らの", "薬草と鉄", "次の相へ。", "炉の火が消えた。", "まだ火は残っている。", "次の工房に備えよう。", "錬金術師のカード", "錬金術師のカードを使う。");
 }
 

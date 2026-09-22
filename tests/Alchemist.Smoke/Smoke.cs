@@ -16,9 +16,11 @@ using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Models.Encounters;
 using MegaCrit.Sts2.Core.Nodes;
+using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Entities.UI;
 using MegaCrit.Sts2.Core.Saves;
 using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.Map;
@@ -29,6 +31,8 @@ using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Nodes.Rewards;
 using MegaCrit.Sts2.Core.Nodes.Screens;
 using MegaCrit.Sts2.Core.Nodes.Screens.Overlays;
+using MegaCrit.Sts2.Core.TestSupport;
+using MegaCrit.Sts2.addons.mega_text;
 
 [ModInitializer(nameof(Initialize))]
 public static class Smoke
@@ -190,9 +194,10 @@ public static class Smoke
             var box=player.GetRelic<MaterialBox>()!;
             await Until(()=>box.Combat != null && player.PlayerCombatState?.Hand.Cards.Count>0,"first battle ready");
             Check(box.Combat!.Phase==Alchemist.Core.Material.Iron,"real battle starts iron");
-            await CreatureCmd.Kill(player.Creature.CombatState!.Enemies.ToArray(),true);
-            await Until(()=>!CombatManager.Instance.IsInProgress && run.CurrentRoom is CombatRoom {IsPreFinished:true},"battle victory");
-            Check(box.Inventory.Counts[0]==2,"real death hooks harvest two iron");
+            await Clear("first battle");
+            Check(box.Inventory.Total==0,"enemy deaths grant no materials");
+            box.Inventory.Grant("workshop-fixture-iron-1",Alchemist.Core.Material.Iron);
+            box.Inventory.Grant("workshop-fixture-iron-2",Alchemist.Core.Material.Iron);
             var coordParts=plannedNodes[0].Split(',').Select(int.Parse).ToArray();
             await RunManager.Instance.EnterMapCoordDebug(new MapCoord(coordParts[0],coordParts[1]),RoomType.RestSite,MapPointType.RestSite,showTransition:false);
             await Until(()=>WorkshopUi.IsOpen,"map workshop opens");
@@ -205,6 +210,13 @@ public static class Smoke
             var buttons=Descendants<Button>(uiOverlay!).ToArray();
             Check(labels.Any(x=>x.Contains("完成カードを選ぶ")) && buttons.Any(x=>x.Text.Contains("作成可能のみ")),"workshop card gallery visible");
             Check(Descendants<NGridCardHolder>(uiOverlay!).Count()==Recipes.All.Count(),"all completed cards rendered");
+            await Task.Delay(200);
+            var descriptionField=AccessTools.Field(typeof(NCard),"_descriptionLabel");
+            var recipeNodes=Descendants<NCard>(uiOverlay!).ToArray();
+            Check(recipeNodes.All(n=>n.Visibility==ModelVisibility.Visible),"all recipe cards are explicitly visible");
+            Check(recipeNodes.Select(n=>((MegaRichTextLabel)descriptionField.GetValue(n)!).Text)
+                .All(t=>!string.IsNullOrWhiteSpace(t) && !t.Contains("If you can read this",StringComparison.OrdinalIgnoreCase)),
+                "all recipe descriptions replace the scene diagnostic placeholder on first open");
             // Overriding holder.Scale leaves cards stuck at SmallScale once hovered; the display scale
             // belongs on the parent node instead.
             Check(Descendants<NGridCardHolder>(uiOverlay!).All(h=>h.Scale.IsEqualApprox(NCardHolder.smallScale)),"card holders keep their own hover scale");
@@ -225,6 +237,20 @@ public static class Smoke
             var strike=player.Deck.Cards.OfType<StrikeIronclad>().First(c=>c.IsUpgradable);
             AccessTools.Method(typeof(WorkshopUi),"UpgradeCard").Invoke(null,[strike]);
             Check(strike.IsUpgraded && box.Inventory.Total==0,"workshop upgrade consumes materials and upgrades card");
+            var rareCard=(ForgedCard)run.CreateCard(ModelDb.Card<ForgedCard>(),player);
+            rareCard.AlchemistFormula="greatblade.v1";
+            var rareAdded=await CardPileCmd.Add(rareCard,PileType.Deck,skipVisuals:true);
+            rareCard=(ForgedCard)rareAdded.cardAdded;
+            box.Inventory.GrantRare("smoke-stardust",RareMaterial.Stardust);
+            AccessTools.Field(typeof(WorkshopUi),"upgradeMode").SetValue(null,false);
+            AccessTools.Field(typeof(WorkshopUi),"rareMode").SetValue(null,true);
+            AccessTools.Method(typeof(WorkshopUi),"Refresh").Invoke(null,null);
+            Check(Descendants<Label>(uiOverlay!).Any(x=>x.Text.Contains("希少加工する錬成カード")),"rare processing gallery visible");
+            AccessTools.Method(typeof(WorkshopUi),"ApplyRare").Invoke(null,[rareCard,RareMaterials.Get(RareMaterial.Stardust)]);
+            Check(rareCard.AlchemistRareModifier=="rare.stardust" && box.Inventory.RareCounts[(int)RareMaterial.Stardust]==0,
+                "workshop permanently applies and consumes stardust");
+            var restoredRare=(ForgedCard)CardModel.FromSerializable(rareCard.ToSerializable());
+            Check(restoredRare.AlchemistRareModifier=="rare.stardust","rare modifier survives card serialization");
             await (Task)AccessTools.Method(typeof(WorkshopUi),"LeaveMapWorkshop").Invoke(null,null)!;
             await RunManager.Instance.EnterRoomDebug(RoomType.Monster,model:ModelDb.Encounter<BowlbugsWeak>().ToMutable(),showTransition:false);
             await Until(()=>box.Combat != null && player.PlayerCombatState?.Hand.Cards.Count>0,"second battle ready");
@@ -233,7 +259,12 @@ public static class Smoke
             int before=player.Creature.Block;
             await CardCmd.AutoPlay(new ThrowingPlayerChoiceContext(),card,null,skipCardPileVisuals:true);
             Check(player.Creature.Block==before+16,"crafted card usable next battle");
-            // AGENTS.md 4.4: the reward slot is additional to kill harvesting and to the normal rewards.
+            var replayCard=player.PlayerCombatState.AllCards.OfType<ForgedCard>().Single(c=>c.AlchemistRareModifier=="rare.stardust");
+            var replayTarget=player.Creature.CombatState!.Enemies[0];
+            replayTarget.SetMaxHpInternal(999);replayTarget.SetCurrentHpInternal(999);
+            await CardCmd.AutoPlay(new ThrowingPlayerChoiceContext(),replayCard,replayTarget,skipCardPileVisuals:true);
+            Check(replayTarget.CurrentHp<=999-replayCard.DynamicVars.Damage.BaseValue*2,"stardust replays the card exactly once");
+            // Material reward slots are additional to furnace harvesting and to the normal rewards.
             // Passing an encounter model would override the room type with that encounter's own, so the room
             // type alone selects the elite and boss encounters here.
             var eliteRoom=(CombatRoom)await RunManager.Instance.EnterRoomDebug(RoomType.Elite,showTransition:false);
@@ -262,12 +293,12 @@ public static class Smoke
             var chooseOverlay=(Control?)AccessTools.Field(typeof(WorkshopUi),"overlay").GetValue(null);
             var choiceButtons=Descendants<Button>(chooseOverlay!).Select(x=>x.Text).ToArray();
             Check(Descendants<Label>(chooseOverlay!).Any(x=>x.Text.Contains("素材を1つ選ぶ")),"material choice screen visible");
-            Check(candidates.All(m=>choiceButtons.Any(t=>t.StartsWith(Recipes.Name(m)))) && choiceButtons.Any(t=>t.Contains("辞退")),
+            Check(candidates.All(m=>choiceButtons.Any(t=>t.StartsWith(RareMaterials.Name(m)))) && choiceButtons.Any(t=>t.Contains("辞退")),
                 "three candidates and a decline are offered");
-            int chosenBefore=box.Inventory.Counts[(int)candidates[0]];
+            int chosenBefore=box.Inventory.Count(candidates[0]);
             AccessTools.Method(typeof(WorkshopUi),"TakeOffer").Invoke(null,[eliteSlots[0].OfferId,candidates[0]]);
             Check(await choosing,"the rewards screen is released once the slot is resolved");
-            Check(box.Inventory.Counts[(int)candidates[0]]==chosenBefore+1 && box.Inventory.Offers.Count==0,"choosing grants exactly one material");
+            Check(box.Inventory.Count(candidates[0])==chosenBefore+1 && box.Inventory.Offers.Count==0,"choosing grants exactly one material");
             var eliteAfterTake=new RewardsSet(player).WithRewardsFromRoom(eliteRoom);
             await eliteAfterTake.GenerateWithoutOffering();
             Check(!eliteAfterTake.Rewards.OfType<MaterialReward>().Any(),"a taken slot is never offered again");
@@ -280,6 +311,10 @@ public static class Smoke
             var bossSlots=bossSet.Rewards.OfType<MaterialReward>().ToArray();
             Check(bossSlots.Length==MaterialOffers.BossSlots,"boss rewards carry two material slots");
             Check(bossSlots.Select(s=>s.OfferId).Distinct().Count()==2 && bossSlots.All(s=>box.Inventory.HasOffer(s.OfferId)),"boss slots are distinct and recorded");
+            var bossOffers=bossSlots.Select(s=>box.Inventory.Offers.Single(o=>o.Id==s.OfferId)).ToArray();
+            Check(bossOffers.Count(o=>o.Candidates.All(x=>x.Class==MaterialClass.Rare))==1
+                && bossOffers.Single(o=>o.Candidates.All(x=>x.Class==MaterialClass.Rare)).Candidates.Select(x=>x.RareMaterial).ToHashSet().SetEquals(Enum.GetValues<RareMaterial>()),
+                "one boss slot guarantees all three rare materials");
             Check(bossSet.Rewards.Any(r=>r is GoldReward) && bossSet.Rewards.Any(r=>r is CardReward),"boss keeps its gold and card rewards");
             // The real rewards screen lives on the overlay stack, so the picker has to be parented there
             // and added after it, or it would draw behind. Offer() is not awaited: it completes only once
@@ -287,9 +322,9 @@ public static class Smoke
             _ = bossSet.Offer();
             await Until(()=>GodotObject.IsInstanceValid(NOverlayStack.Instance)
                 && Descendants<NRewardButton>(NOverlayStack.Instance).Any(b=>b.Reward is MaterialReward),"rewards screen shows the material slots");
-            Check(Descendants<NRewardButton>(NOverlayStack.Instance).Count(b=>b.Reward is MaterialReward)==MaterialOffers.BossSlots,
+            Check(Descendants<NRewardButton>(NOverlayStack.Instance!).Count(b=>b.Reward is MaterialReward)==MaterialOffers.BossSlots,
                 "both boss slots appear as reward buttons");
-            var rewardsScreen=NOverlayStack.Instance.GetChildren().OfType<NRewardsScreen>().Last();
+            var rewardsScreen=NOverlayStack.Instance!.GetChildren().OfType<NRewardsScreen>().Last();
             var choosingBoss=WorkshopUi.ChooseOffer(box,bossSlots[0].OfferId);
             await Until(()=>WorkshopUi.IsOpen,"boss material choice opens");
             var bossOverlay=(Control?)AccessTools.Field(typeof(WorkshopUi),"overlay").GetValue(null);
@@ -323,6 +358,30 @@ public static class Smoke
                     Check(hitTargets.All(enemy=>999-enemy.CurrentHp>=f.Values["Damage"]*hits),"all multihit strikes land "+f.Id);
                 Check(forged.Pile?.Type==(f.Exhaust?PileType.Exhaust:f.Kind==ForgeKind.Power?PileType.None:PileType.Discard) || f.Kind==ForgeKind.Power,"formula executes "+f.Id);
             }
+            var furnace=player.Creature.CombatState!.CreateCard<PortableFurnace>(player);
+            var sacrifices=new CardModel[] {
+                player.Creature.CombatState.CreateCard<StrikeIronclad>(player),
+                player.Creature.CombatState.CreateCard<DefendIronclad>(player)
+            };
+            await CardPileCmd.AddGeneratedCardsToCombat([furnace,..sacrifices],PileType.Hand,player);
+            await CardCmd.AutoPlay(new ThrowingPlayerChoiceContext(),furnace,null,skipCardPileVisuals:true);
+            var activations=player.PlayerCombatState!.Hand.Cards.OfType<FurnaceActivation>().Take(2).ToArray();
+            Check(activations.Length==2,"portable furnace creates two activations");
+            var selector=new TestCardSelector();
+            using(CardSelectCmd.UseSelector(selector))
+            {
+                for(int i=0;i<2;i++)
+                {
+                    var phase=box.Combat!.Phase;
+                    int beforeMaterial=box.Inventory.Counts[(int)phase];
+                    selector.PrepareToSelect([sacrifices[i]]);
+                    await CardCmd.AutoPlay(new ThrowingPlayerChoiceContext(),activations[i],null,skipCardPileVisuals:true);
+                    Check(sacrifices[i].Pile?.Type==PileType.Exhaust,"furnace activation exhausts the selected card");
+                    Check(box.Inventory.Counts[(int)phase]==beforeMaterial+1,
+                        "successful furnace exhaust grants the current-phase material immediately");
+                }
+            }
+            Check(box.Combat!.FurnaceUsed==2,"furnace harvesting is capped at two per combat");
             GD.Print("ALCHEMIST_LOOP_COMPLETE");
         }
         catch(Exception ex) { GD.PushError("ALCHEMIST_LOOP_FAIL "+ex); }

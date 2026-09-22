@@ -3,7 +3,7 @@ using System.Text.Json;
 namespace Alchemist.Core;
 
 public enum Material { Iron, Herb, Powder, Ether }
-public sealed record Harvest(string Id, Material Material);
+public sealed record Harvest(string Id, MaterialChoice Material);
 public sealed record Recipe(string Id, Material First, Material Second, string Name, string Preview,
     string Role = "基礎強化", string Plan = "", string? FormulaId = null);
 
@@ -27,10 +27,11 @@ public static class Recipes
 public sealed class AlchemyState
 {
     public const int Capacity = 10;
-    // 1: harvest-only inventory. 2: adds elite/boss reward slots (Offers).
-    public const int CurrentSchema = 2;
+    // 1: harvest-only. 2: normal reward slots. 3: rare inventory and mixed reward slots.
+    public const int CurrentSchema = 3;
     public int Schema { get; set; } = CurrentSchema;
     public int[] Counts { get; set; } = new int[4];
+    public int[] RareCounts { get; set; } = new int[3];
     public List<Harvest> Pending { get; set; } = [];
     /// Reward slots that have been offered but not yet taken or declined.
     public List<MaterialOffer> Offers { get; set; } = [];
@@ -39,14 +40,18 @@ public sealed class AlchemyState
     public int WorkshopClosedFloor { get; set; } = -1;
     public Material NextCombatMaterial { get; set; } = Material.Iron;
     public Dictionary<int,List<string>> WorkshopNodes { get; set; } = [];
-    public int Total => Counts.Sum();
+    public int Total => Counts.Sum() + RareCounts.Sum();
     public int Revision { get; set; }
 
     public bool Grant(string id, Material material)
+        => Grant(id, MaterialChoice.Normal(material));
+    public bool GrantRare(string id, RareMaterial material)
+        => Grant(id, MaterialChoice.Rare(material));
+    public bool Grant(string id, MaterialChoice material)
     {
-        if (!Enum.IsDefined(material)) throw new ArgumentOutOfRangeException(nameof(material));
+        if (!material.IsValid) throw new ArgumentOutOfRangeException(nameof(material));
         if (!Received.Add(id)) return false;
-        if (Total < Capacity && Pending.Count == 0) Counts[(int)material]++;
+        if (Total < Capacity && Pending.Count == 0) Add(material, 1);
         else Pending.Add(new(id, material));
         Revision++;
         return true;
@@ -56,11 +61,13 @@ public sealed class AlchemyState
     /// Records a reward slot. Returns false when the slot was already offered or already resolved, so a
     /// hook that fires twice cannot hand out the same slot twice.
     public bool Offer(string id, IReadOnlyList<Material> candidates)
+        => Offer(id, candidates.Select(MaterialChoice.Normal).ToArray());
+    public bool Offer(string id, IReadOnlyList<MaterialChoice> candidates)
     {
         if (string.IsNullOrEmpty(id)) throw new ArgumentException("報酬枠のIDが空です。", nameof(id));
         if (candidates.Count != MaterialOffers.CandidateCount)
             throw new ArgumentException($"候補は{MaterialOffers.CandidateCount}個必要です。", nameof(candidates));
-        if (candidates.Any(m => !Enum.IsDefined(m)) || candidates.Distinct().Count() != candidates.Count)
+        if (candidates.Any(m => !m.IsValid) || candidates.Distinct().Count() != candidates.Count)
             throw new ArgumentException("候補が不正か重複しています。", nameof(candidates));
         if (Received.Contains(id) || HasOffer(id)) return false;
         Offers.Add(new(id, [.. candidates]));
@@ -70,7 +77,8 @@ public sealed class AlchemyState
 
     /// Takes one candidate. Capacity is handled by the shared receipt path, so a full box defers the
     /// material to Pending instead of dropping it.
-    public void TakeOffer(string id, Material choice)
+    public void TakeOffer(string id, Material choice) => TakeOffer(id, MaterialChoice.Normal(choice));
+    public void TakeOffer(string id, MaterialChoice choice)
     {
         var offer = Offers.FirstOrDefault(o => o.Id == id)
             ?? throw new InvalidOperationException("その報酬枠はすでに解決済みです。");
@@ -90,17 +98,19 @@ public sealed class AlchemyState
     }
 
     public void Resolve(bool accept, Material? exchange = null)
+        => Resolve(accept, exchange is null ? null : MaterialChoice.Normal(exchange.Value));
+    public void Resolve(bool accept, MaterialChoice? exchange)
     {
         if (Pending.Count == 0) throw new InvalidOperationException("未受領素材がありません。");
         if (accept)
         {
             if (Total >= Capacity)
             {
-                if (exchange is null || !Enum.IsDefined(exchange.Value) || Counts[(int)exchange] <= 0)
+                if (exchange is null || !exchange.Value.IsValid || Count(exchange.Value) <= 0)
                     throw new InvalidOperationException("交換する素材を選んでください。");
-                Counts[(int)exchange]--;
+                Add(exchange.Value, -1);
             }
-            Counts[(int)Pending[0].Material]++;
+            Add(Pending[0].Material, 1);
         }
         Pending.RemoveAt(0);
         Revision++;
@@ -156,19 +166,55 @@ public sealed class AlchemyState
         Committed.Add(operation);
         Revision++;
     }
+    public bool CanApplyRare(RareMaterial material) => Settled && RareCounts[(int)material] > 0;
+    public void CommitRare(RareMaterial material, string operation, Action apply, Action rollback)
+    {
+        if (Committed.Contains(operation)) return;
+        if (!Enum.IsDefined(material) || !CanApplyRare(material))
+            throw new InvalidOperationException("希少素材が不足しているか、未解決の受け取り・報酬枠があります。");
+        try
+        {
+            apply();
+            RareCounts[(int)material]--;
+            Committed.Add(operation);
+            Revision++;
+        }
+        catch { rollback(); throw; }
+    }
+    public int Count(MaterialChoice material) => material.Class == MaterialClass.Normal
+        ? Counts[(int)material.NormalMaterial] : RareCounts[(int)material.RareMaterial];
+    private void Add(MaterialChoice material, int amount)
+    {
+        if (material.Class == MaterialClass.Normal) Counts[(int)material.NormalMaterial] += amount;
+        else RareCounts[(int)material.RareMaterial] += amount;
+    }
     public string Save() => JsonSerializer.Serialize(this);
     public static AlchemyState Load(string json)
     {
-        var s = JsonSerializer.Deserialize<AlchemyState>(json) ?? throw new InvalidDataException("錬金術のセーブが空です。");
-        if (s.Schema is not (1 or 2) || s.Counts is not { Length: 4 } || s.Counts.Any(n => n < 0 || n > Capacity)
+        using var document = JsonDocument.Parse(json);
+        int schema = document.RootElement.TryGetProperty(nameof(Schema), out var schemaNode) ? schemaNode.GetInt32() : 1;
+        AlchemyState s;
+        if (schema is 1 or 2)
+        {
+            var legacy = JsonSerializer.Deserialize<LegacyState>(json) ?? throw new InvalidDataException("錬金術のセーブが空です。");
+            s = new AlchemyState {
+                Counts = legacy.Counts, Pending = legacy.Pending.Select(x=>new Harvest(x.Id,MaterialChoice.Normal(x.Material))).ToList(),
+                Offers = legacy.Offers.Select(x=>new MaterialOffer(x.Id,[..x.Candidates.Select(MaterialChoice.Normal)])).ToList(),
+                Received = legacy.Received, Committed = legacy.Committed, WorkshopClosedFloor = legacy.WorkshopClosedFloor,
+                NextCombatMaterial = legacy.NextCombatMaterial, WorkshopNodes = legacy.WorkshopNodes, Revision = legacy.Revision
+            };
+        }
+        else s = JsonSerializer.Deserialize<AlchemyState>(json) ?? throw new InvalidDataException("錬金術のセーブが空です。");
+        if (schema is not (1 or 2 or 3) || s.Counts is not { Length: 4 } || s.RareCounts is not { Length: 3 }
+            || s.Counts.Any(n => n < 0 || n > Capacity) || s.RareCounts.Any(n => n < 0 || n > Capacity)
             || s.Total > Capacity || s.Pending is null || s.Received is null || s.Committed is null || s.WorkshopNodes is null
             || s.Offers is null
             || !Enum.IsDefined(s.NextCombatMaterial)
-            || s.Pending.Any(p => p is null || !Enum.IsDefined(p.Material) || !s.Received.Contains(p.Id))
+            || s.Pending.Any(p => p is null || !p.Material.IsValid || !s.Received.Contains(p.Id))
             || s.Pending.Select(p => p.Id).Distinct().Count() != s.Pending.Count
             || s.Offers.Any(o => o is null || string.IsNullOrEmpty(o.Id) || s.Received.Contains(o.Id)
                 || o.Candidates is not { Length: MaterialOffers.CandidateCount }
-                || o.Candidates.Any(m => !Enum.IsDefined(m))
+                || o.Candidates.Any(m => !m.IsValid)
                 || o.Candidates.Distinct().Count() != o.Candidates.Length)
             || s.Offers.Select(o => o.Id).Distinct().Count() != s.Offers.Count)
             throw new InvalidDataException("非対応または破損した錬金術セーブです。データは初期化しません。");
@@ -176,12 +222,25 @@ public sealed class AlchemyState
         s.Schema = CurrentSchema;
         return s;
     }
+
+    private sealed record LegacyHarvest(string Id, Material Material);
+    private sealed record LegacyOffer(string Id, Material[] Candidates);
+    private sealed class LegacyState
+    {
+        public int[] Counts { get; set; } = new int[4];
+        public List<LegacyHarvest> Pending { get; set; } = [];
+        public List<LegacyOffer> Offers { get; set; } = [];
+        public HashSet<string> Received { get; set; } = [];
+        public HashSet<string> Committed { get; set; } = [];
+        public int WorkshopClosedFloor { get; set; } = -1;
+        public Material NextCombatMaterial { get; set; } = Material.Iron;
+        public Dictionary<int,List<string>> WorkshopNodes { get; set; } = [];
+        public int Revision { get; set; }
+    }
 }
 
-public sealed class HarvestCombat(IEnumerable<uint> initialEnemies, int cap, Material startingMaterial = Material.Iron)
+public sealed class HarvestCombat(Material startingMaterial = Material.Iron)
 {
-    private readonly HashSet<uint> eligible = initialEnemies.ToHashSet();
-    private readonly HashSet<uint> harvested = [];
     public int Turn { get; private set; } = 1;
     public int FurnaceUsed { get; private set; }
     public bool FurnaceActive { get; set; }
@@ -189,11 +248,6 @@ public sealed class HarvestCombat(IEnumerable<uint> initialEnemies, int cap, Mat
     public Material Phase => (Material)(((int)StartingMaterial + Turn - 1) % 4);
     public Material NextPhase => (Material)(((int)Phase + 1) % 4);
     public void BeginTurn(int turn) { if (turn > Turn) Turn = turn; }
-    public Material? Kill(uint enemy)
-    {
-        if (harvested.Count >= cap || !eligible.Contains(enemy) || !harvested.Add(enemy)) return null;
-        return Phase;
-    }
     public bool UseFurnace()
     {
         if (!FurnaceActive || FurnaceUsed >= 2) return false;
