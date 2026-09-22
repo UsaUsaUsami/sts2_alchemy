@@ -12,6 +12,7 @@ using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.Screens.Overlays;
+using MegaCrit.Sts2.Core.Nodes.Screens.Shops;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
 
@@ -125,6 +126,17 @@ public static class WorkshopUi
         content.AddThemeConstantOverride("separation", 14);
         scroll.AddChild(content);
         (parent ?? runNode!).AddChild(overlay);
+        Refresh();
+    }
+
+    public static void OpenMerchantShop(NMerchantInventory parent)
+    {
+        box = CurrentBox();
+        runNode = NRun.Instance;
+        if (box is null || !InMerchantRoom || !GodotObject.IsInstanceValid(parent)) return;
+        if (IsOpen) Close();
+        Open(parent);
+        merchantMode = true;
         Refresh();
     }
 
@@ -322,7 +334,7 @@ public static class WorkshopUi
         if(clickable)
         {
             var cost=UpgradeCost(card);
-            bool affordable=box!.Inventory.CanSpend(cost.First,cost.Second);
+            bool affordable=box!.Inventory.CanUpgradeAt(box.Owner.RunState.TotalFloor,cost.First,cost.Second);
             Text($"{Recipes.Name(cost.First)} ＋ {Recipes.Name(cost.Second)}",17,wrapper,affordable?new Color("f2d18b"):new Color("90989c"));
             if(!affordable) Text("素材不足",15,wrapper,new Color("d88b82"));
         }
@@ -418,7 +430,9 @@ public static class WorkshopUi
     {
         var cards=box!.Owner.Deck.Cards.Where(c=>c.IsUpgradable).ToArray();
         Text("強化するカードを選ぶ",32,content,new Color("f2d18b"));
-        Text("アタックは鉄＋火薬、スキルは薬草＋エーテル、パワーは火薬＋エーテルを消費します。",19);
+        Text("1つの工房につき1枚だけ強化できます。アタックは鉄＋火薬、スキルは薬草＋エーテル、パワーは火薬＋エーテルを消費します。",19);
+        if(box.Inventory.WorkshopUpgradeFloor==box.Owner.RunState.TotalFloor)
+            Text("この工房での強化は使用済みです。カード錬成は引き続き行えます。",20,content,new Color("d8c082"));
         var grid=new GridContainer { Columns=3,SizeFlagsHorizontal=Control.SizeFlags.ExpandFill };
         grid.AddThemeConstantOverride("h_separation",10);grid.AddThemeConstantOverride("v_separation",16);
         content!.AddChild(grid);
@@ -428,7 +442,8 @@ public static class WorkshopUi
     private static void UpgradeConfirmation(CardModel card)
     {
         var cost=UpgradeCost(card);
-        bool can=card.IsUpgradable && box!.Owner.Deck.Cards.Contains(card) && box.Inventory.CanSpend(cost.First,cost.Second);
+        bool can=card.IsUpgradable && box!.Owner.Deck.Cards.Contains(card)
+            && box.Inventory.CanUpgradeAt(box.Owner.RunState.TotalFloor,cost.First,cost.Second);
         Text("このカードを強化しますか？",32,content,new Color("f2d18b"));
         var row=new HBoxContainer(); row.AddThemeConstantOverride("separation",12); content!.AddChild(row);
         var current=new VBoxContainer(); row.AddChild(current); Text("現在",21,current); current.AddChild(DeckCardDisplay(card,0.72f,false));
@@ -572,8 +587,10 @@ public static class WorkshopUi
     // deck (MerchantCardEntry.OnTryPurchase), which has no hook for redirecting into a material grant
     // without patching that core purchase path. This panel is the same kind of custom, scene-free overlay
     // WorkshopUi already uses everywhere else, gated to the merchant room instead of the workshop node.
-    private const int MaterialShopCost = 25;
     private static bool InMerchantRoom => box?.Owner.RunState.CurrentRoom is MerchantRoom;
+    private static string MerchantVisitId => $"{box!.Owner.RunState.TotalFloor}:{box.Owner.RunState.CurrentRoom?.Id}";
+    private static MerchantMaterialOffer[] CurrentMerchantOffers =>
+        MerchantMaterialOffers.Roll(box!.Owner.RunState.Rng.Seed,MerchantVisitId);
     private static void MerchantMaterialShop()
     {
         Text("商人で素材を買う",32,content,new Color("f2d18b"));
@@ -583,35 +600,41 @@ public static class WorkshopUi
             return;
         }
         Text($"所持ゴールド　{box!.Owner.Gold}G",20);
-        Text($"素材1個につき{MaterialShopCost}Gの固定価格。所持ゴールドが続く限り何度でも購入できます。",19);
-        var grid = new GridContainer { Columns = 2, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        Text($"この訪問では3枠だけ入荷します。各枠は1回限り、1個{MerchantMaterialOffers.Price}Gです。",19);
+        var grid = new GridContainer { Columns = 3, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         grid.AddThemeConstantOverride("h_separation",10);grid.AddThemeConstantOverride("v_separation",16);
         content!.AddChild(grid);
-        foreach (var material in Enum.GetValues<Core.Material>()) MerchantMaterialSlot(grid,material);
+        foreach (var offer in CurrentMerchantOffers) MerchantMaterialSlot(grid,offer);
     }
-    private static void MerchantMaterialSlot(Container parent, Core.Material material)
+    private static void MerchantMaterialSlot(Container parent, MerchantMaterialOffer offer)
     {
         var wrapper = new VBoxContainer { CustomMinimumSize = new(160,235) };
         wrapper.Alignment = BoxContainer.AlignmentMode.Center;
         var stage = new Control { CustomMinimumSize = new(150,190) };
         wrapper.AddChild(stage);
-        var holder = MountCard(stage, CreateMaterialPreviewCard(MaterialCards.Canonical(material)), 0.62f, false);
+        var holder = MountCard(stage, CreateMaterialPreviewCard(MaterialCards.Canonical(offer.Material)), 0.62f, false);
         if (holder is not null) UpdateCardWhenReady(holder, PileType.None, CardPreviewMode.Normal);
-        bool afford = box!.Owner.Gold >= MaterialShopCost;
-        Text($"{Recipes.Name(material)}　{MaterialShopCost}G",20,wrapper,afford?new Color("f2d18b"):new Color("90989c"));
-        Button(afford?"購入する":"ゴールド不足",()=>_=BuyMaterial(material),!afford,wrapper);
+        bool sold = box!.Inventory.Received.Contains(offer.Id);
+        bool full = box.Inventory.Total >= AlchemyState.Capacity || !box.Inventory.Settled;
+        bool afford = box.Owner.Gold >= MerchantMaterialOffers.Price;
+        Text($"{Recipes.Name(offer.Material)}　{MerchantMaterialOffers.Price}G",20,wrapper,!sold&&afford&&!full?new Color("f2d18b"):new Color("90989c"));
+        string label = sold ? "売り切れ" : full ? "ボックスを整理してください" : afford ? "購入する" : "ゴールド不足";
+        Button(label,()=>_=BuyMaterial(offer),sold||full||!afford,wrapper);
         parent.AddChild(wrapper);
     }
-    private static async Task BuyMaterial(Core.Material material)
+    private static async Task BuyMaterial(MerchantMaterialOffer offer)
     {
-        if (box is null || busy || !InMerchantRoom || box.Owner.Gold < MaterialShopCost) return;
+        if (box is null || busy || !InMerchantRoom || box.Owner.Gold < MerchantMaterialOffers.Price
+            || box.Inventory.Total >= AlchemyState.Capacity || !box.Inventory.Settled
+            || box.Inventory.Received.Contains(offer.Id)
+            || !CurrentMerchantOffers.Contains(offer)) return;
         busy = true;
         Refresh();
         try
         {
-            await PlayerCmd.LoseGold(MaterialShopCost, box.Owner, GoldLossType.Spent);
-            box.Inventory.Grant($"shop:{Guid.NewGuid():N}", material);
-            status = $"{Recipes.Name(material)}を購入しました。";
+            await PlayerCmd.LoseGold(MerchantMaterialOffers.Price, box.Owner, GoldLossType.Spent);
+            if(!box.Inventory.Grant(offer.Id,offer.Material)) throw new InvalidOperationException("この素材は売り切れです。");
+            status = $"{Recipes.Name(offer.Material)}を購入しました。";
         }
         catch (Exception ex) { status = $"購入できませんでした：{ex.Message}"; GD.PushError(ex.ToString()); }
         finally { busy = false; if (IsOpen) Refresh(); }
@@ -689,7 +712,7 @@ public static class WorkshopUi
         try
         {
             var cost=UpgradeCost(card);
-            box.Inventory.CommitUpgrade(cost.First,cost.Second,Guid.NewGuid().ToString("N"),()=>CardCmd.Upgrade(card,CardPreviewStyle.EventLayout));
+            box.Inventory.CommitUpgrade(box.Owner.RunState.TotalFloor,cost.First,cost.Second,Guid.NewGuid().ToString("N"),()=>CardCmd.Upgrade(card,CardPreviewStyle.EventLayout));
             status=$"{card.Title}を強化しました。";
             selectedUpgrade=null;
         }
@@ -748,6 +771,21 @@ public static class WorkshopUi
         }
         catch (Exception ex) { status = $"錬成できませんでした：{ex.Message}"; GD.PushError(ex.ToString()); }
         finally { busy = false; if (IsOpen) Refresh(); }
+    }
+}
+
+[HarmonyPatch(typeof(NMerchantInventory),nameof(NMerchantInventory.Open))]
+public static class MerchantMaterialButtonPatch
+{
+    public static void Postfix(NMerchantInventory __instance)
+    {
+        if(WorkshopUi.CurrentBox() is null || __instance.GetNodeOrNull<Button>("AlchemistMaterialShopButton") is not null) return;
+        var button = new Button { Name="AlchemistMaterialShopButton", Text="錬金素材を見る" };
+        button.AnchorLeft=1; button.AnchorRight=1;
+        button.OffsetLeft=-330; button.OffsetRight=-30; button.OffsetTop=24; button.OffsetBottom=86;
+        button.AddThemeFontSizeOverride("font_size",22);
+        button.Pressed += ()=>WorkshopUi.OpenMerchantShop(__instance);
+        __instance.AddChild(button);
     }
 }
 

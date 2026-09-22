@@ -11,14 +11,15 @@ public sealed record Recipe(string Id, IReadOnlyList<Material> Materials, string
 
 public static class Recipes
 {
-    // Curated M1 recipes cover all ten pairs with multiple build directions; full base x material grammar remains M3.
+    // Exactly one cheap recipe is exposed for each unordered two-material pair. Older v1 formulas stay
+    // in ForgeCatalog so cards already present in a save still load, but redundant cheap variants are hidden.
     public static readonly Recipe[] All = [
-        new("iron_guard.v1", [Material.Iron, Material.Iron], "鍛鉄の護り", "1コスト / スキル / 自身\n16ブロック、1枚ドロー。強化後21ブロック。", "守りと循環", "大きく守りながら、切り札を引きに行く。"),
-        new("herbal_edge.v1", [Material.Iron, Material.Herb], "薬刃", "1コスト / アタック / 敵1体\n12ダメージ、弱体2。強化後16ダメージ、弱体3。", "攻撃の準備", "弱体を付け、大剣や全体攻撃の火力を伸ばす。"),
-        new("blast.v1", [Material.Powder, Material.Powder], "炸裂弾", "1コスト / アタック / 敵全体\n14ダメージ。強化後19。", "集団戦", "廃棄せず繰り返せる全体攻撃。"),
-        new("ether_lens.v1", [Material.Ether, Material.Ether], "エーテルレンズ", "1コスト / スキル / 自身\n3枚ドロー、8ブロック。強化後12ブロック。", "守りと循環", "手札を増やし、パワーや切り札を早く引く。"),
-        new("herbal_guard.v1", [Material.Herb, Material.Herb], "薬草の被膜", "1コスト / スキル / 自身\n12ブロック、敵全体に脱力2。強化後16ブロック。", "守りと循環", "敵全体の攻撃を弱め、毒が回る時間を作る。"),
-        ..ForgeCatalog.All.Select(f=>new Recipe(f.Id,f.Materials,f.Name,f.Preview,f.Role,f.Plan,f.Id))];
+        new("iron_guard.v1", [Material.Iron, Material.Iron], "鍛鉄の護り", "1コスト / スキル / 自身\n10ブロック。強化後13ブロック。", "防御", "そのターンを守る、鉄の基本錬成。"),
+        new("herbal_edge.v1", [Material.Iron, Material.Herb], "薬刃", "1コスト / アタック / 敵1体\n8ダメージ、弱体1。強化後11ダメージ、弱体2。", "攻撃の準備", "弱体を付け、後続の攻撃を通す。"),
+        new("blast.v1", [Material.Powder, Material.Powder], "炸裂弾", "1コスト / アタック / 敵全体\n8ダメージ。強化後11。", "集団戦", "複数の敵へ均等に圧力をかける。"),
+        new("ether_lens.v1", [Material.Ether, Material.Ether], "エーテルレンズ", "1コスト / スキル / 自身\n4ブロック、2枚ドロー。強化後7ブロック。", "手札調整", "守りながら必要なカードを探す。"),
+        new("herbal_guard.v1", [Material.Herb, Material.Herb], "薬草の被膜", "1コスト / スキル / 自身\n8ブロック、敵全体に脱力1。強化後11ブロック。", "弱体防御", "敵の攻撃を弱め、毒が回る時間を作る。"),
+        ..ForgeCatalog.Craftable.Select(f=>new Recipe(f.Id,f.Materials,f.Name,f.Preview,f.Role,f.Plan,f.Id))];
     private static bool SameMultiset(IReadOnlyList<Material> a, IReadOnlyList<Material> b)
         => a.Count == b.Count && a.OrderBy(m => m).SequenceEqual(b.OrderBy(m => m));
     public static IEnumerable<Recipe> FindAll(IReadOnlyList<Material> materials) => All.Where(r => SameMultiset(r.Materials, materials));
@@ -35,7 +36,7 @@ public sealed class AlchemyState
     // this is the compensating yield. Each harvest event grants this many units of the same material.
     public const int YieldPerEvent = 2;
     // 1: harvest-only. 2: normal reward slots. 3: rare inventory and mixed reward slots.
-    public const int CurrentSchema = 3;
+    public const int CurrentSchema = 4;
     public int Schema { get; set; } = CurrentSchema;
     public int[] Counts { get; set; } = new int[4];
     public int[] RareCounts { get; set; } = new int[3];
@@ -45,6 +46,7 @@ public sealed class AlchemyState
     public HashSet<string> Received { get; set; } = [];
     public HashSet<string> Committed { get; set; } = [];
     public int WorkshopClosedFloor { get; set; } = -1;
+    public int WorkshopUpgradeFloor { get; set; } = -1;
     public Material NextCombatMaterial { get; set; } = Material.Iron;
     public Dictionary<int,List<string>> WorkshopNodes { get; set; } = [];
     public int Total => Counts.Sum() + RareCounts.Sum();
@@ -176,13 +178,16 @@ public sealed class AlchemyState
     }
     public bool CanSpend(Material first, Material second) => Settled
         && Counts[(int)first] >= (first == second ? 2 : 1) && Counts[(int)second] >= 1;
-    public void CommitUpgrade(Material first, Material second, string operation, Action upgrade)
+    public bool CanUpgradeAt(int floor, Material first, Material second)
+        => WorkshopUpgradeFloor != floor && CanSpend(first, second);
+    public void CommitUpgrade(int floor, Material first, Material second, string operation, Action upgrade)
     {
         if (Committed.Contains(operation)) return;
-        if (!CanSpend(first,second)) throw new InvalidOperationException("強化に必要な素材が不足しているか、未解決の受け取り・報酬枠があります。");
+        if (!CanUpgradeAt(floor,first,second)) throw new InvalidOperationException("この工房では既に強化したか、必要素材が不足しているか、未解決の受け取りがあります。");
         upgrade();
         Counts[(int)first]--;
         Counts[(int)second]--;
+        WorkshopUpgradeFloor = floor;
         Committed.Add(operation);
         Revision++;
     }
@@ -225,7 +230,7 @@ public sealed class AlchemyState
             };
         }
         else s = JsonSerializer.Deserialize<AlchemyState>(json) ?? throw new InvalidDataException("錬金術のセーブが空です。");
-        if (schema is not (1 or 2 or 3) || s.Counts is not { Length: 4 } || s.RareCounts is not { Length: 3 }
+        if (schema is not (1 or 2 or 3 or 4) || s.Counts is not { Length: 4 } || s.RareCounts is not { Length: 3 }
             || s.Counts.Any(n => n < 0 || n > Capacity) || s.RareCounts.Any(n => n < 0 || n > Capacity)
             || s.Total > Capacity || s.Pending is null || s.Received is null || s.Committed is null || s.WorkshopNodes is null
             || s.Offers is null
@@ -262,12 +267,14 @@ public sealed class AlchemyState
 public sealed class HarvestCombat(Material startingMaterial = Material.Iron)
 {
     public int Turn { get; private set; } = 1;
+    public int PhaseOffset { get; private set; }
     public int FurnaceUsed { get; private set; }
     public bool FurnaceActive { get; set; }
     public Material StartingMaterial { get; } = startingMaterial;
-    public Material Phase => (Material)(((int)StartingMaterial + Turn - 1) % 4);
+    public Material Phase => (Material)(((int)StartingMaterial + Turn - 1 + PhaseOffset) % 4);
     public Material NextPhase => (Material)(((int)Phase + 1) % 4);
     public void BeginTurn(int turn) { if (turn > Turn) Turn = turn; }
+    public void AdvancePhase(int amount = 1) => PhaseOffset = (PhaseOffset + Math.Max(0, amount)) % 4;
     public bool UseFurnace()
     {
         if (!FurnaceActive || FurnaceUsed >= 2) return false;

@@ -31,6 +31,8 @@ using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Nodes.Rewards;
 using MegaCrit.Sts2.Core.Nodes.Screens;
 using MegaCrit.Sts2.Core.Nodes.Screens.Overlays;
+using MegaCrit.Sts2.Core.Nodes.Rooms;
+using MegaCrit.Sts2.Core.Nodes.Screens.Shops;
 using MegaCrit.Sts2.Core.TestSupport;
 using MegaCrit.Sts2.addons.mega_text;
 
@@ -368,23 +370,31 @@ public static class Smoke
             var shopRoom=(MerchantRoom)await RunManager.Instance.EnterRoomDebug(RoomType.Shop,showTransition:false);
             Check(shopRoom.RoomType==RoomType.Shop,"merchant room entered");
             await Task.Delay(300);
-            WorkshopUi.Open();
-            await Until(()=>WorkshopUi.IsOpen,"material box opens over the merchant room");
+            var merchantNode=Descendants<NMerchantRoom>(NRun.Instance!).Last();
+            merchantNode.OpenInventory();
+            await Until(()=>merchantNode.Inventory.IsOpen,"native merchant inventory opens");
+            var materialEntry=merchantNode.Inventory.GetNodeOrNull<Button>("AlchemistMaterialShopButton");
+            Check(materialEntry is not null && materialEntry.Text.Contains("錬金素材"),"material entry is mounted on the visible merchant inventory");
+            materialEntry!.EmitSignal(BaseButton.SignalName.Pressed);
+            await Until(()=>WorkshopUi.IsOpen,"merchant material shop opens from its visible button");
             var shopOverlay=(Control?)AccessTools.Field(typeof(WorkshopUi),"overlay").GetValue(null);
-            Check(Descendants<Button>(shopOverlay!).Any(b=>b.Text.Contains("商人で素材を買う")),"merchant purchase entry visible while in the shop room");
-            AccessTools.Field(typeof(WorkshopUi),"merchantMode").SetValue(null,true);
             await PlayerCmd.GainGold(500,player);
             AccessTools.Method(typeof(WorkshopUi),"Refresh").Invoke(null,null);
             var shopLabels=Descendants<Label>(shopOverlay!).Select(x=>x.Text).ToArray();
             var shopButtons=Descendants<Button>(shopOverlay!).ToArray();
-            Check(Enum.GetValues<Alchemist.Core.Material>().All(m=>shopLabels.Any(t=>t.Contains($"{Recipes.Name(m)}　25G"))),
-                "all four materials are priced and offered");
-            Check(shopButtons.Count(b=>b.Text=="購入する")==4,"enough gold makes every material purchasable");
+            var shopOffers=(MerchantMaterialOffer[])AccessTools.Property(typeof(WorkshopUi),"CurrentMerchantOffers").GetValue(null)!;
+            Check(shopOffers.Length==MerchantMaterialOffers.Slots && shopOffers.All(o=>shopLabels.Any(t=>t.Contains($"{Recipes.Name(o.Material)}　{MerchantMaterialOffers.Price}G"))),
+                "three deterministic material slots are priced and offered");
+            Check(shopButtons.Count(b=>b.Text=="購入する")==MerchantMaterialOffers.Slots,"enough gold makes every stocked material purchasable");
             int goldBefore=player.Gold;
-            int ironBefore=box.Inventory.Counts[(int)Alchemist.Core.Material.Iron];
-            await (Task)AccessTools.Method(typeof(WorkshopUi),"BuyMaterial").Invoke(null,[Alchemist.Core.Material.Iron])!;
-            Check(player.Gold==goldBefore-25 && box.Inventory.Counts[(int)Alchemist.Core.Material.Iron]==ironBefore+1,
+            var bought=shopOffers[0];
+            int materialBefore=box.Inventory.Counts[(int)bought.Material];
+            await (Task)AccessTools.Method(typeof(WorkshopUi),"BuyMaterial").Invoke(null,[bought])!;
+            Check(player.Gold==goldBefore-MerchantMaterialOffers.Price && box.Inventory.Counts[(int)bought.Material]==materialBefore+1,
                 "buying a material spends gold once and grants exactly one unit");
+            int goldAfter=player.Gold;
+            await (Task)AccessTools.Method(typeof(WorkshopUi),"BuyMaterial").Invoke(null,[bought])!;
+            Check(player.Gold==goldAfter && box.Inventory.Received.Contains(bought.Id),"a sold slot cannot be purchased twice");
             Check(Descendants<NGridCardHolder>(shopOverlay!).Any(),"material box renders card-style visuals for owned materials");
             AccessTools.Field(typeof(WorkshopUi),"merchantMode").SetValue(null,false);
             AccessTools.Method(typeof(WorkshopUi),"Close").Invoke(null,null);
@@ -414,6 +424,8 @@ public static class Smoke
                 if(f.Values.TryGetValue("DexterityPower",out int dexterity)) Check(player.Creature.GetPower<DexterityPower>()?.Amount==dexterity,"dexterity applied "+f.Id);
                 if(f.Values.TryGetValue("Hits",out int hits) && hits>1)
                     Check(hitTargets.All(enemy=>999-enemy.CurrentHp>=f.Values["Damage"]*hits),"all multihit strikes land "+f.Id);
+                if(f.Values.TryGetValue("AdvancePhase",out int phaseSteps) && phaseSteps>0)
+                    Check(box.Combat!.Phase==(Alchemist.Core.Material)(((int)box.Combat.StartingMaterial+phaseSteps)%4),"phase-control formula advances the current phase "+f.Id);
                 Check(forged.Pile?.Type==(f.Exhaust?PileType.Exhaust:f.Kind==ForgeKind.Power?PileType.None:PileType.Discard) || f.Kind==ForgeKind.Power,"formula executes "+f.Id);
             }
             var furnace=player.Creature.CombatState!.CreateCard<PortableFurnace>(player);

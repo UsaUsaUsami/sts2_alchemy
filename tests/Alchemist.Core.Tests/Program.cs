@@ -19,6 +19,8 @@ var continuous = new HarvestCombat(Material.Powder);
 Check(continuous.Phase==Material.Powder,"combat starts from saved material");
 continuous.BeginTurn(2);
 Check(continuous.Phase==Material.Ether && continuous.NextPhase==Material.Iron,"continuous phase advances and wraps");
+continuous.AdvancePhase();
+Check(continuous.Phase==Material.Iron && continuous.NextPhase==Material.Herb,"cards can advance the material phase without changing the turn");
 var inventory = new AlchemyState();
 Check(inventory.Total == 0,"empty initial inventory");
 for (int i=0;i<AlchemyState.Capacity;i++) inventory.Grant($"kill{i}",Material.Iron);
@@ -52,12 +54,18 @@ Check(AlchemyState.Load(inventory.Save()).Committed.Contains("async"),"save pres
 var upgradeStock=new AlchemyState();
 upgradeStock.Grant("ui",Material.Iron);upgradeStock.Grant("up",Material.Powder);
 int upgraded=0;
-upgradeStock.CommitUpgrade(Material.Iron,Material.Powder,"upgrade1",()=>upgraded++);
-upgradeStock.CommitUpgrade(Material.Iron,Material.Powder,"upgrade1",()=>upgraded++);
+upgradeStock.CommitUpgrade(7,Material.Iron,Material.Powder,"upgrade1",()=>upgraded++);
+upgradeStock.CommitUpgrade(7,Material.Iron,Material.Powder,"upgrade1",()=>upgraded++);
 Check(upgraded==1 && upgradeStock.Total==0,"upgrade consumes materials once");
 var failedUpgrade=new AlchemyState();failedUpgrade.Grant("fi",Material.Herb);failedUpgrade.Grant("fe",Material.Ether);
-Reject(()=>failedUpgrade.CommitUpgrade(Material.Herb,Material.Ether,"bad",()=>throw new InvalidOperationException()),"failed upgrade throws");
+Reject(()=>failedUpgrade.CommitUpgrade(8,Material.Herb,Material.Ether,"bad",()=>throw new InvalidOperationException()),"failed upgrade throws");
 Check(failedUpgrade.Total==2,"failed upgrade preserves materials");
+var limitedUpgrade=new AlchemyState();
+foreach(var pair in new[]{("i0",Material.Iron),("p0",Material.Powder),("i1",Material.Iron),("p1",Material.Powder)}) limitedUpgrade.Grant(pair.Item1,pair.Item2);
+limitedUpgrade.CommitUpgrade(9,Material.Iron,Material.Powder,"first",()=>{});
+Reject(()=>limitedUpgrade.CommitUpgrade(9,Material.Iron,Material.Powder,"second",()=>{}),"only one existing-card upgrade per workshop");
+limitedUpgrade.CommitUpgrade(10,Material.Iron,Material.Powder,"next",()=>{});
+Check(limitedUpgrade.Total==0,"a later workshop restores the upgrade action");
 var phaseSave=new AlchemyState { NextCombatMaterial=Material.Ether };
 phaseSave.WorkshopNodes[0]=["2,4","5,9"];
 var loadedPhase=AlchemyState.Load(phaseSave.Save());
@@ -120,6 +128,8 @@ Check(migrated.Schema==AlchemyState.CurrentSchema && migrated.Offers.Count==0 &&
     "schema 1 saves migrate without losing materials");
 var migratedOffer=AlchemyState.Load("{\"Schema\":2,\"Offers\":[{\"Id\":\"x\",\"Candidates\":[0,1,2]}]}");
 Check(migratedOffer.Offers.Single().Candidates.All(x=>x.Class==MaterialClass.Normal),"schema 2 offers migrate to typed candidates");
+var migratedV3=AlchemyState.Load("{\"Schema\":3,\"Counts\":[0,0,0,0],\"RareCounts\":[0,0,0]}");
+Check(migratedV3.Schema==AlchemyState.CurrentSchema && migratedV3.WorkshopUpgradeFloor==-1,"schema 3 saves gain an unused workshop upgrade action");
 Reject(()=>AlchemyState.Load("{\"Schema\":2,\"Offers\":[{\"Id\":\"x\",\"Candidates\":[0,0,1]}]}"),"corrupt candidates rejected");
 Reject(()=>AlchemyState.Load("{\"Schema\":2,\"Received\":[\"x\"],\"Offers\":[{\"Id\":\"x\",\"Candidates\":[0,1,2]}]}"),"slot both received and open rejected");
 var rareStock=new AlchemyState();rareStock.GrantRare("rare",RareMaterial.Stardust);
@@ -127,9 +137,10 @@ string applied="";
 rareStock.CommitRare(RareMaterial.Stardust,"apply",()=>applied="rare.stardust",()=>applied="");
 Check(applied=="rare.stardust" && rareStock.RareCounts[(int)RareMaterial.Stardust]==0,"rare processing consumes exactly one material");
 Reject(()=>rareStock.CommitRare(RareMaterial.Stardust,"again",()=>applied="bad",()=>applied="rare.stardust"),"missing rare material is rejected");
-Check(Recipes.All.Length==83 && Recipes.All.Select(r=>r.Id).Distinct().Count()==83,"eighty-three stable recipe ids");
-Check(Recipes.All.Count(r=>r.Materials.Count==2)==28 && Recipes.All.Count(r=>r.Materials.Count==3)==20 && Recipes.All.Count(r=>r.Materials.Count==4)==35,
-    "commons use two materials, uncommons three, rares four");
+Check(ForgeCatalog.All.Count==78 && ForgeCatalog.All.Select(r=>r.Id).Distinct().Count()==78,"all legacy formula ids remain loadable");
+Check(Recipes.All.Length==65 && Recipes.All.Select(r=>r.Id).Distinct().Count()==65,"craftable pool has sixty-five stable recipe ids");
+Check(Recipes.All.Count(r=>r.Materials.Count==2)==10 && Recipes.All.Count(r=>r.Materials.Count==3)==20 && Recipes.All.Count(r=>r.Materials.Count==4)==35,
+    "one common per material pair, twenty uncommons and thirty-five rares");
 foreach(var a in Enum.GetValues<Material>()) foreach(var b in Enum.GetValues<Material>())
 {
     var choices=Recipes.FindAll(a,b).ToArray();
@@ -140,12 +151,18 @@ foreach(var a in Enum.GetValues<Material>()) foreach(var b in Enum.GetValues<Mat
         Check(stock.CanCraft(r),$"two collected materials can craft {r.Id}");
     }
 }
-Check(Recipes.FindAll(Material.Iron,Material.Iron).Count()>=4,"iron offers attack defense multihit and scaling");
-Check(Recipes.FindAll(Material.Herb,Material.Herb).Count()>=3,"herbs offer engine defense and dexterity");
-Check(ForgeCatalog.All.Count(f=>f.Values.GetValueOrDefault("Hits")>1)>=6,"multiple multihit recipes available");
-Check(ForgeCatalog.All.Count(f=>f.Values.GetValueOrDefault("StrengthPower")>0)>=5,"multiple strength recipes available");
-Check(ForgeCatalog.All.Count(f=>f.Values.GetValueOrDefault("DexterityPower")>0)>=4,"multiple dexterity recipes available");
-foreach(var f in ForgeCatalog.All)
+Check(Enum.GetValues<Material>().SelectMany((a,i)=>Enum.GetValues<Material>().Skip(i).Select(b=>Recipes.FindAll(a,b).Count())).All(n=>n==1),
+    "every unordered pair exposes exactly one cheap recipe");
+Check(ForgeCatalog.Craftable.Where(f=>f.Materials.Count==2).All(f=>f.Values.GetValueOrDefault("StrengthPower")==0
+    && f.Values.GetValueOrDefault("DexterityPower")==0 && f.Values.GetValueOrDefault("Hits")<=1),
+    "cheap formulas do not provide permanent stats or multihit");
+Check(ForgeCatalog.Craftable.Count(f=>f.Values.GetValueOrDefault("Hits")>1)==2,"multihit is limited to one uncommon and one rare");
+Check(ForgeCatalog.Craftable.Where(f=>f.Materials.Count==3).All(f=>f.Values.GetValueOrDefault("StrengthPower")<=1 && f.Values.GetValueOrDefault("DexterityPower")<=1),
+    "uncommon permanent stat gains are capped at one");
+Check(ForgeCatalog.Craftable.Where(f=>f.Materials.Count==4).All(f=>f.Values.GetValueOrDefault("StrengthPower")<=2 && f.Values.GetValueOrDefault("DexterityPower")<=2),
+    "rare permanent stat gains are capped at two");
+Check(ForgeCatalog.Craftable.Count(f=>f.Values.GetValueOrDefault("AdvancePhase")>0)>=3,"phase-control recipes form a new effect family");
+foreach(var f in ForgeCatalog.Craftable)
 {
     Check(f.Values.All(x=>x.Value>=0) && f.Cost>=1,"no energy generation or zero-cost cycle "+f.Id);
     Check(!f.Preview.Contains('{') && f.Preview.Contains(f.Describe(true)),"full shared preview "+f.Id);
@@ -156,6 +173,11 @@ foreach(var f in ForgeCatalog.All)
     Check(created==1 && stock.Total==0,$"formula consumes exactly {f.Materials.Count} "+f.Id);
 }
 Reject(()=>ForgeCatalog.Get("unknown.v99"),"unknown formula not reset");
+var shopA=MerchantMaterialOffers.Roll(1234,"act1:shop3");
+Check(shopA.Length==MerchantMaterialOffers.Slots && shopA.Select(x=>x.Material).Distinct().Count()==MerchantMaterialOffers.Slots,
+    "merchant has three distinct finite material slots");
+Check(shopA.SequenceEqual(MerchantMaterialOffers.Roll(1234,"act1:shop3")),"merchant stock is stable for the visit");
+Check(!shopA.SequenceEqual(MerchantMaterialOffers.Roll(1234,"act1:shop4")),"merchant visit id changes stock");
 // Recipe.Materials generalizes past pairs (commons 2 / uncommons 3 / rares 4); exercised directly here
 // since the catalog itself still only fills the two-material tier.
 var triple = new Recipe("test.triple.v0", [Material.Iron, Material.Iron, Material.Herb], "test", "");
