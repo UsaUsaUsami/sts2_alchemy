@@ -76,7 +76,8 @@ public sealed class ForgedCard() : AlchemyCard(2,CardType.Attack,CardRarity.Even
         new DamageVar(28,ValueProp.Move),new BlockVar(8,ValueProp.Move),new CardsVar(0),
         new PowerVar<PoisonPower>(0),new PowerVar<VulnerablePower>(0),
         new PowerVar<StrengthPower>(0),new PowerVar<DexterityPower>(0),new DynamicVar("Hits",0),
-        new DynamicVar("ExhaustBlock",0),new DynamicVar("ExhaustDraw",0),new DynamicVar("Fumes",0)];
+        new DynamicVar("ExhaustBlock",0),new DynamicVar("ExhaustDraw",0),new DynamicVar("Fumes",0),
+        new DynamicVar("AdvancePhase",0)];
     public override List<(string,string)> Localization => [
         ("title","錬成カード"),("description",ForgeCatalog.Get("greatblade.v1").Text),
         ..ForgeCatalog.All.Select(f=>($"formula.{f.Id}.description",f.Text)),
@@ -124,6 +125,8 @@ public sealed class ForgedCard() : AlchemyCard(2,CardType.Attack,CardRarity.Even
         if(DynamicVars["ExhaustBlock"].BaseValue>0) await PowerCmd.Apply<FeelNoPainPower>(c,Owner.Creature,DynamicVars["ExhaustBlock"].BaseValue,Owner.Creature,this);
         if(DynamicVars["ExhaustDraw"].BaseValue>0) await PowerCmd.Apply<DarkEmbracePower>(c,Owner.Creature,DynamicVars["ExhaustDraw"].BaseValue,Owner.Creature,this);
         if(DynamicVars["Fumes"].BaseValue>0) await PowerCmd.Apply<NoxiousFumesPower>(c,Owner.Creature,DynamicVars["Fumes"].BaseValue,Owner.Creature,this);
+        if(DynamicVars["AdvancePhase"].BaseValue>0)
+            Owner.GetRelic<MaterialBox>()?.Combat?.AdvancePhase(DynamicVars["AdvancePhase"].IntValue);
     }
 }
 

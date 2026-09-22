@@ -31,6 +31,8 @@ using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Nodes.Rewards;
 using MegaCrit.Sts2.Core.Nodes.Screens;
 using MegaCrit.Sts2.Core.Nodes.Screens.Overlays;
+using MegaCrit.Sts2.Core.Nodes.Rooms;
+using MegaCrit.Sts2.Core.Nodes.Screens.Shops;
 using MegaCrit.Sts2.Core.TestSupport;
 using MegaCrit.Sts2.addons.mega_text;
 
@@ -196,6 +198,10 @@ public static class Smoke
             Check(box.Combat!.Phase==Alchemist.Core.Material.Iron,"real battle starts iron");
             await Clear("first battle");
             Check(box.Inventory.Total==0,"enemy deaths grant no materials");
+            var normalSet=new RewardsSet(player).WithRewardsFromRoom((CombatRoom)run.CurrentRoom!);
+            await normalSet.GenerateWithoutOffering();
+            Check(normalSet.Rewards.Any(r=>r is GoldReward) && !normalSet.Rewards.Any(r=>r is CardReward),
+                "normal combat keeps its gold reward; the standard card reward is stripped there too");
             box.Inventory.Grant("workshop-fixture-iron-1",Alchemist.Core.Material.Iron);
             box.Inventory.Grant("workshop-fixture-iron-2",Alchemist.Core.Material.Iron);
             var coordParts=plannedNodes[0].Split(',').Select(int.Parse).ToArray();
@@ -203,13 +209,21 @@ public static class Smoke
             await Until(()=>WorkshopUi.IsOpen,"map workshop opens");
             Check(run.CurrentRoom is RestSiteRoom { Options.Count: 0 },"workshop node offers no resting or upgrading");
             var uiOverlay=(Control?)AccessTools.Field(typeof(WorkshopUi),"overlay").GetValue(null);
+            // MaterialCardRow mounts card-style visuals for owned materials in the sidebar, distinct from
+            // the recipe gallery in content; card-count checks below scope to content to avoid conflating
+            // the two now that both use NGridCardHolder.
+            var uiContent=(Control?)AccessTools.Field(typeof(WorkshopUi),"content").GetValue(null);
             Check(uiOverlay is not null && uiOverlay.GetChildren().OfType<PanelContainer>().Any(),"workshop responsive frame created");
             var labels=Descendants<Label>(uiOverlay!).Select(x=>x.Text).ToArray();
             Check(labels.Any(x=>x.Contains("錬金工房")) && labels.Any(x=>x.Contains("容量")),"workshop material sidebar visible");
             labels=Descendants<Label>(uiOverlay!).Select(x=>x.Text).ToArray();
             var buttons=Descendants<Button>(uiOverlay!).ToArray();
             Check(labels.Any(x=>x.Contains("完成カードを選ぶ")) && buttons.Any(x=>x.Text.Contains("作成可能のみ")),"workshop card gallery visible");
-            Check(Descendants<NGridCardHolder>(uiOverlay!).Count()==Recipes.All.Count(),"all completed cards rendered");
+            Check(Descendants<NGridCardHolder>(uiContent!).Count()==Recipes.All.Count(),"all completed cards rendered");
+            int ownedMaterialTypes=Enum.GetValues<Alchemist.Core.Material>().Count(m=>box.Inventory.Counts[(int)m]>0)
+                +Enum.GetValues<RareMaterial>().Count(m=>box.Inventory.RareCounts[(int)m]>0);
+            Check(Descendants<NGridCardHolder>(uiOverlay!).Count()==Recipes.All.Count()+ownedMaterialTypes,
+                "the sidebar's MaterialCardRow adds one card per owned material type on top of the gallery");
             await Task.Delay(200);
             var descriptionField=AccessTools.Field(typeof(NCard),"_descriptionLabel");
             var recipeNodes=Descendants<NCard>(uiOverlay!).ToArray();
@@ -221,12 +235,24 @@ public static class Smoke
             // belongs on the parent node instead.
             Check(Descendants<NGridCardHolder>(uiOverlay!).All(h=>h.Scale.IsEqualApprox(NCardHolder.smallScale)),"card holders keep their own hover scale");
             var previewCards=(List<CardModel>)AccessTools.Field(typeof(WorkshopUi),"previewCards").GetValue(null)!;
-            Check(previewCards.Count==Recipes.All.Count() && previewCards.All(c=>!run.ContainsCard(c)),"card previews do not enter run state");
+            Check(previewCards.Count==Recipes.All.Count()+ownedMaterialTypes && previewCards.All(c=>!run.ContainsCard(c)),"card previews do not enter run state");
+            AccessTools.Field(typeof(WorkshopUi),"materialCraftMode").SetValue(null,true);
+            AccessTools.Method(typeof(WorkshopUi),"Refresh").Invoke(null,null);
+            buttons=Descendants<Button>(uiOverlay!).ToArray();
+            Check(Descendants<Label>(uiOverlay!).Any(x=>x.Text.Contains("素材から錬成")) && buttons.Count(x=>x.Text.Contains("空きスロット"))==4,
+                "material-first crafting grid opens with four empty slots (commons need 2, uncommons 3, rares 4)");
+            AccessTools.Method(typeof(WorkshopUi),"AddCraftMaterial").Invoke(null,[Alchemist.Core.Material.Iron]);
+            AccessTools.Method(typeof(WorkshopUi),"AddCraftMaterial").Invoke(null,[Alchemist.Core.Material.Iron]);
+            labels=Descendants<Label>(uiOverlay!).Select(x=>x.Text).ToArray();
+            Check(labels.Any(x=>x.Contains("鉄 ＋ 鉄 から作れるカード"))
+                && Descendants<NGridCardHolder>(uiContent!).Count()==Recipes.FindAll(Alchemist.Core.Material.Iron,Alchemist.Core.Material.Iron).Count(),
+                "two selected materials reveal every matching recipe without consuming them");
+            Check(box.Inventory.Counts[(int)Alchemist.Core.Material.Iron]==2,"placing materials in the grid is a preview, not consumption");
             AccessTools.Field(typeof(WorkshopUi),"selectedRecipe").SetValue(null,Recipes.All[0]);
             AccessTools.Method(typeof(WorkshopUi),"Refresh").Invoke(null,null);
             labels=Descendants<Label>(uiOverlay!).Select(x=>x.Text).ToArray();
             buttons=Descendants<Button>(uiOverlay!).ToArray();
-            Check(labels.Any(x=>x.Contains("このカードを錬成しますか")) && buttons.Any(x=>x.Text=="このカードを作る") && Descendants<NGridCardHolder>(uiOverlay!).Count()==1,"selected card confirmation visible");
+            Check(labels.Any(x=>x.Contains("このカードを錬成しますか")) && buttons.Any(x=>x.Text=="このカードを作る") && Descendants<NGridCardHolder>(uiContent!).Count()==1,"selected card confirmation visible");
             await (Task)AccessTools.Method(typeof(WorkshopUi),"Craft").Invoke(null,[Recipes.All[0]])!;
             Check(player.Deck.Cards.Count(c=>c is IronGuard)==1 && box.Inventory.Total==0,"real workshop crafts and consumes");
             box.Inventory.Grant("upgrade-iron",Alchemist.Core.Material.Iron);
@@ -277,8 +303,8 @@ public static class Smoke
             await eliteSet.GenerateWithoutOffering();
             var eliteSlots=eliteSet.Rewards.OfType<MaterialReward>().ToArray();
             Check(eliteSlots.Length==MaterialOffers.EliteSlots,"elite rewards carry one material slot");
-            Check(eliteSet.Rewards.Any(r=>r is GoldReward) && eliteSet.Rewards.Any(r=>r is CardReward) && eliteSet.Rewards.Any(r=>r is RelicReward),
-                "material slot is added to the elite rewards, not in place of them");
+            Check(eliteSet.Rewards.Any(r=>r is GoldReward) && eliteSet.Rewards.Any(r=>r is RelicReward) && !eliteSet.Rewards.Any(r=>r is CardReward),
+                "material slot is added to gold and relic rewards; the standard card reward is stripped");
             Check(eliteSlots[0].Description.GetFormattedText()=="素材を選ぶ","material slot label localized");
             var candidates=box.Inventory.Offers.Single(o=>o.Id==eliteSlots[0].OfferId).Candidates;
             Check(candidates.Length==3 && candidates.Distinct().Count()==3,"the slot offers three distinct materials");
@@ -298,7 +324,7 @@ public static class Smoke
             int chosenBefore=box.Inventory.Count(candidates[0]);
             AccessTools.Method(typeof(WorkshopUi),"TakeOffer").Invoke(null,[eliteSlots[0].OfferId,candidates[0]]);
             Check(await choosing,"the rewards screen is released once the slot is resolved");
-            Check(box.Inventory.Count(candidates[0])==chosenBefore+1 && box.Inventory.Offers.Count==0,"choosing grants exactly one material");
+            Check(box.Inventory.Count(candidates[0])==chosenBefore+AlchemyState.YieldPerEvent && box.Inventory.Offers.Count==0,"choosing grants the doubled harvest yield");
             var eliteAfterTake=new RewardsSet(player).WithRewardsFromRoom(eliteRoom);
             await eliteAfterTake.GenerateWithoutOffering();
             Check(!eliteAfterTake.Rewards.OfType<MaterialReward>().Any(),"a taken slot is never offered again");
@@ -315,7 +341,7 @@ public static class Smoke
             Check(bossOffers.Count(o=>o.Candidates.All(x=>x.Class==MaterialClass.Rare))==1
                 && bossOffers.Single(o=>o.Candidates.All(x=>x.Class==MaterialClass.Rare)).Candidates.Select(x=>x.RareMaterial).ToHashSet().SetEquals(Enum.GetValues<RareMaterial>()),
                 "one boss slot guarantees all three rare materials");
-            Check(bossSet.Rewards.Any(r=>r is GoldReward) && bossSet.Rewards.Any(r=>r is CardReward),"boss keeps its gold and card rewards");
+            Check(bossSet.Rewards.Any(r=>r is GoldReward) && !bossSet.Rewards.Any(r=>r is CardReward),"boss keeps its gold reward; the standard card reward is stripped");
             // The real rewards screen lives on the overlay stack, so the picker has to be parented there
             // and added after it, or it would draw behind. Offer() is not awaited: it completes only once
             // every reward has been taken.
@@ -338,6 +364,48 @@ public static class Smoke
                 && !reloadedBox.Inventory.Settled,"a half-claimed boss reward survives serialization");
             AccessTools.Method(typeof(WorkshopUi),"DeclineOffer").Invoke(null,[bossSlots[1].OfferId]);
             Check(box.Inventory.Offers.Count==0 && box.Inventory.Settled,"declining clears the remaining slot");
+            // Merchant material purchase: a custom panel gated to the shop room, not the game's own
+            // character-card slots (those complete a purchase by adding straight to the deck).
+            if(WorkshopUi.IsOpen) AccessTools.Method(typeof(WorkshopUi),"Close").Invoke(null,null);
+            var shopRoom=(MerchantRoom)await RunManager.Instance.EnterRoomDebug(RoomType.Shop,showTransition:false);
+            Check(shopRoom.RoomType==RoomType.Shop,"merchant room entered");
+            await Task.Delay(300);
+            var merchantNode=Descendants<NMerchantRoom>(NRun.Instance!).Last();
+            merchantNode.OpenInventory();
+            await Until(()=>merchantNode.Inventory.IsOpen,"native merchant inventory opens");
+            var materialEntry=merchantNode.Inventory.GetNodeOrNull<Button>("AlchemistMaterialShopButton");
+            Check(materialEntry is not null && materialEntry.Text.Contains("錬金素材"),"material entry is mounted on the visible merchant inventory");
+            materialEntry!.EmitSignal(BaseButton.SignalName.Pressed);
+            await Until(()=>WorkshopUi.IsOpen,"merchant material shop opens from its visible button");
+            var shopOverlay=(Control?)AccessTools.Field(typeof(WorkshopUi),"overlay").GetValue(null);
+            await PlayerCmd.GainGold(500,player);
+            AccessTools.Method(typeof(WorkshopUi),"Refresh").Invoke(null,null);
+            var shopLabels=Descendants<Label>(shopOverlay!).Select(x=>x.Text).ToArray();
+            var shopButtons=Descendants<Button>(shopOverlay!).ToArray();
+            var shopOffers=(MerchantMaterialOffer[])AccessTools.Property(typeof(WorkshopUi),"CurrentMerchantOffers").GetValue(null)!;
+            Check(shopOffers.Length==MerchantMaterialOffers.Slots && shopOffers.All(o=>shopLabels.Any(t=>t.Contains($"{Recipes.Name(o.Material)}　{MerchantMaterialOffers.Price}G"))),
+                "three deterministic material slots are priced and offered");
+            Check(shopButtons.Count(b=>b.Text=="購入する")==MerchantMaterialOffers.Slots,"enough gold makes every stocked material purchasable");
+            int goldBefore=player.Gold;
+            var bought=shopOffers[0];
+            int materialBefore=box.Inventory.Counts[(int)bought.Material];
+            await (Task)AccessTools.Method(typeof(WorkshopUi),"BuyMaterial").Invoke(null,[bought])!;
+            Check(player.Gold==goldBefore-MerchantMaterialOffers.Price && box.Inventory.Counts[(int)bought.Material]==materialBefore+1,
+                "buying a material spends gold once and grants exactly one unit");
+            int goldAfter=player.Gold;
+            await (Task)AccessTools.Method(typeof(WorkshopUi),"BuyMaterial").Invoke(null,[bought])!;
+            Check(player.Gold==goldAfter && box.Inventory.Received.Contains(bought.Id),"a sold slot cannot be purchased twice");
+            Check(Descendants<NGridCardHolder>(shopOverlay!).Any(),"material box renders card-style visuals for owned materials");
+            AccessTools.Field(typeof(WorkshopUi),"merchantMode").SetValue(null,false);
+            AccessTools.Method(typeof(WorkshopUi),"Close").Invoke(null,null);
+            await RunManager.Instance.EnterRoomDebug(RoomType.Monster,model:ModelDb.Encounter<BowlbugsWeak>().ToMutable(),showTransition:false);
+            await Until(()=>box.Combat != null && player.PlayerCombatState?.Hand.Cards.Count>0,"post-shop battle ready");
+            await Clear("post-shop battle");
+            WorkshopUi.Open();
+            await Until(()=>WorkshopUi.IsOpen,"material box opens outside the merchant room");
+            var nonShopOverlay=(Control?)AccessTools.Field(typeof(WorkshopUi),"overlay").GetValue(null);
+            Check(!Descendants<Button>(nonShopOverlay!).Any(b=>b.Text.Contains("商人で素材を買う")),"merchant purchase entry hidden away from the shop room");
+            AccessTools.Method(typeof(WorkshopUi),"Close").Invoke(null,null);
             foreach(var f in ForgeCatalog.All)
             {
                 await RunManager.Instance.EnterRoomDebug(RoomType.Monster,model:ModelDb.Encounter<BowlbugsWeak>().ToMutable(),showTransition:false);
@@ -356,6 +424,8 @@ public static class Smoke
                 if(f.Values.TryGetValue("DexterityPower",out int dexterity)) Check(player.Creature.GetPower<DexterityPower>()?.Amount==dexterity,"dexterity applied "+f.Id);
                 if(f.Values.TryGetValue("Hits",out int hits) && hits>1)
                     Check(hitTargets.All(enemy=>999-enemy.CurrentHp>=f.Values["Damage"]*hits),"all multihit strikes land "+f.Id);
+                if(f.Values.TryGetValue("AdvancePhase",out int phaseSteps) && phaseSteps>0)
+                    Check(box.Combat!.Phase==(Alchemist.Core.Material)(((int)box.Combat.StartingMaterial+phaseSteps)%4),"phase-control formula advances the current phase "+f.Id);
                 Check(forged.Pile?.Type==(f.Exhaust?PileType.Exhaust:f.Kind==ForgeKind.Power?PileType.None:PileType.Discard) || f.Kind==ForgeKind.Power,"formula executes "+f.Id);
             }
             var furnace=player.Creature.CombatState!.CreateCard<PortableFurnace>(player);
@@ -377,8 +447,8 @@ public static class Smoke
                     selector.PrepareToSelect([sacrifices[i]]);
                     await CardCmd.AutoPlay(new ThrowingPlayerChoiceContext(),activations[i],null,skipCardPileVisuals:true);
                     Check(sacrifices[i].Pile?.Type==PileType.Exhaust,"furnace activation exhausts the selected card");
-                    Check(box.Inventory.Counts[(int)phase]==beforeMaterial+1,
-                        "successful furnace exhaust grants the current-phase material immediately");
+                    Check(box.Inventory.Counts[(int)phase]==beforeMaterial+AlchemyState.YieldPerEvent,
+                        "successful furnace exhaust grants the doubled current-phase material immediately");
                 }
             }
             Check(box.Combat!.FurnaceUsed==2,"furnace harvesting is capped at two per combat");

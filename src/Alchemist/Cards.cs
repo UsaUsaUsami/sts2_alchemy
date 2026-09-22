@@ -42,7 +42,7 @@ public sealed class FurnaceActivation() : AlchemyCard(0, CardType.Skill, CardRar
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust, CardKeyword.Retain];
     public override List<(string, string)> Localization => new CardLoc("炉の起動",
-        "手札1枚を廃棄し、現在相の素材を1個得る。さらに現在相の効果を得る。\n鉄：4ブロック。薬草：敵全体に脱力1。\n火薬：敵全体に3ダメージ。エーテル：1枚ドロー。\n戦闘全体で2回まで。");
+        "手札1枚を廃棄し、現在相の素材を2個得る。さらに現在相の効果を得る。\n鉄：4ブロック。薬草：敵全体に脱力1。\n火薬：敵全体に3ダメージ。エーテル：1枚ドロー。\n戦闘全体で2回まで。");
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
     {
         var box = Owner.GetRelic<MaterialBox>();
@@ -68,44 +68,43 @@ public sealed class FurnaceActivation() : AlchemyCard(0, CardType.Skill, CardRar
 
 public sealed class IronGuard() : AlchemyCard(1, CardType.Skill, CardRarity.Event, TargetType.Self)
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(16, ValueProp.Move),new CardsVar(1)];
-    public override List<(string, string)> Localization => new CardLoc("鍛鉄の護り", "{Block:diff()}[gold]ブロック[/gold]を得る。\nカードを{Cards}枚引く。");
-    protected override async Task OnPlay(PlayerChoiceContext c, CardPlay p) { await CreatureCmd.GainBlock(Owner.Creature, DynamicVars.Block, p); await CardPileCmd.Draw(c,DynamicVars.Cards.BaseValue,Owner); }
-    protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(5);
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(10, ValueProp.Move)];
+    public override List<(string, string)> Localization => new CardLoc("鍛鉄の護り", "{Block:diff()}[gold]ブロック[/gold]を得る。");
+    protected override async Task OnPlay(PlayerChoiceContext c, CardPlay p) => await CreatureCmd.GainBlock(Owner.Creature, DynamicVars.Block, p);
+    protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(3);
 }
 public sealed class HerbalEdge() : AlchemyCard(1, CardType.Attack, CardRarity.Event, TargetType.AnyEnemy)
 {
     protected override CardModel Artwork => ModelDb.Card<Thunderclap>();
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new DamageVar(12, ValueProp.Move), new PowerVar<VulnerablePower>(2)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new DamageVar(8, ValueProp.Move), new PowerVar<VulnerablePower>(1)];
     public override List<(string, string)> Localization => new CardLoc("薬刃", "{Damage:diff()}ダメージ。\n[gold]弱体[/gold]{VulnerablePower:diff()}を与える。");
     protected override async Task OnPlay(PlayerChoiceContext c, CardPlay p)
     {
         await DamageCmd.Attack(DynamicVars.Damage.BaseValue).FromCard(this,p).Targeting(p.Target!).Execute(c);
         await PowerCmd.Apply<VulnerablePower>(c,p.Target!,DynamicVars.Vulnerable.BaseValue,Owner.Creature,this);
     }
-    protected override void OnUpgrade() { DynamicVars.Damage.UpgradeValueBy(4); DynamicVars.Vulnerable.UpgradeValueBy(1); }
+    protected override void OnUpgrade() { DynamicVars.Damage.UpgradeValueBy(3); DynamicVars.Vulnerable.UpgradeValueBy(1); }
 }
 public sealed class AlchemicalBlast() : AlchemyCard(1, CardType.Attack, CardRarity.Event, TargetType.AllEnemies)
 {
     protected override CardModel Artwork => ModelDb.Card<Thunderclap>();
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new DamageVar(14, ValueProp.Move)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new DamageVar(8, ValueProp.Move)];
     public override List<(string, string)> Localization => new CardLoc("炸裂弾", "敵全体に{Damage:diff()}ダメージ。");
     protected override async Task OnPlay(PlayerChoiceContext c, CardPlay p) => await DamageCmd.Attack(DynamicVars.Damage.BaseValue).FromCard(this,p).TargetingAllOpponents(CombatState!).Execute(c);
-    protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(5);
+    protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(3);
 }
 public sealed class EtherLens() : AlchemyCard(1, CardType.Skill, CardRarity.Event, TargetType.Self)
 {
     protected override CardModel Artwork => ModelDb.Card<ShrugItOff>();
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(8, ValueProp.Move), new CardsVar(3)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(4, ValueProp.Move), new CardsVar(2)];
     public override List<(string, string)> Localization => new CardLoc("エーテルレンズ", "{Block:diff()}[gold]ブロック[/gold]を得る。\nカードを{Cards}枚引く。");
     protected override async Task OnPlay(PlayerChoiceContext c, CardPlay p) { await CreatureCmd.GainBlock(Owner.Creature,DynamicVars.Block,p); await CardPileCmd.Draw(c,DynamicVars.Cards.BaseValue,Owner); }
-    protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(4);
+    protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(3);
 }
 public sealed class HerbalGuard() : AlchemyCard(1, CardType.Skill, CardRarity.Event, TargetType.Self)
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(12, ValueProp.Move),new PowerVar<WeakPower>(2)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(8, ValueProp.Move),new PowerVar<WeakPower>(1)];
     public override List<(string, string)> Localization => new CardLoc("薬草の被膜", "{Block:diff()}[gold]ブロック[/gold]を得る。\n敵全体に[gold]脱力[/gold]{WeakPower}を与える。");
     protected override async Task OnPlay(PlayerChoiceContext c, CardPlay p) { await CreatureCmd.GainBlock(Owner.Creature,DynamicVars.Block,p); await PowerCmd.Apply<WeakPower>(c,CombatState!.HittableEnemies,DynamicVars.Weak.BaseValue,Owner.Creature,this); }
-    protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(4);
+    protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(3);
 }
-
