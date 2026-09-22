@@ -42,7 +42,7 @@ public sealed class FurnaceActivation() : AlchemyCard(0, CardType.Skill, CardRar
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust, CardKeyword.Retain];
     public override List<(string, string)> Localization => new CardLoc("炉の起動",
-        "手札1枚を廃棄し、現在相の素材を1個得る。さらに現在相の効果を得る。\n鉄：4ブロック。薬草：敵全体に脱力1。\n火薬：敵全体に3ダメージ。エーテル：1枚ドロー。\n戦闘全体で2回まで。");
+        "手札1枚を廃棄し、現在相の素材を2個得る。さらに現在相の効果を得る。\n鉄：4ブロック。薬草：敵全体に脱力1。\n火薬：敵全体に3ダメージ。エーテル：1枚ドロー。\n戦闘全体で2回まで。");
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
     {
         var box = Owner.GetRelic<MaterialBox>();

@@ -27,6 +27,9 @@ public static class Recipes
 public sealed class AlchemyState
 {
     public const int Capacity = 10;
+    // Standard combat card rewards are disabled for this character (see MaterialBox.TryModifyRewards);
+    // this is the compensating yield. Each harvest event grants this many units of the same material.
+    public const int YieldPerEvent = 2;
     // 1: harvest-only. 2: normal reward slots. 3: rare inventory and mixed reward slots.
     public const int CurrentSchema = 3;
     public int Schema { get; set; } = CurrentSchema;
@@ -56,6 +59,19 @@ public sealed class AlchemyState
         Revision++;
         return true;
     }
+    /// Grants YieldPerEvent units of one material from a single harvest event. The first unit uses `id`
+    /// itself, preserving the exact Received/Pending bookkeeping other code already relies on (the
+    /// reward-slot re-entry guard checks Received.Contains(id)); additional units use suffixed ids so a
+    /// full box queues each extra unit through the existing single-unit pending/exchange flow instead of
+    /// requiring a multi-unit exchange UI.
+    public bool GrantHarvest(string id, MaterialChoice material)
+    {
+        bool granted = Grant(id, material);
+        for (int i = 1; i < YieldPerEvent; i++) Grant($"{id}:bonus{i}", material);
+        return granted;
+    }
+    public bool GrantHarvest(string id, Material material) => GrantHarvest(id, MaterialChoice.Normal(material));
+
     public bool HasOffer(string id) => Offers.Any(o => o.Id == id);
 
     /// Records a reward slot. Returns false when the slot was already offered or already resolved, so a
@@ -84,7 +100,7 @@ public sealed class AlchemyState
             ?? throw new InvalidOperationException("その報酬枠はすでに解決済みです。");
         if (!offer.Candidates.Contains(choice)) throw new InvalidOperationException("候補にない素材です。");
         Offers.Remove(offer);
-        Grant(id, choice);
+        GrantHarvest(id, choice);
     }
 
     public void DeclineOffer(string id)

@@ -65,6 +65,12 @@ Check(loadedPhase.NextCombatMaterial==Material.Ether && loadedPhase.WorkshopNode
 var pending = new AlchemyState(); for(int i=0;i<12;i++) pending.Grant($"p{i}",Material.Iron);
 var reload = AlchemyState.Load(pending.Save());
 Check(reload.Pending.Count==2 && !reload.CanCraft(recipe),"pending saved and blocks storage abuse");
+// Card rewards are disabled for this character; GrantHarvest is the doubled yield that replaces them.
+var harvestState=new AlchemyState();
+Check(harvestState.GrantHarvest("harvest0",Material.Powder) && harvestState.Count(MaterialChoice.Normal(Material.Powder))==AlchemyState.YieldPerEvent,
+    "a harvest event grants the doubled yield");
+Check(!harvestState.GrantHarvest("harvest0",Material.Powder) && harvestState.Count(MaterialChoice.Normal(Material.Powder))==AlchemyState.YieldPerEvent,
+    "a resent harvest event does not grant twice");
 // Elite and boss reward slots (AGENTS.md 4.4), counted apart from the kill cap.
 Check(MaterialOffers.EliteSlots==1 && MaterialOffers.BossSlots==2 && MaterialOffers.CandidateCount==3,
     "one elite slot, two boss slots, three candidates each");
@@ -88,19 +94,21 @@ Reject(()=>offers.Offer("bad",[Material.Iron,Material.Herb]),"wrong candidate co
 Check(!offers.Settled && !offers.CanCraft(Recipes.All[0]),"an open slot blocks crafting");
 Reject(()=>offers.TakeOffer("boss0",MaterialChoice.Rare(RareMaterial.Stardust)),"material outside the candidates rejected");
 offers.TakeOffer("boss0",eliteRoll[1]);
-Check(offers.Count(eliteRoll[1])==1 && offers.Total==1 && offers.Settled,"taking a slot grants exactly one material");
+Check(offers.Count(eliteRoll[1])==AlchemyState.YieldPerEvent && offers.Total==AlchemyState.YieldPerEvent && offers.Settled,
+    "taking a slot grants the doubled harvest yield");
 Reject(()=>offers.TakeOffer("boss0",eliteRoll[0]),"a slot cannot be taken twice");
 Check(!offers.Offer("boss0",eliteRoll),"a resolved slot is never re-offered");
 offers.Offer("boss1",eliteRoll); offers.DeclineOffer("boss1");
-Check(offers.Total==1 && offers.Settled && !offers.Offer("boss1",eliteRoll),"declining closes the slot for good");
+Check(offers.Total==AlchemyState.YieldPerEvent && offers.Settled && !offers.Offer("boss1",eliteRoll),"declining closes the slot for good");
 Reject(()=>offers.DeclineOffer("boss1"),"a declined slot cannot be declined twice");
 var fullBox=new AlchemyState();
 for(int i=0;i<10;i++) fullBox.Grant($"f{i}",Material.Iron);
 fullBox.Offer("eliteFull",eliteRoll); fullBox.TakeOffer("eliteFull",eliteRoll[0]);
-Check(fullBox.Total==10 && fullBox.Pending.Count==1 && fullBox.Offers.Count==0,
-    "a full box defers the chosen material to the shared receipt path");
-fullBox.Resolve(true,MaterialChoice.Normal(Material.Iron));
-Check(fullBox.Count(eliteRoll[0])==(eliteRoll[0]==MaterialChoice.Normal(Material.Iron)?10:1) && fullBox.Settled,"deferred choice resolves by exchange");
+Check(fullBox.Total==10 && fullBox.Pending.Count==AlchemyState.YieldPerEvent && fullBox.Offers.Count==0,
+    "a full box defers every unit of the doubled yield to the shared receipt path");
+while (fullBox.Pending.Count>0) fullBox.Resolve(true,MaterialChoice.Normal(Material.Iron));
+Check(fullBox.Count(eliteRoll[0])==(eliteRoll[0]==MaterialChoice.Normal(Material.Iron)?10:AlchemyState.YieldPerEvent) && fullBox.Settled,
+    "deferred choice resolves by exchange, once per unit");
 var savedOffers=new AlchemyState();
 savedOffers.Offer("keep0",eliteRoll); savedOffers.Offer("keep1",MaterialOffers.Roll(7,"keep1"));
 var reloadedOffers=AlchemyState.Load(savedOffers.Save());
