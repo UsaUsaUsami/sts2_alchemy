@@ -230,3 +230,15 @@ Phase 2着手前に、上記3点（レシピの3・4素材化、素材のカー�
 ## 2026-09-22: v0.9.1 カード・素材の双方向錬成UI
 
 従来の完成カード一覧を「カードから探す」として維持し、「素材から作る」を追加する。素材側は通常素材2枠を順に埋め、`Recipes.FindAll`で順不同の該当候補を表示する。同種2個も許可し、所持数を超える配置はできない。スロットは入力プレビューに限定し、カード確定前に素材・乱数・ラン状態を変更しない。確定操作は従来の`CommitAsync`へ合流するため、消費・カード追加・失敗時ロールバックは両UIで同じになる。
+
+## 2026-09-23: v0.12.1 ジ・アーキテクト（ラン勝利イベント）が独自キャラで詰む不具合の修正
+
+**発見経緯**：ユーザーの実プレイで「アーキテクトまで到達しても、それ用のデータがないから詰む」と報告があった。
+
+**原因調査**：ゲーム本体の`TheArchitect`（ランを勝利で終える最終イベント）は、キャラクターごとの台詞を`AncientDialogueSet.CharacterDialogues`という辞書から引く。この辞書はゲーム本体の5キャラ（Ironclad/Silent/Defect/Necrobinder/Regent）分しか定義されておらず、`AlchemistCharacter`のような独自キャラは含まれない。`TheArchitect.LoadDialogue()`は該当が無いと`Rng.NextItem`に空リストを渡し、`Dialogue`はnullのまま（`NextItem`は空リストに対して例外を投げず`default`を返すため、ここ自体はクラッシュしない）。しかし「進む」ボタンを押した時に呼ばれる`WinRun()`が`Dialogue.EndAttackers`を無条件に参照しており、ここでNull参照例外が発生する。結果、`RunManager.Instance.WinRun()`まで到達できず、ランを勝利で終えられずに詰む。
+
+**対処**：`src/Alchemist/ArchitectFix.cs`に`TheArchitect.LoadDialogue`（private）へのHarmony Postfixパッチを追加した。`LoadDialogue`実行後に`Dialogue`（private fieldの`_dialogue`）がnullのままなら、`new AncientDialogue("") { EndAttackers = ArchitectAttackers.Both }`という台詞なし・1行のダミーを補う。1行にしたのは、`AncientDialogue`のコンストラクタが0行を許さない（`sfxPaths.Length == 0`で例外）ため。1行あれば`IsOnLastLine`が最初から真になり、これまでと同じ「進む」ボタンのみの画面になる。`EndAttackers = Both`はゲーム本体の他キャラの大半と同じ値。
+
+**実機検証の扱い**：`ModelDb.Event<TheArchitect>().ToMutable()`で作った疑似インスタンスに対して`LoadDialogue`をリフレクション経由で直接呼ぶスモークテストを追加したが、2回（30000・40000フレーム）とも全く同じ地点（`[BaseLib] Checking for additional interactions with THE_ARCHITECT`のログ直後）でフレームを使い切り、完了マーカーに届かなかった。フレーム数を増やしても停止位置が変わらなかったため、フレーム不足ではなく、通常の部屋遷移を経ずに`ToMutable()`したイベントモデルに対してこの操作を行うこと自体がこのテスト環境と噛み合わない可能性が高いと判断した。原因追及より実装の正しさを優先し、このテストコードは追加せず元に戻した（コードの精読による原因特定の確度が高く、パッチ自体は他の変更と独立していて既存機能に影響しないため）。したがって、この修正の実機での最終確認は、ユーザーが実際にランをアーキテクトまで進めて勝利できるかどうかに委ねる。
+
+**影響範囲の限定**：`TheArchitect`以外の「古老」イベント（Darv, Neow, Nonupeipe, Orobas, Pael, Tanx, Tezcatara, Vakuu）も同じ`AncientDialogueSet.CharacterDialogues`パターンを使うが、いずれも`AncientEventModel`という別基底クラス（`TheArchitect`は`EventModel`を直接継承する特殊なイベント）で、`Dialogue`を同じように無条件参照するコードは確認していない。ユーザーは今回のランでアーキテクトまで到達しており、道中でこれらの他イベントによるクラッシュは報告されていないため、今回は`TheArchitect`のみを対象とした。他の古老イベントで同様の問題が見つかれば、別途調査する。
