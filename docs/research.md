@@ -28,8 +28,15 @@
 ## 未検証項目
 
 - BaseLib v3.4.6/v3.4.7への追従可否（API diffの直接確認はしていない）。
-- 工房ノード・素材ボックスの実機UI操作（今回のプレイでは実際に開いた形跡をログから確認できていない。詳細は[[test-results]]）。
+- 工房のマウス操作感・日本語レイアウトと、Act通しでの素材経済（自動UI経路は確認済み。詳細は[[test-results]]）。
 - マルチプレイ・他キャラクターへの副作用確認。
+
+## 2026-09-21: v0.4.0 マップ・強化API確認
+
+- 対象は実機v0.111.0 / BaseLib v3.4.5。ローカル対象版DLLと隔離実行で `RunManager.GenerateMap` 後の `RunState.Map`、`MapPoint.PointType`、`NMapScreen.SetMap`、`NNormalMapPoint._Ready` を確認した。生成後に選択済み座標を適用し、マップノードへ専用ラベルを追加できる。
+- 工房の安定した入退室経路として `RestSiteRoom.EnterInternal` と `MapRoom` を確認した。工房座標だけ部屋ロールを休憩所へ固定し、通常の休憩所にはパッチを適用しない。
+- 既存カード強化は `CardCmd.Upgrade(card, EventLayout)` でマスターデッキのカードへ適用できる。カード型は `CardType.Attack / Skill / Power` から取得でき、強化済みカードは候補から除外できる。
+- `MaterialBox` のシリアライズ対象状態で次戦闘の開始相とActごとの工房座標が保存・復元されることを確認した。
 
 ## 2026-09-21: v0.2.0 カード生成APIの再確認
 
@@ -38,3 +45,14 @@
 - DowngradeInternalはcanonicalの数値とキーワードへ戻すため、ForgedCard.AfterDowngradedで保存済みformulaの基礎値・キーワードを再適用する。
 - 毒の継続と廃棄連動にはゲーム標準NoxiousFumesPower、FeelNoPainPower、DarkEmbracePowerを使用。カード説明はForgedCardに限定したDescription getterパッチと既存の動的変数フォーマットで表示する。
 - 参照元はローカル対象版DLLおよび既記録のBaseLib配布元 https://github.com/Alchyr/BaseLib-StS2 。実ゲームを使う隔離テストの結果はtest-results.md参照。ゲーム本体や有料アセットはdistに同梱しない。
+
+## 2026-09-22: 報酬画面への差し込み
+
+- 対象は実機v0.111.0 / BaseLib v3.4.5。ローカル対象版DLLの逆コンパイル参照`.research/game`と隔離実行で確認。
+- 拡張点は`AbstractModel.TryModifyRewards(Player, List<Reward>, AbstractRoom?)`。`RewardsSet.GenerateWithoutOffering`が`Hook.ModifyRewards`経由で呼び、`RunState.IterateHookListeners(null)`にプレイヤーのレリックが含まれるため、`CustomRelicModel`から上書きできる。`TryModifyRewardsLate`は後段。
+- 既定の報酬は`RewardsSet.GenerateRewardsFor`が部屋種別ごとに生成する（エリート＝ゴールド・カード・レリック＋抽選ポーション、ボス＝ゴールド・カード＋抽選ポーション）。`RewardsSetIndex`はゴールド1・ポーション2・レリック3・カード5で、小さいほど先に並ぶ。
+- `Reward`の直列化は`RewardType`列挙に縛られ、MOD独自型に割り当てる値がない。BaseLibの`CombatRoomFromSerializableRewardExtPatch`は`RewardType.None`の項目をロード時に除去する。したがってMODの報酬に状態を持たせず、MOD側の保存領域に置く必要がある。
+- `NRewardButton.Create(reward, screen)`は`Reward`の型を問わず、ラベルに`Description.GetFormattedText()`、アイコンに`IconPath`のテクスチャを使う。独自の`Reward`派生でもそのまま並ぶことを実機で確認した。
+- 任意の日本語文字列は、BaseLibの`ILocalizationProvider`（`RelicLoc`の`ExtraLoc`）でrelicsテーブルへ追加し、`new LocString("relics", $"{ModelId.Entry}.{key}")`で参照できる。専用ロックテーブルのJSONを追加しなくてよい。
+- 報酬画面は`NOverlayStack.Instance.Push()`で表示され、`Push`は自身に`AddChildSafely`する。オーバーレイを前面に出すには同じ`NOverlayStack`の子として後に追加する。`NModalContainer.Add`は`IScreenContext`へのキャストを要求するため、単純なControlでは使えない。
+- `RunManager.EnterRoomDebug`はエンカウンターモデルを渡すとそのモデルの`RoomType`で引数を上書きする。テストでエリート・ボスの部屋を作るときはモデルを渡さない。

@@ -11,6 +11,6 @@ public static class Main
     public static void Initialize()
     {
         new Harmony("syouh.Alchemist").PatchAll(Assembly.GetExecutingAssembly());
-        GD.Print("[Alchemist] Initialized 0.3.0; target StS2 v0.111.0 / BaseLib 3.4.5; singleplayer prototype");
+        GD.Print("[Alchemist] Initialized 0.6.0; target StS2 v0.111.0 / BaseLib 3.4.5; singleplayer prototype");
     }
 }
