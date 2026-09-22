@@ -52,7 +52,7 @@ Check(AlchemyState.Load(inventory.Save()).Committed.Contains("async"),"save pres
 var pending = new AlchemyState(); for(int i=0;i<12;i++) pending.Grant($"p{i}",Material.Iron);
 var reload = AlchemyState.Load(pending.Save());
 Check(reload.Pending.Count==2 && !reload.CanCraft(recipe),"pending saved and blocks storage abuse");
-Check(Recipes.All.Length==12 && Recipes.All.Select(r=>r.Id).Distinct().Count()==12,"twelve stable recipe ids");
+Check(Recipes.All.Length==28 && Recipes.All.Select(r=>r.Id).Distinct().Count()==28,"twenty-eight stable recipe ids");
 foreach(var a in Enum.GetValues<Material>()) foreach(var b in Enum.GetValues<Material>())
 {
     var choices=Recipes.FindAll(a,b).ToArray();
@@ -63,8 +63,11 @@ foreach(var a in Enum.GetValues<Material>()) foreach(var b in Enum.GetValues<Mat
         Check(stock.CanCraft(r),$"two collected materials can craft {r.Id}");
     }
 }
-Check(Recipes.FindAll(Material.Iron,Material.Iron).Count()==2,"iron offers attack or defense");
-Check(Recipes.FindAll(Material.Herb,Material.Herb).Count()==2,"herbs offer engine or defense");
+Check(Recipes.FindAll(Material.Iron,Material.Iron).Count()>=4,"iron offers attack defense multihit and scaling");
+Check(Recipes.FindAll(Material.Herb,Material.Herb).Count()>=3,"herbs offer engine defense and dexterity");
+Check(ForgeCatalog.All.Count(f=>f.Values.GetValueOrDefault("Hits")>1)>=6,"multiple multihit recipes available");
+Check(ForgeCatalog.All.Count(f=>f.Values.GetValueOrDefault("StrengthPower")>0)>=5,"multiple strength recipes available");
+Check(ForgeCatalog.All.Count(f=>f.Values.GetValueOrDefault("DexterityPower")>0)>=4,"multiple dexterity recipes available");
 foreach(var f in ForgeCatalog.All)
 {
     Check(f.Values.All(x=>x.Value>=0) && f.Cost>=1,"no energy generation or zero-cost cycle "+f.Id);
