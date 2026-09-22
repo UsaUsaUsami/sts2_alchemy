@@ -30,7 +30,7 @@ public static class Recipes
 
 public sealed class AlchemyState
 {
-    public const int Capacity = 10;
+    public const int Capacity = 20;
     // Standard combat card rewards are disabled for this character (see MaterialBox.TryModifyRewards);
     // this is the compensating yield. Each harvest event grants this many units of the same material.
     public const int YieldPerEvent = 2;

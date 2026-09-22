@@ -30,7 +30,7 @@ public sealed class MaterialBox : CustomRelicModel
     public const string RewardLocKey = "materialReward";
     public const string RewardIconPath = "res://images/relics/burning_blood.png";
     public override List<(string,string)> Localization => new RelicLoc("素材ボックス",
-        "鉄→薬草→火薬→エーテルの順に素材相が循環する。[gold]炉の起動[/gold]でカードを廃棄すると現在相の素材を2個得る。\n炉の起動は戦闘全体で2回まで。容量10。通常のカード報酬はない。\nエリート報酬は1枠、ボス報酬は2枠。ボスの片方は希少素材確定。希少素材は工房で錬成カードへ恒久加工できる。\n画面左の「素材・工房」から確認する。", "廃棄する時機が、次の一枚を決める。",
+        "鉄→薬草→火薬→エーテルの順に素材相が循環する。[gold]炉の起動[/gold]でカードを廃棄すると現在相の素材を2個得る。\n炉の起動は戦闘全体で2回まで。容量20。通常のカード報酬はない。\nエリート報酬は1枠、ボス報酬は2枠。ボスの片方は希少素材確定。希少素材は工房で錬成カードへ恒久加工できる。\n画面左の「素材・工房」から確認する。", "廃棄する時機が、次の一枚を決める。",
         (RewardLocKey, "素材を選ぶ"));
     [SavedProperty]
     public string AlchemistState { get => Inventory.Save(); set => state = AlchemyState.Load(value); }

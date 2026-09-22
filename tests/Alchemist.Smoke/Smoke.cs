@@ -196,6 +196,10 @@ public static class Smoke
             Check(box.Combat!.Phase==Alchemist.Core.Material.Iron,"real battle starts iron");
             await Clear("first battle");
             Check(box.Inventory.Total==0,"enemy deaths grant no materials");
+            var normalSet=new RewardsSet(player).WithRewardsFromRoom((CombatRoom)run.CurrentRoom!);
+            await normalSet.GenerateWithoutOffering();
+            Check(normalSet.Rewards.Any(r=>r is GoldReward) && !normalSet.Rewards.Any(r=>r is CardReward),
+                "normal combat keeps its gold reward; the standard card reward is stripped there too");
             box.Inventory.Grant("workshop-fixture-iron-1",Alchemist.Core.Material.Iron);
             box.Inventory.Grant("workshop-fixture-iron-2",Alchemist.Core.Material.Iron);
             var coordParts=plannedNodes[0].Split(',').Select(int.Parse).ToArray();
@@ -225,8 +229,8 @@ public static class Smoke
             AccessTools.Field(typeof(WorkshopUi),"materialCraftMode").SetValue(null,true);
             AccessTools.Method(typeof(WorkshopUi),"Refresh").Invoke(null,null);
             buttons=Descendants<Button>(uiOverlay!).ToArray();
-            Check(Descendants<Label>(uiOverlay!).Any(x=>x.Text.Contains("素材から錬成")) && buttons.Any(x=>x.Text.Contains("空きスロット")),
-                "material-first crafting grid opens with two empty slots");
+            Check(Descendants<Label>(uiOverlay!).Any(x=>x.Text.Contains("素材から錬成")) && buttons.Count(x=>x.Text.Contains("空きスロット"))==4,
+                "material-first crafting grid opens with four empty slots (commons need 2, uncommons 3, rares 4)");
             AccessTools.Method(typeof(WorkshopUi),"AddCraftMaterial").Invoke(null,[Alchemist.Core.Material.Iron]);
             AccessTools.Method(typeof(WorkshopUi),"AddCraftMaterial").Invoke(null,[Alchemist.Core.Material.Iron]);
             labels=Descendants<Label>(uiOverlay!).Select(x=>x.Text).ToArray();
@@ -289,8 +293,8 @@ public static class Smoke
             await eliteSet.GenerateWithoutOffering();
             var eliteSlots=eliteSet.Rewards.OfType<MaterialReward>().ToArray();
             Check(eliteSlots.Length==MaterialOffers.EliteSlots,"elite rewards carry one material slot");
-            Check(eliteSet.Rewards.Any(r=>r is GoldReward) && eliteSet.Rewards.Any(r=>r is CardReward) && eliteSet.Rewards.Any(r=>r is RelicReward),
-                "material slot is added to the elite rewards, not in place of them");
+            Check(eliteSet.Rewards.Any(r=>r is GoldReward) && eliteSet.Rewards.Any(r=>r is RelicReward) && !eliteSet.Rewards.Any(r=>r is CardReward),
+                "material slot is added to gold and relic rewards; the standard card reward is stripped");
             Check(eliteSlots[0].Description.GetFormattedText()=="素材を選ぶ","material slot label localized");
             var candidates=box.Inventory.Offers.Single(o=>o.Id==eliteSlots[0].OfferId).Candidates;
             Check(candidates.Length==3 && candidates.Distinct().Count()==3,"the slot offers three distinct materials");
@@ -310,7 +314,7 @@ public static class Smoke
             int chosenBefore=box.Inventory.Count(candidates[0]);
             AccessTools.Method(typeof(WorkshopUi),"TakeOffer").Invoke(null,[eliteSlots[0].OfferId,candidates[0]]);
             Check(await choosing,"the rewards screen is released once the slot is resolved");
-            Check(box.Inventory.Count(candidates[0])==chosenBefore+1 && box.Inventory.Offers.Count==0,"choosing grants exactly one material");
+            Check(box.Inventory.Count(candidates[0])==chosenBefore+AlchemyState.YieldPerEvent && box.Inventory.Offers.Count==0,"choosing grants the doubled harvest yield");
             var eliteAfterTake=new RewardsSet(player).WithRewardsFromRoom(eliteRoom);
             await eliteAfterTake.GenerateWithoutOffering();
             Check(!eliteAfterTake.Rewards.OfType<MaterialReward>().Any(),"a taken slot is never offered again");
@@ -327,7 +331,7 @@ public static class Smoke
             Check(bossOffers.Count(o=>o.Candidates.All(x=>x.Class==MaterialClass.Rare))==1
                 && bossOffers.Single(o=>o.Candidates.All(x=>x.Class==MaterialClass.Rare)).Candidates.Select(x=>x.RareMaterial).ToHashSet().SetEquals(Enum.GetValues<RareMaterial>()),
                 "one boss slot guarantees all three rare materials");
-            Check(bossSet.Rewards.Any(r=>r is GoldReward) && bossSet.Rewards.Any(r=>r is CardReward),"boss keeps its gold and card rewards");
+            Check(bossSet.Rewards.Any(r=>r is GoldReward) && !bossSet.Rewards.Any(r=>r is CardReward),"boss keeps its gold reward; the standard card reward is stripped");
             // The real rewards screen lives on the overlay stack, so the picker has to be parented there
             // and added after it, or it would draw behind. Offer() is not awaited: it completes only once
             // every reward has been taken.
@@ -389,8 +393,8 @@ public static class Smoke
                     selector.PrepareToSelect([sacrifices[i]]);
                     await CardCmd.AutoPlay(new ThrowingPlayerChoiceContext(),activations[i],null,skipCardPileVisuals:true);
                     Check(sacrifices[i].Pile?.Type==PileType.Exhaust,"furnace activation exhausts the selected card");
-                    Check(box.Inventory.Counts[(int)phase]==beforeMaterial+1,
-                        "successful furnace exhaust grants the current-phase material immediately");
+                    Check(box.Inventory.Counts[(int)phase]==beforeMaterial+AlchemyState.YieldPerEvent,
+                        "successful furnace exhaust grants the doubled current-phase material immediately");
                 }
             }
             Check(box.Combat!.FurnaceUsed==2,"furnace harvesting is capped at two per combat");

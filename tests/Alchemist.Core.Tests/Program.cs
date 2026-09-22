@@ -21,18 +21,18 @@ continuous.BeginTurn(2);
 Check(continuous.Phase==Material.Ether && continuous.NextPhase==Material.Iron,"continuous phase advances and wraps");
 var inventory = new AlchemyState();
 Check(inventory.Total == 0,"empty initial inventory");
-for (int i=0;i<10;i++) inventory.Grant($"kill{i}",Material.Iron);
-Check(inventory.Total == 10,"capacity ten, same type counts individually");
+for (int i=0;i<AlchemyState.Capacity;i++) inventory.Grant($"kill{i}",Material.Iron);
+Check(inventory.Total == AlchemyState.Capacity,"capacity cap, same type counts individually");
 Check(!inventory.Grant("kill0",Material.Iron),"grant is idempotent");
 inventory.Grant("overflow",Material.Herb);
-Check(inventory.Total == 10 && inventory.Pending.Count == 1,"overflow deferred");
+Check(inventory.Total == AlchemyState.Capacity && inventory.Pending.Count == 1,"overflow deferred");
 Reject(()=>inventory.Resolve(true),"full acceptance needs exchange");
 inventory.Resolve(true,Material.Iron);
-Check(inventory.Counts[0] == 9 && inventory.Counts[1] == 1 && inventory.Pending.Count == 0,"exchange atomic");
+Check(inventory.Counts[0] == AlchemyState.Capacity-1 && inventory.Counts[1] == 1 && inventory.Pending.Count == 0,"exchange atomic");
 inventory.Grant("decline",Material.Powder); inventory.Resolve(false);
-Check(inventory.Total == 10 && inventory.Counts[2] == 0,"decline only pending reward");
+Check(inventory.Total == AlchemyState.Capacity && inventory.Counts[2] == 0,"decline only pending reward");
 var saved = AlchemyState.Load(inventory.Save());
-Check(saved.Total == 10 && !saved.Grant("overflow",Material.Herb),"save preserves receipt ids");
+Check(saved.Total == AlchemyState.Capacity && !saved.Grant("overflow",Material.Herb),"save preserves receipt ids");
 Reject(()=>AlchemyState.Load("{\"Schema\":99}"),"unknown schema not reset");
 Reject(()=>AlchemyState.Load("{\"Counts\":[-1,0,0,0]}"),"negative count rejected");
 foreach (var a in Enum.GetValues<Material>()) foreach (var b in Enum.GetValues<Material>())
@@ -40,11 +40,11 @@ foreach (var a in Enum.GetValues<Material>()) foreach (var b in Enum.GetValues<M
 var recipe = Recipes.All[0]; int deck = 0;
 inventory.Commit(recipe,"op1",()=>deck++,()=>deck--);
 inventory.Commit(recipe,"op1",()=>deck++,()=>deck--);
-Check(deck==1 && inventory.Total==8,"craft consumes two, duplicate ignored");
+Check(deck==1 && inventory.Total==AlchemyState.Capacity-2,"craft consumes two, duplicate ignored");
 Reject(()=>inventory.Commit(recipe,"failure",()=>{deck++;throw new InvalidOperationException();},()=>deck--),"failed delivery throws");
-Check(deck==1 && inventory.Total==8,"failed delivery rolled back");
+Check(deck==1 && inventory.Total==AlchemyState.Capacity-2,"failed delivery rolled back");
 await inventory.CommitAsync(recipe,"async",()=>{deck++;return Task.CompletedTask;},()=>deck--);
-Check(deck==2 && inventory.Total==6,"async delivery and cost agree");
+Check(deck==2 && inventory.Total==AlchemyState.Capacity-4,"async delivery and cost agree");
 var empty = new AlchemyState();
 Reject(()=>empty.Commit(recipe,"empty",()=>deck++,()=>deck--),"insufficient ingredients do not deliver");
 Check(deck==2 && empty.Total==0,"no negative inventory");
@@ -62,7 +62,7 @@ var phaseSave=new AlchemyState { NextCombatMaterial=Material.Ether };
 phaseSave.WorkshopNodes[0]=["2,4","5,9"];
 var loadedPhase=AlchemyState.Load(phaseSave.Save());
 Check(loadedPhase.NextCombatMaterial==Material.Ether && loadedPhase.WorkshopNodes[0].SequenceEqual(["2,4","5,9"]),"phase and workshop map survive save");
-var pending = new AlchemyState(); for(int i=0;i<12;i++) pending.Grant($"p{i}",Material.Iron);
+var pending = new AlchemyState(); for(int i=0;i<AlchemyState.Capacity+2;i++) pending.Grant($"p{i}",Material.Iron);
 var reload = AlchemyState.Load(pending.Save());
 Check(reload.Pending.Count==2 && !reload.CanCraft(recipe),"pending saved and blocks storage abuse");
 // Card rewards are disabled for this character; GrantHarvest is the doubled yield that replaces them.
@@ -102,12 +102,12 @@ offers.Offer("boss1",eliteRoll); offers.DeclineOffer("boss1");
 Check(offers.Total==AlchemyState.YieldPerEvent && offers.Settled && !offers.Offer("boss1",eliteRoll),"declining closes the slot for good");
 Reject(()=>offers.DeclineOffer("boss1"),"a declined slot cannot be declined twice");
 var fullBox=new AlchemyState();
-for(int i=0;i<10;i++) fullBox.Grant($"f{i}",Material.Iron);
+for(int i=0;i<AlchemyState.Capacity;i++) fullBox.Grant($"f{i}",Material.Iron);
 fullBox.Offer("eliteFull",eliteRoll); fullBox.TakeOffer("eliteFull",eliteRoll[0]);
-Check(fullBox.Total==10 && fullBox.Pending.Count==AlchemyState.YieldPerEvent && fullBox.Offers.Count==0,
+Check(fullBox.Total==AlchemyState.Capacity && fullBox.Pending.Count==AlchemyState.YieldPerEvent && fullBox.Offers.Count==0,
     "a full box defers every unit of the doubled yield to the shared receipt path");
 while (fullBox.Pending.Count>0) fullBox.Resolve(true,MaterialChoice.Normal(Material.Iron));
-Check(fullBox.Count(eliteRoll[0])==(eliteRoll[0]==MaterialChoice.Normal(Material.Iron)?10:AlchemyState.YieldPerEvent) && fullBox.Settled,
+Check(fullBox.Count(eliteRoll[0])==(eliteRoll[0]==MaterialChoice.Normal(Material.Iron)?AlchemyState.Capacity:AlchemyState.YieldPerEvent) && fullBox.Settled,
     "deferred choice resolves by exchange, once per unit");
 var savedOffers=new AlchemyState();
 savedOffers.Offer("keep0",eliteRoll); savedOffers.Offer("keep1",MaterialOffers.Roll(7,"keep1"));
