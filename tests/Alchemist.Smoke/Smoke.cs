@@ -62,18 +62,38 @@ public static class Smoke
                     Check(restored.IsUpgraded && restored.Id==mutable.Id,"upgraded card save "+canonical.Id);
                 }
                 Check(ResourceLoader.Exists(box.PackedIconPath),"relic portrait");
-                bool mapsOk=true;
+                bool mapsOk=true,everyRouteOk=true; int convertedFights=0,totalChosen=0,uncovered=0,midMiss=0,lateMiss=0;
                 for(int seed=0;seed<100;seed++)
                 {
                     var map=new StandardActMap(new Rng((ulong)seed),ModelDb.Act<Overgrowth>(),false,false);
-                    var candidates=map.GetAllMapPoints().Where(p=>p.PointType==MapPointType.Unknown).Select(p=>new WorkshopCandidate(p.coord.col,p.coord.row)).ToArray();
-                    int rests=map.GetAllMapPoints().Count(p=>p.PointType==MapPointType.RestSite);
-                    var chosen=WorkshopPlanner.Select(candidates,rests,map.GetRowCount()-1);
-                    mapsOk &= chosen.Count==Math.Min(rests,candidates.Count(p=>p.Row>=3&&p.Row<=map.GetRowCount()-4));
-                    mapsOk &= chosen.All(p=>candidates.Contains(p) && map.StartingMapPoint.BFS_FindPath(map.GetPoint(new MapCoord(p.Col,p.Row))!).Any());
-                    mapsOk &= chosen.Count==0 || chosen[0].Row<=map.GetRowCount()/2+1;
+                    int maxRow=map.GetRowCount()-1, restsBefore=map.GetAllMapPoints().Count(p=>p.PointType==MapPointType.RestSite);
+                    var layout=WorkshopPlanner.SelectGuaranteed(WorkshopMap.BuildGraph(map),
+                        new(map.StartingMapPoint.coord.col,map.StartingMapPoint.coord.row),
+                        new(map.BossMapPoint.coord.col,map.BossMapPoint.coord.row),maxRow);
+                    var chosen=layout.Coords;
+                    if(!layout.MidGuaranteed || !layout.LateGuaranteed) uncovered++;
+                    if(chosen.Count==0) continue;
+                    var points=chosen.Select(p=>map.GetPoint(new MapCoord(p.Col,p.Row))!).ToArray();
+                    totalChosen+=points.Length;
+                    convertedFights+=points.Count(p=>p.PointType==MapPointType.Monster);
+                    // Never spend a merchant, rest site or elite on a workshop.
+                    mapsOk &= points.All(p=>p.CanBeModified && p.PointType is MapPointType.Unknown or MapPointType.Monster);
+                    mapsOk &= chosen.All(p=>p.Row>=WorkshopPlanner.EarliestRow);
+                    mapsOk &= map.GetAllMapPoints().Count(p=>p.PointType==MapPointType.RestSite)==restsBefore;
+                    int midEnd=WorkshopPlanner.MidBandEndRow(maxRow);
+                    bool midOk=BossUnreachableWithout(map,[..chosen.Where(p=>p.Row<=midEnd).Select(p=>new MapCoord(p.Col,p.Row))]);
+                    bool lateOk=BossUnreachableWithout(map,[..chosen.Where(p=>p.Row>midEnd).Select(p=>new MapCoord(p.Col,p.Row))]);
+                    if(!midOk) midMiss++;
+                    if(!lateOk) lateMiss++;
+                    // Coverage must hold wherever the planner claimed a guarantee.
+                    everyRouteOk &= midOk || !layout.MidGuaranteed;
+                    everyRouteOk &= lateOk || !layout.LateGuaranteed;
+                    mapsOk &= chosen.Any(p=>p.Row<=midEnd) && chosen.Any(p=>p.Row>midEnd);
                 }
+                GD.Print($"ALCHEMIST_STAT workshopsPerAct={totalChosen/100.0:0.00} convertedFightsPerAct={convertedFights/100.0:0.00} uncoveredMaps={uncovered} midMiss={midMiss} lateMiss={lateMiss}");
                 Check(mapsOk,"workshop placement valid across 100 real maps");
+                Check(everyRouteOk,"claimed route coverage holds on 100 real maps");
+                Check(uncovered<=2,"maps without full coverage stay rare and are reported");
                 foreach(var f in ForgeCatalog.All)
                 {
                     var card=run.CreateCard<ForgedCard>(player);
@@ -96,6 +116,23 @@ public static class Smoke
             catch(Exception ex) { GD.PushError("ALCHEMIST_SMOKE_FAIL " + ex); }
         }
     }
+    // A layer covers every route exactly when deleting it disconnects the boss from the start.
+    private static bool BossUnreachableWithout(ActMap map,HashSet<MapCoord> removed)
+    {
+        var seen=new HashSet<MapCoord>();
+        var queue=new Queue<MapPoint>([map.StartingMapPoint]);
+        while(queue.Count>0)
+        {
+            var point=queue.Dequeue();
+            foreach(var child in point.Children)
+            {
+                if(removed.Contains(child.coord) || !seen.Add(child.coord)) continue;
+                if(child.coord.Equals(map.BossMapPoint.coord)) return false;
+                queue.Enqueue(child);
+            }
+        }
+        return true;
+    }
     private static async Task Until(Func<bool> condition, string stage)
     {
         for(int i=0;i<200;i++) { if(condition()) return; await Task.Delay(100); }
@@ -114,11 +151,21 @@ public static class Smoke
             GD.Print("ALCHEMIST_LOOP run started");
             await Until(()=>player.GetRelic<MaterialBox>()!.Inventory.WorkshopNodes.ContainsKey(run.CurrentActIndex),"workshops planned");
             var plannedNodes=player.GetRelic<MaterialBox>()!.Inventory.WorkshopNodes[run.CurrentActIndex];
-            int restCount=run.Map.GetAllMapPoints().Count(p=>p.PointType==MapPointType.RestSite);
-            int remainingCandidates=run.Map.GetAllMapPoints().Count(p=>p.PointType==MapPointType.Unknown && p.coord.row>=3 && p.coord.row<=run.Map.GetRowCount()-4);
-            Check(plannedNodes.Count==Math.Min(restCount-plannedNodes.Count,remainingCandidates+plannedNodes.Count),"workshop frequency follows rest sites");
+            // Many points carry a workshop so that every branch has one, but any single route crosses
+            // one in the mid band and one in the late band.
+            int liveMidEnd=WorkshopPlanner.MidBandEndRow(run.Map.GetRowCount()-1);
+            var liveRows=plannedNodes.Select(k=>int.Parse(k.Split(',')[1])).ToArray();
+            Check(liveRows.Any(r=>r<=liveMidEnd) && liveRows.Any(r=>r>liveMidEnd),"live run places a mid and a late workshop band");
+            var liveCoords=plannedNodes.Select(k=>k.Split(',').Select(int.Parse).ToArray()).Select(p=>new MapCoord(p[0],p[1])).ToArray();
+            Check(BossUnreachableWithout(run.Map,[..liveCoords.Where(c=>c.row<=liveMidEnd)])
+               && BossUnreachableWithout(run.Map,[..liveCoords.Where(c=>c.row>liveMidEnd)]),"live run route cannot skip either workshop band");
             await Task.Delay(100);
             Check(NMapScreen.Instance is not null && Descendants<Label>(NMapScreen.Instance).Count(x=>x.Text=="工房")==plannedNodes.Count,"workshops visible on map in advance");
+            var mapPoints=Descendants<NNormalMapPoint>(NMapScreen.Instance!).ToArray();
+            string IconOf(NNormalMapPoint p)=>p.GetNode<TextureRect>("%Icon").Texture?.ResourcePath ?? "";
+            var workshopIcons=mapPoints.Where(p=>WorkshopMap.IsWorkshop(run,p.Point.coord)).Select(IconOf).ToArray();
+            var restIcons=mapPoints.Where(p=>!WorkshopMap.IsWorkshop(run,p.Point.coord) && p.Point.PointType==MapPointType.RestSite).Select(IconOf).ToArray();
+            Check(workshopIcons.Length==plannedNodes.Count && workshopIcons.All(x=>x.Contains("map_shop")) && restIcons.All(x=>!x.Contains("map_shop")),"workshop icon stays distinct from rest sites");
             await RunManager.Instance.EnterRoomDebug(RoomType.Monster,model:ModelDb.Encounter<BowlbugsWeak>().ToMutable(),showTransition:false);
             var box=player.GetRelic<MaterialBox>()!;
             await Until(()=>box.Combat != null && player.PlayerCombatState?.Hand.Cards.Count>0,"first battle ready");
@@ -129,6 +176,7 @@ public static class Smoke
             var coordParts=plannedNodes[0].Split(',').Select(int.Parse).ToArray();
             await RunManager.Instance.EnterMapCoordDebug(new MapCoord(coordParts[0],coordParts[1]),RoomType.RestSite,MapPointType.RestSite,showTransition:false);
             await Until(()=>WorkshopUi.IsOpen,"map workshop opens");
+            Check(run.CurrentRoom is RestSiteRoom { Options.Count: 0 },"workshop node offers no resting or upgrading");
             var uiOverlay=(Control?)AccessTools.Field(typeof(WorkshopUi),"overlay").GetValue(null);
             Check(uiOverlay is not null && uiOverlay.GetChildren().OfType<PanelContainer>().Any(),"workshop responsive frame created");
             var labels=Descendants<Label>(uiOverlay!).Select(x=>x.Text).ToArray();
@@ -137,6 +185,9 @@ public static class Smoke
             var buttons=Descendants<Button>(uiOverlay!).ToArray();
             Check(labels.Any(x=>x.Contains("完成カードを選ぶ")) && buttons.Any(x=>x.Text.Contains("作成可能のみ")),"workshop card gallery visible");
             Check(Descendants<NGridCardHolder>(uiOverlay!).Count()==Recipes.All.Count(),"all completed cards rendered");
+            // Overriding holder.Scale leaves cards stuck at SmallScale once hovered; the display scale
+            // belongs on the parent node instead.
+            Check(Descendants<NGridCardHolder>(uiOverlay!).All(h=>h.Scale.IsEqualApprox(NCardHolder.smallScale)),"card holders keep their own hover scale");
             var previewCards=(List<CardModel>)AccessTools.Field(typeof(WorkshopUi),"previewCards").GetValue(null)!;
             Check(previewCards.Count==Recipes.All.Count() && previewCards.All(c=>!run.ContainsCard(c)),"card previews do not enter run state");
             AccessTools.Field(typeof(WorkshopUi),"selectedRecipe").SetValue(null,Recipes.All[0]);

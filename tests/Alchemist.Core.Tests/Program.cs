@@ -95,7 +95,40 @@ foreach(var f in ForgeCatalog.All)
     Check(created==1 && stock.Total==0,"formula consumes exactly two "+f.Id);
 }
 Reject(()=>ForgeCatalog.Get("unknown.v99"),"unknown formula not reset");
-var planned=WorkshopPlanner.Select(Enumerable.Range(1,15).Select(r=>new WorkshopCandidate(r%7,r)),3,15);
-Check(planned.Count==3 && planned.All(p=>p.Row>=3&&p.Row<=12) && planned.Select(p=>p.Row).Distinct().Count()==3,"workshops spread through valid rows");
-Check(WorkshopPlanner.Select([new(1,4)],3,15).Count==1,"workshop planner handles candidate shortage");
+// A layered map: rows 1..14 have three columns each, every point feeding all three of the next row.
+List<CutNode> Layered(Func<int,int,int> cost)
+{
+    List<CutNode> graph = [new(new(0,0),WorkshopCut.Blocked,[..Enumerable.Range(0,3).Select(c=>new WorkshopCandidate(c,1))])];
+    for(int row=1;row<=14;row++)
+        for(int col=0;col<3;col++)
+            graph.Add(new(new(col,row),cost(col,row),
+                [..row==14?[new WorkshopCandidate(0,15)]:Enumerable.Range(0,3).Select(c=>new WorkshopCandidate(c,row+1))]));
+    graph.Add(new(new(0,15),WorkshopCut.Blocked,[]));
+    return graph;
+}
+IEnumerable<List<WorkshopCandidate>> Routes(IReadOnlyList<CutNode> graph, WorkshopCandidate at)
+{
+    var node=graph.Single(n=>n.At==at);
+    if(node.Children.Count==0) { yield return [at]; yield break; }
+    foreach(var child in node.Children)
+        foreach(var tail in Routes(graph,child)) { tail.Insert(0,at); yield return tail; }
+}
+var plainGraph=Layered((_,_)=>1);
+var layout=WorkshopPlanner.SelectGuaranteed(plainGraph,new(0,0),new(0,15),15);
+var guaranteed=layout.Coords;
+Check(layout.MidGuaranteed && layout.LateGuaranteed,"both bands report a real guarantee");
+Check(guaranteed.Count>0 && guaranteed.All(p=>p.Row>=WorkshopPlanner.EarliestRow),"guaranteed workshops respect the earliest row");
+int midEnd=WorkshopPlanner.MidBandEndRow(15);
+Check(Routes(plainGraph,new(0,0)).All(route=>route.Any(p=>guaranteed.Contains(p) && p.Row<=midEnd))
+   && Routes(plainGraph,new(0,0)).All(route=>route.Any(p=>guaranteed.Contains(p) && p.Row>midEnd)),"every route meets a mid and a late workshop");
+Check(WorkshopPlanner.PerAct is >=1 and <=2,"one to two workshops per act");
+// Rows 6 and 11 hold a merchant in column 1; the cut must route around it, never through it.
+var blockedGraph=Layered((col,row)=>col==1 && row is 6 or 11 ? WorkshopCut.Blocked : 1);
+var aroundBlocked=WorkshopPlanner.SelectGuaranteed(blockedGraph,new(0,0),new(0,15),15).Coords;
+Check(aroundBlocked.All(p=>!(p.Col==1 && p.Row is 6 or 11)),"protected points are never converted");
+Check(Routes(blockedGraph,new(0,0)).All(route=>route.Any(p=>aroundBlocked.Contains(p))),"every route still meets a workshop");
+// A column of protected points spanning a whole band cannot be covered at all.
+var uncoverable=WorkshopPlanner.SelectGuaranteed(Layered((col,_)=>col==0?WorkshopCut.Blocked:1),new(0,0),new(0,15),15);
+Check(!uncoverable.MidGuaranteed && !uncoverable.LateGuaranteed,"impossible coverage is reported, not patched over");
+Check(uncoverable.Coords.Count>0 && uncoverable.Coords.All(p=>p.Col!=0),"fallback still places a workshop without touching protected points");
 Console.WriteLine($"{passed} checks passed.");

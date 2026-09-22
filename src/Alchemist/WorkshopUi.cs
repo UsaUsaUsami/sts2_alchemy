@@ -30,6 +30,7 @@ public static class WorkshopUi
     private static bool upgradeMode;
     private static string status = "";
     private static bool craftableOnly;
+    private static bool browsing;
     private static Recipe? selectedRecipe;
     private static CardModel? selectedUpgrade;
     private static readonly List<CardModel> previewCards = [];
@@ -73,6 +74,7 @@ public static class WorkshopUi
     {
         if (box is null || !GodotObject.IsInstanceValid(runNode) || IsOpen) return;
         workshop = false;
+        browsing = false;
         selectedRecipe = null;
         selectedUpgrade = null;
         status = "";
@@ -169,23 +171,33 @@ public static class WorkshopUi
         foreach (var card in previewCards) card.Owner = null!;
         previewCards.Clear();
     }
+    // NCardHolder tweens its own scale between SmallScale and HoverScale, so the display scale belongs on
+    // a parent node. Setting holder.Scale directly leaves every hovered card stuck at SmallScale afterwards.
+    private static NGridCardHolder? MountCard(Control stage, CardModel card, float scale, bool clickable)
+    {
+        var node = NCard.Create(card);
+        if (node is null) return null;
+        var holder = NGridCardHolder.Create(node);
+        if (holder is null) return null;
+        var pivot = new Control { Scale = Vector2.One * (scale / NCardHolder.smallScale.X) };
+        stage.AddChild(pivot);
+        pivot.AddChild(holder);
+        holder.Position = stage.CustomMinimumSize / 2 / pivot.Scale;
+        holder.SetClickable(clickable);
+        return holder;
+    }
     private static Control CardDisplay(Recipe recipe, float scale, bool clickable)
     {
         var wrapper = new VBoxContainer { CustomMinimumSize = clickable ? new(235,350) : new(390,510) };
         wrapper.Alignment = BoxContainer.AlignmentMode.Center;
         var stage = new Control { CustomMinimumSize = clickable ? new(225,285) : new(380,420) };
         wrapper.AddChild(stage);
-        var node = NCard.Create(CreatePreviewCard(recipe));
-        var holder = node is null ? null : NGridCardHolder.Create(node);
+        var holder = MountCard(stage, CreatePreviewCard(recipe), scale, clickable);
         if (holder is not null)
         {
-            stage.AddChild(holder);
-            holder.Position = stage.CustomMinimumSize / 2;
-            holder.Scale = Vector2.One * scale;
-            holder.SetClickable(clickable);
             if (clickable)
                 holder.Connect(NCardHolder.SignalName.Pressed, Callable.From<NCardHolder>(_=> { selectedRecipe = recipe; Refresh(); }));
-            node!.UpdateVisuals(PileType.None, CardPreviewMode.Normal);
+            holder.CardNode!.UpdateVisuals(PileType.None, CardPreviewMode.Normal);
         }
         bool canCraft = box!.Inventory.CanCraft(recipe);
         Text($"{Recipes.Name(recipe.First)} ＋ {Recipes.Name(recipe.Second)}",18,wrapper,
@@ -214,17 +226,11 @@ public static class WorkshopUi
         wrapper.Alignment=BoxContainer.AlignmentMode.Center;
         var stage=new Control { CustomMinimumSize=clickable?new(225,285):new(320,405) };
         wrapper.AddChild(stage);
-        var shown=upgraded?UpgradePreview(card):card;
-        var node=NCard.Create(shown);
-        var holder=node is null?null:NGridCardHolder.Create(node);
+        var holder=MountCard(stage,upgraded?UpgradePreview(card):card,scale,clickable);
         if(holder is not null)
         {
-            stage.AddChild(holder);
-            holder.Position=stage.CustomMinimumSize/2;
-            holder.Scale=Vector2.One*scale;
-            holder.SetClickable(clickable);
             if(clickable) holder.Connect(NCardHolder.SignalName.Pressed,Callable.From<NCardHolder>(_=>{selectedUpgrade=card;Refresh();}));
-            node!.UpdateVisuals(PileType.Deck,upgraded?CardPreviewMode.Upgrade:CardPreviewMode.Normal);
+            holder.CardNode!.UpdateVisuals(PileType.Deck,upgraded?CardPreviewMode.Upgrade:CardPreviewMode.Normal);
         }
         if(clickable)
         {
@@ -234,6 +240,17 @@ public static class WorkshopUi
             if(!affordable) Text("素材不足",15,wrapper,new Color("d88b82"));
         }
         return wrapper;
+    }
+    private static void RecipeBrowser(string title, string help)
+    {
+        Text(title,32,content,new Color("f2d18b"));
+        Text(help,19);
+        Button(craftableOnly ? "作成可能のみ表示　｜　全カードへ" : "全カード表示　｜　作成可能のみへ",()=>{craftableOnly=!craftableOnly;Refresh();});
+        var recipes = Recipes.All.Where(r=>!craftableOnly || box!.Inventory.CanCraft(r))
+            .OrderByDescending(box!.Inventory.CanCraft)
+            .ThenBy(r=>r.Role=="デッキの軸"?0:r.Role=="切り札"?1:2).ToArray();
+        RecipeGallery(recipes);
+        if (recipes.Length==0) Text("現在の素材で作れるカードはありません。左の素材数を確認してください。",22);
     }
     private static void RecipeGallery(IEnumerable<Recipe> recipes)
     {
@@ -259,7 +276,8 @@ public static class WorkshopUi
         Text(recipe.Preview,21,details);
         Text($"必要素材：{Recipes.Name(recipe.First)} ＋ {Recipes.Name(recipe.Second)}",22,details);
         if (!canCraft) Text("不足："+Missing(recipe),20,details,new Color("d88b82"));
-        Button(canCraft ? "このカードを作る" : "素材が足りません",()=>_ = Craft(recipe),!canCraft,details);
+        if (workshop) Button(canCraft ? "このカードを作る" : "素材が足りません",()=>_ = Craft(recipe),!canCraft,details);
+        else Text("錬成はマップ上の工房で行います。",20,details,new Color("aebbc0"));
         Button("一覧へ戻る",()=> { selectedRecipe=null; Refresh(); },parent:details);
     }
     private static void UpgradeGallery()
@@ -323,23 +341,22 @@ public static class WorkshopUi
             if(upgradeMode && selectedUpgrade is not null) UpgradeConfirmation(selectedUpgrade);
             else if(upgradeMode) UpgradeGallery();
             else if (selectedRecipe is not null) Confirmation(selectedRecipe);
-            else
-            {
-                Text("完成カードを選ぶ",32,content,new Color("f2d18b"));
-                Text("カードを選ぶと大きく表示し、効果を確認してから錬成できます。",19);
-                Button(craftableOnly ? "作成可能のみ表示　｜　全カードへ" : "全カード表示　｜　作成可能のみへ",()=>{craftableOnly=!craftableOnly;Refresh();});
-                var recipes = Recipes.All.Where(r=>!craftableOnly || box.Inventory.CanCraft(r)).OrderByDescending(box.Inventory.CanCraft).ThenBy(r=>r.Role=="デッキの軸"?0:r.Role=="切り札"?1:2).ToArray();
-                RecipeGallery(recipes);
-                if (recipes.Length==0) Text("現在の素材で作れるカードはありません。左の素材数を確認してください。",22);
-            }
+            else RecipeBrowser("完成カードを選ぶ","カードを選ぶと大きく表示し、効果を確認してから錬成できます。");
             Button("工房を退出する",()=>_ = LeaveMapWorkshop(),parent:sidebar);
             Text("退出するとマップへ戻ります。",16,sidebar,new Color("aebbc0"));
+        }
+        else if (browsing)
+        {
+            if (selectedRecipe is not null) Confirmation(selectedRecipe);
+            else RecipeBrowser("レシピ一覧","素材の組み合わせと完成カードを確認できます。錬成はマップ上の工房で行います。");
+            Button("素材ボックスへ戻る",()=>{browsing=false;selectedRecipe=null;Refresh();},parent:sidebar);
         }
         else
         {
             Text("素材の使い道",32,content,new Color("f2d18b"));
             Text("敵を倒した時の素材相に応じて素材を獲得します。現在・次・次々の相は、戦闘中に左上のボタンで確認できます。",22);
             Text("工房はマップ上の専用ノードから利用できます。",20);
+            Button("レシピ一覧を見る",()=>{browsing=true;craftableOnly=false;Refresh();},parent:sidebar);
             Button("閉じる",Close,parent:sidebar);
         }
     }

@@ -4,6 +4,7 @@ using HarmonyLib;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Map;
 using MegaCrit.Sts2.Core.Nodes;
+using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
@@ -21,6 +22,21 @@ public static class WorkshopMap
     }
     public static bool IsCurrentWorkshop() => RunManager.Instance.DebugOnlyGetState() is { } run && IsWorkshop(run,run.CurrentMapCoord);
 
+    private static WorkshopCandidate Point(MapPoint p) => new(p.coord.col,p.coord.row);
+    // Merchants, rest sites, elites, the boss and anything the act protected are never converted; a
+    // normal fight may be, but costs enough that "?" points are taken first.
+    private static int CostOf(MapPoint p) => !p.CanBeModified ? WorkshopCut.Blocked : p.PointType switch
+    {
+        MapPointType.Unknown => 1,
+        MapPointType.Monster => 4,
+        _ => WorkshopCut.Blocked
+    };
+    public static List<CutNode> BuildGraph(ActMap map) =>
+        [..map.GetAllMapPoints().Append(map.StartingMapPoint).Append(map.BossMapPoint).Distinct()
+            .Select(p=>new CutNode(Point(p),
+                p==map.StartingMapPoint || p==map.BossMapPoint ? WorkshopCut.Blocked : CostOf(p),
+                [..p.Children.Select(Point)]))];
+
     public static void Plan(RunState run)
     {
         if (run.Players.Count != 1 || run.Players[0].Character is not AlchemistCharacter) return;
@@ -29,11 +45,11 @@ public static class WorkshopMap
         var map=run.Map;
         if(!box.Inventory.WorkshopNodes.ContainsKey(run.CurrentActIndex))
         {
-            var unknown=map.GetAllMapPoints().Where(p=>p.PointType==MapPointType.Unknown)
-                .Select(p=>new WorkshopCandidate(p.coord.col,p.coord.row));
-            int rests=map.GetAllMapPoints().Count(p=>p.PointType==MapPointType.RestSite);
-            box.Inventory.WorkshopNodes[run.CurrentActIndex]=WorkshopPlanner.Select(unknown,rests,map.GetRowCount()-1)
-                .Select(p=>$"{p.Col},{p.Row}").ToList();
+            var layout=WorkshopPlanner.SelectGuaranteed(BuildGraph(map),
+                Point(map.StartingMapPoint),Point(map.BossMapPoint),map.GetRowCount()-1);
+            if(!layout.MidGuaranteed || !layout.LateGuaranteed)
+                GD.PushWarning($"[Alchemist] Act {run.CurrentActIndex}: 全経路を覆えませんでした（中盤={layout.MidGuaranteed} 終盤={layout.LateGuaranteed}）。該当帯は工房1個に縮退します。");
+            box.Inventory.WorkshopNodes[run.CurrentActIndex]=layout.Coords.Select(p=>$"{p.Col},{p.Row}").ToList();
             box.Inventory.Revision++;
         }
         var workshopKeys=box.Inventory.WorkshopNodes[run.CurrentActIndex];
@@ -80,7 +96,38 @@ public static class WorkshopRoomEntryPatch
     }
 }
 
+// RestSiteSynchronizer only completes a player's rest site from BeforeLocalRestSiteExited when options
+// remain, so a workshop node - which offers none - would hang forever awaiting AfterAllRestSitesCompleted.
+// Singleplayer prototype: skip the barrier for workshop nodes only.
+[HarmonyPatch(typeof(RestSiteRoom),nameof(RestSiteRoom.Exit))]
+public static class WorkshopRoomExitPatch
+{
+    public static bool Prefix(ref Task __result)
+    {
+        if(!WorkshopMap.IsCurrentWorkshop()) return true;
+        NRestSiteRoom.Instance?.BeforeExitingRoom();
+        __result=Task.CompletedTask;
+        return false;
+    }
+}
+
 [HarmonyPatch(typeof(NNormalMapPoint),"_Ready")]
+public static class WorkshopMapLabelPatch
+{
+    public static void Postfix(NNormalMapPoint __instance)
+    {
+        var run=RunManager.Instance.DebugOnlyGetState();
+        if(!WorkshopMap.IsWorkshop(run,__instance.Point.coord)) return;
+        var label=new Label { Text="工房",Position=new(-24,34),Size=new(72,28),HorizontalAlignment=HorizontalAlignment.Center,MouseFilter=Control.MouseFilterEnum.Ignore };
+        label.AddThemeFontSizeOverride("font_size",16);
+        label.AddThemeColorOverride("font_color",new Color("f4d796"));
+        __instance.AddChild(label);
+    }
+}
+
+// UpdateIcon also runs from RefreshState, so patching _Ready alone let the rest site campfire come back
+// as soon as the point changed state.
+[HarmonyPatch(typeof(NNormalMapPoint),"UpdateIcon")]
 public static class WorkshopMapIconPatch
 {
     public static void Postfix(NNormalMapPoint __instance)
@@ -90,9 +137,5 @@ public static class WorkshopMapIconPatch
         var icon=__instance.GetNode<TextureRect>("%Icon");
         icon.Texture=ResourceLoader.Load<Texture2D>(ImageHelper.GetImagePath("atlases/ui_atlas.sprites/map/icons/map_shop.tres"));
         icon.SelfModulate=new Color("e6b86a");
-        var label=new Label { Text="工房",Position=new(-24,34),Size=new(72,28),HorizontalAlignment=HorizontalAlignment.Center,MouseFilter=Control.MouseFilterEnum.Ignore };
-        label.AddThemeFontSizeOverride("font_size",16);
-        label.AddThemeColorOverride("font_color",new Color("f4d796"));
-        __instance.AddChild(label);
     }
 }

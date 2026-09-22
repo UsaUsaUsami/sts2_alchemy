@@ -3,7 +3,9 @@ using BaseLib.Abstracts;
 using BaseLib.Utils;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Entities.Creatures;
+using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Relics;
+using MegaCrit.Sts2.Core.Entities.RestSite;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Relics;
@@ -59,5 +61,13 @@ public sealed class MaterialBox : CustomRelicModel
         }
         Combat = null;
         return Task.CompletedTask;
+    }
+    // The workshop reuses RestSiteRoom for floor progression only; resting and upgrading there would
+    // hand out a rest site the act never spent. NRestSiteRoom shows Proceed on its own when empty.
+    public override bool TryModifyRestSiteOptions(Player player, ICollection<RestSiteOption> options)
+    {
+        if (player != Owner || options.Count == 0 || !WorkshopMap.IsCurrentWorkshop()) return false;
+        options.Clear();
+        return true;
     }
 }

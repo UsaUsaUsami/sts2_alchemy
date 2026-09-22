@@ -152,17 +152,35 @@ public sealed class HarvestCombat(IEnumerable<uint> initialEnemies, int cap, Mat
 public readonly record struct WorkshopCandidate(int Col, int Row);
 public static class WorkshopPlanner
 {
-    public static IReadOnlyList<WorkshopCandidate> Select(IEnumerable<WorkshopCandidate> source, int desiredCount, int maxRow)
+    // AGENTS.md 4.5: one to two workshops per ordinary act.
+    public const int PerAct = 2;
+    // Leaves a few fights before the first workshop so there is something to spend.
+    public const int EarliestRow = 3;
+    // Where the mid band ends, as a fraction of the rows available for workshops.
+    private const double MidBandEnd = 0.45;
+
+    public static int MidBandEndRow(int maxRow) => EarliestRow + (int)((maxRow - EarliestRow) * MidBandEnd);
+
+    /// Places a workshop layer every route must cross, once in the mid act and once late enough that
+    /// materials won just before the boss are still spendable. A band whose routes cannot all be covered
+    /// without converting a merchant, rest site or elite falls back to a single workshop and reports
+    /// itself as not guaranteed, rather than taking one of those rooms to compensate.
+    public static WorkshopLayout SelectGuaranteed(IReadOnlyList<CutNode> graph,
+        WorkshopCandidate start, WorkshopCandidate goal, int maxRow)
     {
-        var candidates=source.Where(p=>p.Row>=3 && p.Row<=maxRow-3).Distinct().OrderBy(p=>p.Row).ThenBy(p=>p.Col).ToList();
-        int count=Math.Min(Math.Max(0,desiredCount),candidates.Count);
-        var result=new List<WorkshopCandidate>(count);
-        for(int i=0;i<count;i++)
+        int midEnd = MidBandEndRow(maxRow);
+        List<WorkshopCandidate> result = [];
+        var guaranteed = new bool[2];
+        var bands = new[] { (Low: EarliestRow, High: midEnd), (Low: midEnd + 1, High: maxRow) };
+        for (int i = 0; i < bands.Length; i++)
         {
-            double target=(i+1d)*(maxRow+1d)/(count+1d);
-            var chosen=candidates.Where(p=>!result.Contains(p)).OrderBy(p=>Math.Abs(p.Row-target)).ThenBy(p=>p.Col).First();
-            result.Add(chosen);
+            bool InBand(CutNode n) => n.At.Row >= bands[i].Low && n.At.Row <= bands[i].High;
+            var cut = WorkshopCut.Minimum([.. graph.Select(n => InBand(n) ? n : n with { Cost = WorkshopCut.Blocked })], start, goal);
+            guaranteed[i] = cut.Count > 0;
+            result.AddRange(cut.Count > 0 ? cut
+                : graph.Where(n => InBand(n) && n.Cost != WorkshopCut.Blocked)
+                    .OrderBy(n => n.At.Row).ThenBy(n => n.At.Col).Select(n => n.At).TakeLast(1));
         }
-        return result.OrderBy(p=>p.Row).ToArray();
+        return new([.. result.Distinct().OrderBy(p => p.Row).ThenBy(p => p.Col)], guaranteed[0], guaranteed[1]);
     }
 }
