@@ -25,6 +25,10 @@ using MegaCrit.Sts2.Core.Map;
 using MegaCrit.Sts2.Core.Models.Acts;
 using MegaCrit.Sts2.Core.Random;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
+using MegaCrit.Sts2.Core.Rewards;
+using MegaCrit.Sts2.Core.Nodes.Rewards;
+using MegaCrit.Sts2.Core.Nodes.Screens;
+using MegaCrit.Sts2.Core.Nodes.Screens.Overlays;
 
 [ModInitializer(nameof(Initialize))]
 public static class Smoke
@@ -133,6 +137,22 @@ public static class Smoke
         }
         return true;
     }
+    // Elite and boss encounters can arrive in waves, so killing the enemies captured once is not enough.
+    private static async Task Clear(string stage)
+    {
+        var player=RunManager.Instance.DebugOnlyGetState()!.Players[0];
+        for(int wave=0;wave<8 && CombatManager.Instance.IsInProgress;wave++)
+        {
+            var alive=player.Creature.CombatState?.Enemies.Where(e=>!e.IsDead).ToArray() ?? [];
+            if(alive.Length>0) await CreatureCmd.Kill(alive,true);
+            await Task.Delay(300);
+        }
+        if(CombatManager.Instance.IsInProgress)
+        {
+            var left=player.Creature.CombatState?.Enemies.Select(e=>$"{e.CombatId}:{e.CurrentHp}") ?? [];
+            throw new TimeoutException($"{stage} victory (残: {string.Join(",",left)})");
+        }
+    }
     private static async Task Until(Func<bool> condition, string stage)
     {
         for(int i=0;i<200;i++) { if(condition()) return; await Task.Delay(100); }
@@ -213,6 +233,76 @@ public static class Smoke
             int before=player.Creature.Block;
             await CardCmd.AutoPlay(new ThrowingPlayerChoiceContext(),card,null,skipCardPileVisuals:true);
             Check(player.Creature.Block==before+16,"crafted card usable next battle");
+            // AGENTS.md 4.4: the reward slot is additional to kill harvesting and to the normal rewards.
+            // Passing an encounter model would override the room type with that encounter's own, so the room
+            // type alone selects the elite and boss encounters here.
+            var eliteRoom=(CombatRoom)await RunManager.Instance.EnterRoomDebug(RoomType.Elite,showTransition:false);
+            await Until(()=>box.Combat!=null && player.PlayerCombatState?.Hand.Cards.Count>0,"elite battle ready");
+            Check(eliteRoom.RoomType==RoomType.Elite,"elite room entered");
+            int harvestBefore=box.Inventory.Total;
+            await Clear("elite");
+            int harvested=box.Inventory.Total-harvestBefore;
+            var eliteSet=new RewardsSet(player).WithRewardsFromRoom(eliteRoom);
+            await eliteSet.GenerateWithoutOffering();
+            var eliteSlots=eliteSet.Rewards.OfType<MaterialReward>().ToArray();
+            Check(eliteSlots.Length==MaterialOffers.EliteSlots,"elite rewards carry one material slot");
+            Check(eliteSet.Rewards.Any(r=>r is GoldReward) && eliteSet.Rewards.Any(r=>r is CardReward) && eliteSet.Rewards.Any(r=>r is RelicReward),
+                "material slot is added to the elite rewards, not in place of them");
+            Check(eliteSlots[0].Description.GetFormattedText()=="素材を選ぶ","material slot label localized");
+            var candidates=box.Inventory.Offers.Single(o=>o.Id==eliteSlots[0].OfferId).Candidates;
+            Check(candidates.Length==3 && candidates.Distinct().Count()==3,"the slot offers three distinct materials");
+            Check(box.Inventory.Total==harvestBefore+harvested,"the slot does not grant a material before it is chosen");
+            // Reopening the screen must neither duplicate the slot nor reroll it.
+            var eliteAgain=new RewardsSet(player).WithRewardsFromRoom(eliteRoom);
+            await eliteAgain.GenerateWithoutOffering();
+            Check(eliteAgain.Rewards.OfType<MaterialReward>().Count()==1 && box.Inventory.Offers.Count(o=>o.Id==eliteSlots[0].OfferId)==1
+                && box.Inventory.Offers.Single(o=>o.Id==eliteSlots[0].OfferId).Candidates.SequenceEqual(candidates),"reopening neither duplicates nor rerolls the slot");
+            var choosing=WorkshopUi.ChooseOffer(box,eliteSlots[0].OfferId);
+            await Until(()=>WorkshopUi.IsOpen,"material choice opens");
+            var chooseOverlay=(Control?)AccessTools.Field(typeof(WorkshopUi),"overlay").GetValue(null);
+            var choiceButtons=Descendants<Button>(chooseOverlay!).Select(x=>x.Text).ToArray();
+            Check(Descendants<Label>(chooseOverlay!).Any(x=>x.Text.Contains("素材を1つ選ぶ")),"material choice screen visible");
+            Check(candidates.All(m=>choiceButtons.Any(t=>t.StartsWith(Recipes.Name(m)))) && choiceButtons.Any(t=>t.Contains("辞退")),
+                "three candidates and a decline are offered");
+            int chosenBefore=box.Inventory.Counts[(int)candidates[0]];
+            AccessTools.Method(typeof(WorkshopUi),"TakeOffer").Invoke(null,[eliteSlots[0].OfferId,candidates[0]]);
+            Check(await choosing,"the rewards screen is released once the slot is resolved");
+            Check(box.Inventory.Counts[(int)candidates[0]]==chosenBefore+1 && box.Inventory.Offers.Count==0,"choosing grants exactly one material");
+            var eliteAfterTake=new RewardsSet(player).WithRewardsFromRoom(eliteRoom);
+            await eliteAfterTake.GenerateWithoutOffering();
+            Check(!eliteAfterTake.Rewards.OfType<MaterialReward>().Any(),"a taken slot is never offered again");
+            var bossRoom=(CombatRoom)await RunManager.Instance.EnterRoomDebug(RoomType.Boss,showTransition:false);
+            await Until(()=>box.Combat!=null && player.PlayerCombatState?.Hand.Cards.Count>0,"boss battle ready");
+            Check(bossRoom.RoomType==RoomType.Boss,"boss room entered");
+            await Clear("boss");
+            var bossSet=new RewardsSet(player).WithRewardsFromRoom(bossRoom);
+            await bossSet.GenerateWithoutOffering();
+            var bossSlots=bossSet.Rewards.OfType<MaterialReward>().ToArray();
+            Check(bossSlots.Length==MaterialOffers.BossSlots,"boss rewards carry two material slots");
+            Check(bossSlots.Select(s=>s.OfferId).Distinct().Count()==2 && bossSlots.All(s=>box.Inventory.HasOffer(s.OfferId)),"boss slots are distinct and recorded");
+            Check(bossSet.Rewards.Any(r=>r is GoldReward) && bossSet.Rewards.Any(r=>r is CardReward),"boss keeps its gold and card rewards");
+            // The real rewards screen lives on the overlay stack, so the picker has to be parented there
+            // and added after it, or it would draw behind. Offer() is not awaited: it completes only once
+            // every reward has been taken.
+            _ = bossSet.Offer();
+            await Until(()=>GodotObject.IsInstanceValid(NOverlayStack.Instance)
+                && Descendants<NRewardButton>(NOverlayStack.Instance).Any(b=>b.Reward is MaterialReward),"rewards screen shows the material slots");
+            Check(Descendants<NRewardButton>(NOverlayStack.Instance).Count(b=>b.Reward is MaterialReward)==MaterialOffers.BossSlots,
+                "both boss slots appear as reward buttons");
+            var rewardsScreen=NOverlayStack.Instance.GetChildren().OfType<NRewardsScreen>().Last();
+            var choosingBoss=WorkshopUi.ChooseOffer(box,bossSlots[0].OfferId);
+            await Until(()=>WorkshopUi.IsOpen,"boss material choice opens");
+            var bossOverlay=(Control?)AccessTools.Field(typeof(WorkshopUi),"overlay").GetValue(null);
+            Check(bossOverlay is not null && bossOverlay.GetParent()==NOverlayStack.Instance
+                && bossOverlay.GetIndex()>rewardsScreen.GetIndex(),"the picker draws above the rewards screen");
+            // Taking one slot must leave the other intact across a save and reload of the relic state.
+            AccessTools.Method(typeof(WorkshopUi),"TakeOffer").Invoke(null,[bossSlots[0].OfferId,box.Inventory.Offers.Single(o=>o.Id==bossSlots[0].OfferId).Candidates[0]]);
+            Check(await choosingBoss,"the boss rewards screen is released once its slot is resolved");
+            var reloadedBox=(MaterialBox)RelicModel.FromSerializable(box.ToSerializable());
+            Check(reloadedBox.Inventory.Offers.Count==1 && reloadedBox.Inventory.HasOffer(bossSlots[1].OfferId)
+                && !reloadedBox.Inventory.Settled,"a half-claimed boss reward survives serialization");
+            AccessTools.Method(typeof(WorkshopUi),"DeclineOffer").Invoke(null,[bossSlots[1].OfferId]);
+            Check(box.Inventory.Offers.Count==0 && box.Inventory.Settled,"declining clears the remaining slot");
             foreach(var f in ForgeCatalog.All)
             {
                 await RunManager.Instance.EnterRoomDebug(RoomType.Monster,model:ModelDb.Encounter<BowlbugsWeak>().ToMutable(),showTransition:false);

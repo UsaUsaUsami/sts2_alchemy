@@ -9,6 +9,7 @@ using MegaCrit.Sts2.Core.Nodes;
 using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
+using MegaCrit.Sts2.Core.Nodes.Screens.Overlays;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
 
@@ -31,6 +32,8 @@ public static class WorkshopUi
     private static string status = "";
     private static bool craftableOnly;
     private static bool browsing;
+    private static string? offerId;
+    private static TaskCompletionSource<bool>? offerResult;
     private static Recipe? selectedRecipe;
     private static CardModel? selectedUpgrade;
     private static readonly List<CardModel> previewCards = [];
@@ -67,10 +70,12 @@ public static class WorkshopUi
         var combat = box.Combat;
         launcher!.Text = combat is null ? $"素材・工房  {box.Inventory.Total}/10"
             : $"素材 {box.Inventory.Total}/10  炉 {combat.FurnaceUsed}/2\n{Recipes.Name(combat.Phase)} → {Recipes.Name((Core.Material)(((int)combat.Phase+1)%4))} → {Recipes.Name((Core.Material)(((int)combat.Phase+2)%4))}";
+        // Unresolved reward slots are reached from the rewards screen button, so only overflow receipts
+        // open this screen on their own.
         if (box.Inventory.Pending.Count > 0 && !CombatManager.Instance.IsInProgress && !IsOpen) Open();
     }
 
-    public static void Open()
+    public static void Open(Node? parent = null)
     {
         if (box is null || !GodotObject.IsInstanceValid(runNode) || IsOpen) return;
         workshop = false;
@@ -108,8 +113,25 @@ public static class WorkshopUi
         content = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, CustomMinimumSize = new(720,0) };
         content.AddThemeConstantOverride("separation", 14);
         scroll.AddChild(content);
-        runNode!.AddChild(overlay);
+        (parent ?? runNode!).AddChild(overlay);
         Refresh();
+    }
+
+    /// Called by the rewards screen entry. The picker is parented to the overlay stack that holds the
+    /// rewards screen and added after it, so it draws above rather than behind.
+    public static Task<bool> ChooseOffer(MaterialBox b, string id)
+    {
+        box = b;
+        runNode = NRun.Instance;
+        // Resolved already (double click, or a reward restored after the choice was made).
+        if (!b.Inventory.HasOffer(id)) return Task.FromResult(true);
+        if (!GodotObject.IsInstanceValid(runNode)) return Task.FromResult(false);
+        offerResult?.TrySetResult(false);
+        if (IsOpen) Close();
+        offerResult = new();
+        offerId = id;
+        Open(GodotObject.IsInstanceValid(NOverlayStack.Instance) ? NOverlayStack.Instance : null);
+        return offerResult.Task;
     }
     public static void OpenMapWorkshop()
     {
@@ -333,6 +355,19 @@ public static class WorkshopUi
             Button("この素材の受け取りを辞退",()=>Resolve(false));
             return;
         }
+        if (box.Inventory.Offers.Count > 0 && !CombatManager.Instance.IsInProgress)
+        {
+            var offer = box.Inventory.Offers.FirstOrDefault(o=>o.Id==offerId) ?? box.Inventory.Offers[0];
+            Text("素材を1つ選ぶ",32,content,new Color("f2d18b"));
+            Text($"3つの候補から1個だけ受け取れます。未解決の報酬枠は残り {box.Inventory.Offers.Count} 個です。",23);
+            if (box.Inventory.Total >= AlchemyState.Capacity)
+                Text("素材ボックスが満杯です。受け取ると、交換か辞退を続けて選びます。",20,content,new Color("d8c082"));
+            foreach (var material in offer.Candidates)
+                Button($"{Recipes.Name(material)}　—　{MaterialHint(material)}",()=>TakeOffer(offer.Id,material));
+            Button("この報酬枠を辞退する",()=>DeclineOffer(offer.Id));
+            Text("辞退した枠は戻りません。次の部屋へ進む前に決めてください。",18,content,new Color("aebbc0"));
+            return;
+        }
         if (workshop)
         {
             var modes=new HBoxContainer(); sidebar.AddChild(modes);
@@ -365,6 +400,40 @@ public static class WorkshopUi
         box!.Inventory.Resolve(accept,exchange);
         Refresh();
     }
+    private static string MaterialHint(Core.Material material) => material switch
+    {
+        Core.Material.Iron => "物理・防御", Core.Material.Herb => "毒・弱体",
+        Core.Material.Powder => "高火力・全体", _ => "ドロー・循環"
+    };
+    private static void TakeOffer(string id, Core.Material material)
+    {
+        if (box is null || busy) return;
+        try { box.Inventory.TakeOffer(id,material); status = $"{Recipes.Name(material)}を受け取りました。"; }
+        catch (Exception ex) { status = $"受け取れませんでした：{ex.Message}"; GD.PushError(ex.ToString()); }
+        FinishOffer(id);
+    }
+    private static void DeclineOffer(string id)
+    {
+        if (box is null || busy) return;
+        try { box.Inventory.DeclineOffer(id); status = "この報酬枠を辞退しました。"; }
+        catch (Exception ex) { status = $"辞退できませんでした：{ex.Message}"; GD.PushError(ex.ToString()); }
+        FinishOffer(id);
+    }
+    // Releases the rewards screen only once the slot really left the state, so a rejected take leaves the
+    // button in place instead of consuming the reward.
+    private static void FinishOffer(string id)
+    {
+        if (box!.Inventory.HasOffer(id)) { if (IsOpen) Refresh(); return; }
+        if (offerId == id)
+        {
+            offerId = null;
+            var waiting = offerResult;
+            offerResult = null;
+            waiting?.TrySetResult(true);
+        }
+        if (box.Inventory.Offers.Count == 0 && box.Inventory.Pending.Count == 0 && !workshop && !browsing) Close();
+        else if (IsOpen) Refresh();
+    }
     private static void Close()
     {
         if (busy) return;
@@ -374,6 +443,12 @@ public static class WorkshopUi
         content = null;
         sidebar = null;
         mapWorkshop = false;
+        offerId = null;
+        // Closing without a choice leaves the slot unresolved: the reward button stays, and the travel
+        // guard reopens this screen before the next room.
+        var waiting = offerResult;
+        offerResult = null;
+        waiting?.TrySetResult(false);
     }
     private static async Task LeaveMapWorkshop()
     {
@@ -445,7 +520,7 @@ public static class PendingHarvestTravelPatch
     public static bool Prefix(ref Task __result)
     {
         if (WorkshopUi.CurrentBox() is not { } b) return true;
-        if (b.Inventory.Pending.Count == 0 && !WorkshopUi.IsBusy && !WorkshopUi.IsOpen) return true;
+        if (b.Inventory.Settled && !WorkshopUi.IsBusy && !WorkshopUi.IsOpen) return true;
         WorkshopUi.Open();
         __result = Task.CompletedTask;
         return false;

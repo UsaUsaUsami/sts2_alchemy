@@ -2,7 +2,7 @@ using Alchemist.Core;
 
 int passed = 0;
 void Check(bool ok, string name) { if (!ok) throw new Exception(name); passed++; Console.WriteLine($"PASS {name}"); }
-void Reject(Action action, string name) { try { action(); } catch (InvalidOperationException) { Check(true,name); return; } catch (InvalidDataException) { Check(true,name); return; } throw new Exception(name); }
+void Reject(Action action, string name) { try { action(); } catch (InvalidOperationException) { Check(true,name); return; } catch (InvalidDataException) { Check(true,name); return; } catch (ArgumentException) { Check(true,name); return; } throw new Exception(name); }
 var combat = new HarvestCombat([1,2,3,4], 3);
 Check(combat.Phase == Material.Iron,"turn one iron");
 foreach (int turn in Enumerable.Range(2,4)) { combat.BeginTurn(turn); Check(combat.Phase == (Material)((turn-1)%4),$"phase turn {turn}"); }
@@ -69,6 +69,48 @@ Check(loadedPhase.NextCombatMaterial==Material.Ether && loadedPhase.WorkshopNode
 var pending = new AlchemyState(); for(int i=0;i<12;i++) pending.Grant($"p{i}",Material.Iron);
 var reload = AlchemyState.Load(pending.Save());
 Check(reload.Pending.Count==2 && !reload.CanCraft(recipe),"pending saved and blocks storage abuse");
+// Elite and boss reward slots (AGENTS.md 4.4), counted apart from the kill cap.
+Check(MaterialOffers.EliteSlots==1 && MaterialOffers.BossSlots==2 && MaterialOffers.CandidateCount==3,
+    "one elite slot, two boss slots, three candidates each");
+var eliteRoll=MaterialOffers.Roll(9876543210,"12:4:reward0");
+Check(eliteRoll.Length==3 && eliteRoll.Distinct().Count()==3 && eliteRoll.All(Enum.IsDefined),
+    "a slot offers three distinct materials");
+Check(eliteRoll.SequenceEqual(MaterialOffers.Roll(9876543210,"12:4:reward0")),"same seed and slot reroll identically");
+Check(!eliteRoll.SequenceEqual(MaterialOffers.Roll(9876543211,"12:4:reward0"))
+   || !eliteRoll.SequenceEqual(MaterialOffers.Roll(9876543210,"12:4:reward1")),"seed and slot both affect the roll");
+Check(Enumerable.Range(0,400).SelectMany(i=>MaterialOffers.Roll((ulong)i,"r")).Distinct().Count()==4,
+    "every material can appear across seeds");
+var offers=new AlchemyState();
+Check(offers.Offer("boss0",eliteRoll) && !offers.Offer("boss0",eliteRoll),"a slot is recorded once");
+Reject(()=>offers.Offer("bad",[Material.Iron,Material.Iron,Material.Herb]),"duplicate candidates rejected");
+Reject(()=>offers.Offer("bad",[Material.Iron,Material.Herb]),"wrong candidate count rejected");
+Check(!offers.Settled && !offers.CanCraft(Recipes.All[0]),"an open slot blocks crafting");
+Reject(()=>offers.TakeOffer("boss0",Enum.GetValues<Material>().Except(eliteRoll).Single()),"material outside the candidates rejected");
+offers.TakeOffer("boss0",eliteRoll[1]);
+Check(offers.Counts[(int)eliteRoll[1]]==1 && offers.Total==1 && offers.Settled,"taking a slot grants exactly one material");
+Reject(()=>offers.TakeOffer("boss0",eliteRoll[0]),"a slot cannot be taken twice");
+Check(!offers.Offer("boss0",eliteRoll),"a resolved slot is never re-offered");
+offers.Offer("boss1",eliteRoll); offers.DeclineOffer("boss1");
+Check(offers.Total==1 && offers.Settled && !offers.Offer("boss1",eliteRoll),"declining closes the slot for good");
+Reject(()=>offers.DeclineOffer("boss1"),"a declined slot cannot be declined twice");
+var fullBox=new AlchemyState();
+for(int i=0;i<10;i++) fullBox.Grant($"f{i}",Material.Iron);
+fullBox.Offer("eliteFull",eliteRoll); fullBox.TakeOffer("eliteFull",eliteRoll[0]);
+Check(fullBox.Total==10 && fullBox.Pending.Count==1 && fullBox.Offers.Count==0,
+    "a full box defers the chosen material to the shared receipt path");
+fullBox.Resolve(true,Material.Iron);
+Check(fullBox.Counts[(int)eliteRoll[0]]==(eliteRoll[0]==Material.Iron?10:1) && fullBox.Settled,"deferred choice resolves by exchange");
+var savedOffers=new AlchemyState();
+savedOffers.Offer("keep0",eliteRoll); savedOffers.Offer("keep1",MaterialOffers.Roll(7,"keep1"));
+var reloadedOffers=AlchemyState.Load(savedOffers.Save());
+Check(reloadedOffers.Offers.Count==2 && reloadedOffers.Offers[0].Candidates.SequenceEqual(eliteRoll),
+    "unresolved slots and their candidates survive save and load");
+Check(!reloadedOffers.Offer("keep0",eliteRoll),"reloaded slots are not re-offered");
+var migrated=AlchemyState.Load("{\"Schema\":1,\"Counts\":[1,0,0,0]}");
+Check(migrated.Schema==AlchemyState.CurrentSchema && migrated.Offers.Count==0 && migrated.Total==1,
+    "schema 1 saves migrate without losing materials");
+Reject(()=>AlchemyState.Load("{\"Schema\":2,\"Offers\":[{\"Id\":\"x\",\"Candidates\":[0,0,1]}]}"),"corrupt candidates rejected");
+Reject(()=>AlchemyState.Load("{\"Schema\":2,\"Received\":[\"x\"],\"Offers\":[{\"Id\":\"x\",\"Candidates\":[0,1,2]}]}"),"slot both received and open rejected");
 Check(Recipes.All.Length==28 && Recipes.All.Select(r=>r.Id).Distinct().Count()==28,"twenty-eight stable recipe ids");
 foreach(var a in Enum.GetValues<Material>()) foreach(var b in Enum.GetValues<Material>())
 {

@@ -45,3 +45,14 @@
 - DowngradeInternalはcanonicalの数値とキーワードへ戻すため、ForgedCard.AfterDowngradedで保存済みformulaの基礎値・キーワードを再適用する。
 - 毒の継続と廃棄連動にはゲーム標準NoxiousFumesPower、FeelNoPainPower、DarkEmbracePowerを使用。カード説明はForgedCardに限定したDescription getterパッチと既存の動的変数フォーマットで表示する。
 - 参照元はローカル対象版DLLおよび既記録のBaseLib配布元 https://github.com/Alchyr/BaseLib-StS2 。実ゲームを使う隔離テストの結果はtest-results.md参照。ゲーム本体や有料アセットはdistに同梱しない。
+
+## 2026-09-22: 報酬画面への差し込み
+
+- 対象は実機v0.111.0 / BaseLib v3.4.5。ローカル対象版DLLの逆コンパイル参照`.research/game`と隔離実行で確認。
+- 拡張点は`AbstractModel.TryModifyRewards(Player, List<Reward>, AbstractRoom?)`。`RewardsSet.GenerateWithoutOffering`が`Hook.ModifyRewards`経由で呼び、`RunState.IterateHookListeners(null)`にプレイヤーのレリックが含まれるため、`CustomRelicModel`から上書きできる。`TryModifyRewardsLate`は後段。
+- 既定の報酬は`RewardsSet.GenerateRewardsFor`が部屋種別ごとに生成する（エリート＝ゴールド・カード・レリック＋抽選ポーション、ボス＝ゴールド・カード＋抽選ポーション）。`RewardsSetIndex`はゴールド1・ポーション2・レリック3・カード5で、小さいほど先に並ぶ。
+- `Reward`の直列化は`RewardType`列挙に縛られ、MOD独自型に割り当てる値がない。BaseLibの`CombatRoomFromSerializableRewardExtPatch`は`RewardType.None`の項目をロード時に除去する。したがってMODの報酬に状態を持たせず、MOD側の保存領域に置く必要がある。
+- `NRewardButton.Create(reward, screen)`は`Reward`の型を問わず、ラベルに`Description.GetFormattedText()`、アイコンに`IconPath`のテクスチャを使う。独自の`Reward`派生でもそのまま並ぶことを実機で確認した。
+- 任意の日本語文字列は、BaseLibの`ILocalizationProvider`（`RelicLoc`の`ExtraLoc`）でrelicsテーブルへ追加し、`new LocString("relics", $"{ModelId.Entry}.{key}")`で参照できる。専用ロックテーブルのJSONを追加しなくてよい。
+- 報酬画面は`NOverlayStack.Instance.Push()`で表示され、`Push`は自身に`AddChildSafely`する。オーバーレイを前面に出すには同じ`NOverlayStack`の子として後に追加する。`NModalContainer.Add`は`IScreenContext`へのキャストを要求するため、単純なControlでは使えない。
+- `RunManager.EnterRoomDebug`はエンカウンターモデルを渡すとそのモデルの`RoomType`で引数を上書きする。テストでエリート・ボスの部屋を作るときはモデルを渡さない。
