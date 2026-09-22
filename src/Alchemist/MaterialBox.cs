@@ -30,7 +30,7 @@ public sealed class MaterialBox : CustomRelicModel
     public const string RewardLocKey = "materialReward";
     public const string RewardIconPath = "res://images/relics/burning_blood.png";
     public override List<(string,string)> Localization => new RelicLoc("素材ボックス",
-        "鉄→薬草→火薬→エーテルの順に素材相が循環する。[gold]炉の起動[/gold]でカードを廃棄すると現在相の素材を1個得る。\n炉の起動は戦闘全体で2回まで。容量10。\nこれとは別に、エリートの報酬で1枠、ボスの報酬で2枠、3候補から素材を1個選べる。\n画面左の「素材・工房」から確認する。", "廃棄する時機が、次の一枚を決める。",
+        "鉄→薬草→火薬→エーテルの順に素材相が循環する。[gold]炉の起動[/gold]でカードを廃棄すると現在相の素材を1個得る。\n炉の起動は戦闘全体で2回まで。容量10。\nエリート報酬は1枠、ボス報酬は2枠。ボスの片方は希少素材確定。希少素材は工房で錬成カードへ恒久加工できる。\n画面左の「素材・工房」から確認する。", "廃棄する時機が、次の一枚を決める。",
         (RewardLocKey, "素材を選ぶ"));
     [SavedProperty]
     public string AlchemistState { get => Inventory.Save(); set => state = AlchemyState.Load(value); }
@@ -80,7 +80,13 @@ public sealed class MaterialBox : CustomRelicModel
             string id = OfferId(room, slot);
             // Already taken or declined: a re-entered rewards screen must not offer the slot again.
             if (Inventory.Received.Contains(id)) continue;
-            if (!Inventory.HasOffer(id)) Inventory.Offer(id, MaterialOffers.Roll(Owner.RunState.Rng.Seed, id));
+            if (!Inventory.HasOffer(id))
+            {
+                var candidates = room.RoomType == RoomType.Boss && slot == 1
+                    ? MaterialOffers.RollRare(Owner.RunState.Rng.Seed,id)
+                    : MaterialOffers.RollMixed(Owner.RunState.Rng.Seed,id);
+                Inventory.Offer(id,candidates);
+            }
             if (rewards.OfType<MaterialReward>().Any(r => r.OfferId == id)) continue;
             rewards.Add(new MaterialReward(player, this, id));
             modified = true;

@@ -20,7 +20,9 @@ namespace Alchemist;
 public sealed class ForgedCard() : AlchemyCard(2,CardType.Attack,CardRarity.Event,TargetType.AnyEnemy)
 {
     private string formulaId = "greatblade.v1";
+    private string rareModifierId = "";
     public ForgeFormula Formula => ForgeCatalog.Get(formulaId);
+    public RareMaterialDefinition? RareModifier => rareModifierId.Length == 0 ? null : RareMaterials.Get(rareModifierId);
     [SavedProperty]
     public string AlchemistFormula
     {
@@ -30,20 +32,45 @@ public sealed class ForgedCard() : AlchemyCard(2,CardType.Attack,CardRarity.Even
             AssertMutable();
             _ = ForgeCatalog.Get(value); // Validate before changing existing data.
             formulaId=value;
-            foreach(var (key,var) in DynamicVars) var.BaseValue=Formula.Values.GetValueOrDefault(key);
-            EnergyCost.SetCustomBaseCost(Formula.Cost);
-            RemoveKeyword(CardKeyword.Exhaust);
-            RemoveKeyword(CardKeyword.Retain);
-            if(Formula.Exhaust) AddKeyword(CardKeyword.Exhaust);
-            if(Formula.Retain) AddKeyword(CardKeyword.Retain);
+            ApplyConfiguration();
         }
+    }
+    [SavedProperty]
+    public string AlchemistRareModifier
+    {
+        get => rareModifierId;
+        set
+        {
+            AssertMutable();
+            if(value.Length>0) _=RareMaterials.Get(value);
+            rareModifierId=value;
+            ApplyConfiguration();
+        }
+    }
+    private void ApplyConfiguration()
+    {
+        foreach(var (key,var) in DynamicVars) var.BaseValue=Formula.Values.GetValueOrDefault(key);
+        bool voided=RareModifier?.Material==RareMaterial.VoidCrystal;
+        if(RareModifier?.Material==RareMaterial.Stardust && BaseReplayCount<1) BaseReplayCount=1;
+        EnergyCost.SetCustomBaseCost(Math.Max(0,Formula.Cost-(voided?1:0)));
+        RemoveKeyword(CardKeyword.Exhaust);
+        RemoveKeyword(CardKeyword.Retain);
+        if(Formula.Exhaust || voided) AddKeyword(CardKeyword.Exhaust);
+        if(Formula.Retain || RareModifier?.Material==RareMaterial.Mercury) AddKeyword(CardKeyword.Retain);
     }
     public override string Title => Formula.Name + (IsUpgraded ? "+" : "");
     public override CardType Type => Formula.Kind switch { ForgeKind.Attack=>CardType.Attack,ForgeKind.Skill=>CardType.Skill,_=>CardType.Power };
     public override TargetType TargetType => Formula.Target switch { ForgeTarget.Enemy=>TargetType.AnyEnemy,ForgeTarget.AllEnemies=>TargetType.AllEnemies,_=>TargetType.Self };
-    protected override int CanonicalEnergyCost => Formula.Cost;
+    protected override int CanonicalEnergyCost => Math.Max(0,Formula.Cost-(RareModifier?.Material==RareMaterial.VoidCrystal?1:0));
     public override bool GainsBlock => Formula.Values.ContainsKey("Block");
-    public override IEnumerable<CardKeyword> CanonicalKeywords => Formula.Retain ? [CardKeyword.Retain] : [];
+    public override IEnumerable<CardKeyword> CanonicalKeywords
+    {
+        get
+        {
+            if(Formula.Retain || RareModifier?.Material==RareMaterial.Mercury) yield return CardKeyword.Retain;
+            if(Formula.Exhaust || RareModifier?.Material==RareMaterial.VoidCrystal) yield return CardKeyword.Exhaust;
+        }
+    }
     protected override CardModel Artwork => Formula.Kind switch { ForgeKind.Power=>ModelDb.Card<Inflame>(),ForgeKind.Skill=>ModelDb.Card<ShrugItOff>(),_=>ModelDb.Card<Thunderclap>() };
     protected override IEnumerable<DynamicVar> CanonicalVars => [
         new DamageVar(28,ValueProp.Move),new BlockVar(8,ValueProp.Move),new CardsVar(0),
@@ -52,7 +79,8 @@ public sealed class ForgedCard() : AlchemyCard(2,CardType.Attack,CardRarity.Even
         new DynamicVar("ExhaustBlock",0),new DynamicVar("ExhaustDraw",0),new DynamicVar("Fumes",0)];
     public override List<(string,string)> Localization => [
         ("title","錬成カード"),("description",ForgeCatalog.Get("greatblade.v1").Text),
-        ..ForgeCatalog.All.Select(f=>($"formula.{f.Id}.description",f.Text))];
+        ..ForgeCatalog.All.Select(f=>($"formula.{f.Id}.description",f.Text)),
+        ..ForgeCatalog.All.SelectMany(f=>RareMaterials.All.Select(r=>($"formula.{f.Id}.{r.Id}.description",$"{f.Text}\n[gold]{r.EffectName}[/gold]：{r.Description}")))];
     protected override IEnumerable<IHoverTip> ExtraHoverTips
     {
         get
@@ -105,7 +133,8 @@ public static class ForgedDescriptionPatch
     public static bool Prefix(CardModel __instance,ref LocString __result)
     {
         if(__instance is not ForgedCard card) return true;
-        __result=new LocString("cards",$"{card.Id.Entry}.formula.{card.AlchemistFormula}.description");
+        string suffix=card.AlchemistRareModifier.Length==0 ? "" : $".{card.AlchemistRareModifier}";
+        __result=new LocString("cards",$"{card.Id.Entry}.formula.{card.AlchemistFormula}{suffix}.description");
         return false;
     }
 }
