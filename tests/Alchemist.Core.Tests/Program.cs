@@ -127,7 +127,9 @@ string applied="";
 rareStock.CommitRare(RareMaterial.Stardust,"apply",()=>applied="rare.stardust",()=>applied="");
 Check(applied=="rare.stardust" && rareStock.RareCounts[(int)RareMaterial.Stardust]==0,"rare processing consumes exactly one material");
 Reject(()=>rareStock.CommitRare(RareMaterial.Stardust,"again",()=>applied="bad",()=>applied="rare.stardust"),"missing rare material is rejected");
-Check(Recipes.All.Length==28 && Recipes.All.Select(r=>r.Id).Distinct().Count()==28,"twenty-eight stable recipe ids");
+Check(Recipes.All.Length==83 && Recipes.All.Select(r=>r.Id).Distinct().Count()==83,"eighty-three stable recipe ids");
+Check(Recipes.All.Count(r=>r.Materials.Count==2)==28 && Recipes.All.Count(r=>r.Materials.Count==3)==20 && Recipes.All.Count(r=>r.Materials.Count==4)==35,
+    "commons use two materials, uncommons three, rares four");
 foreach(var a in Enum.GetValues<Material>()) foreach(var b in Enum.GetValues<Material>())
 {
     var choices=Recipes.FindAll(a,b).ToArray();
