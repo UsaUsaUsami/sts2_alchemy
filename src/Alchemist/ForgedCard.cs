@@ -19,7 +19,7 @@ namespace Alchemist;
 // Formula variants share execution, preview and persistence instead of one class per crafted card.
 public sealed class ForgedCard() : AlchemyCard(2,CardType.Attack,CardRarity.Event,TargetType.AnyEnemy)
 {
-    private string formulaId = "greatblade.v1";
+    private string formulaId = "weapon.iron_iron.v2";
     private string rareModifierId = "";
     public ForgeFormula Formula => ForgeCatalog.Get(formulaId);
     public RareMaterialDefinition? RareModifier => rareModifierId.Length == 0 ? null : RareMaterials.Get(rareModifierId);
@@ -74,12 +74,12 @@ public sealed class ForgedCard() : AlchemyCard(2,CardType.Attack,CardRarity.Even
     protected override CardModel Artwork => Formula.Kind switch { ForgeKind.Power=>ModelDb.Card<Inflame>(),ForgeKind.Skill=>ModelDb.Card<ShrugItOff>(),_=>ModelDb.Card<Thunderclap>() };
     protected override IEnumerable<DynamicVar> CanonicalVars => [
         new DamageVar(28,ValueProp.Move),new BlockVar(8,ValueProp.Move),new CardsVar(0),
-        new PowerVar<PoisonPower>(0),new PowerVar<VulnerablePower>(0),
+        new PowerVar<PoisonPower>(0),new PowerVar<VulnerablePower>(0),new PowerVar<WeakPower>(0),
         new PowerVar<StrengthPower>(0),new PowerVar<DexterityPower>(0),new DynamicVar("Hits",0),
         new DynamicVar("ExhaustBlock",0),new DynamicVar("ExhaustDraw",0),new DynamicVar("Fumes",0),
-        new DynamicVar("AdvancePhase",0)];
+        new PowerVar<BlurPower>(0),new PowerVar<ThornsPower>(0),new DynamicVar("AdvancePhase",0)];
     public override List<(string,string)> Localization => [
-        ("title","錬成カード"),("description",ForgeCatalog.Get("greatblade.v1").Text),
+        ("title","錬成カード"),("description",ForgeCatalog.Get("weapon.iron_iron.v2").Text),
         ..ForgeCatalog.All.Select(f=>($"formula.{f.Id}.description",f.Text)),
         ..ForgeCatalog.All.SelectMany(f=>RareMaterials.All.Select(r=>($"formula.{f.Id}.{r.Id}.description",$"{f.Text}\n[gold]{r.EffectName}[/gold]：{r.Description}")))];
     protected override IEnumerable<IHoverTip> ExtraHoverTips
@@ -88,8 +88,11 @@ public sealed class ForgedCard() : AlchemyCard(2,CardType.Attack,CardRarity.Even
         {
             if(Formula.Values.ContainsKey("PoisonPower") || Formula.Values.ContainsKey("Fumes")) yield return HoverTipFactory.FromPower<PoisonPower>();
             if(Formula.Values.ContainsKey("VulnerablePower")) yield return HoverTipFactory.FromPower<VulnerablePower>();
+            if(Formula.Values.ContainsKey("WeakPower")) yield return HoverTipFactory.FromPower<WeakPower>();
             if(Formula.Values.ContainsKey("StrengthPower")) yield return HoverTipFactory.FromPower<StrengthPower>();
             if(Formula.Values.ContainsKey("DexterityPower")) yield return HoverTipFactory.FromPower<DexterityPower>();
+            if(Formula.Values.ContainsKey("BlurPower")) yield return HoverTipFactory.FromPower<BlurPower>();
+            if(Formula.Values.ContainsKey("ThornsPower")) yield return HoverTipFactory.FromPower<ThornsPower>();
             if(Formula.Values.ContainsKey("ExhaustBlock")) yield return HoverTipFactory.FromKeyword(CardKeyword.Exhaust);
         }
     }
@@ -102,6 +105,8 @@ public sealed class ForgedCard() : AlchemyCard(2,CardType.Attack,CardRarity.Even
     {
         if(DynamicVars.Vulnerable.BaseValue>0)
             await PowerCmd.Apply<VulnerablePower>(c,p.Target!,DynamicVars.Vulnerable.BaseValue,Owner.Creature,this);
+        if(DynamicVars.Weak.BaseValue>0)
+            await PowerCmd.Apply<WeakPower>(c,p.Target!,DynamicVars.Weak.BaseValue,Owner.Creature,this);
         if(DynamicVars.Damage.BaseValue>0)
         {
             int hits=Math.Max(1,DynamicVars["Hits"].IntValue);
@@ -125,6 +130,8 @@ public sealed class ForgedCard() : AlchemyCard(2,CardType.Attack,CardRarity.Even
         if(DynamicVars["ExhaustBlock"].BaseValue>0) await PowerCmd.Apply<FeelNoPainPower>(c,Owner.Creature,DynamicVars["ExhaustBlock"].BaseValue,Owner.Creature,this);
         if(DynamicVars["ExhaustDraw"].BaseValue>0) await PowerCmd.Apply<DarkEmbracePower>(c,Owner.Creature,DynamicVars["ExhaustDraw"].BaseValue,Owner.Creature,this);
         if(DynamicVars["Fumes"].BaseValue>0) await PowerCmd.Apply<NoxiousFumesPower>(c,Owner.Creature,DynamicVars["Fumes"].BaseValue,Owner.Creature,this);
+        if(DynamicVars["BlurPower"].BaseValue>0) await PowerCmd.Apply<BlurPower>(c,Owner.Creature,DynamicVars["BlurPower"].BaseValue,Owner.Creature,this);
+        if(DynamicVars["ThornsPower"].BaseValue>0) await PowerCmd.Apply<ThornsPower>(c,Owner.Creature,DynamicVars["ThornsPower"].BaseValue,Owner.Creature,this);
         if(DynamicVars["AdvancePhase"].BaseValue>0)
             Owner.GetRelic<MaterialBox>()?.Combat?.AdvancePhase(DynamicVars["AdvancePhase"].IntValue);
     }
