@@ -54,7 +54,12 @@ public static class Smoke
                 var player = Player.CreateForNewRun(character,UnlockState.all,1);
                 var run = RunState.CreateForNewRun([player],ActModel.GetDefaultList().Select(a=>a.ToMutable()).ToList(),[],GameMode.Standard,0,"ALCHEMIST_SMOKE_01");
                 Check(player.Deck.Cards.Count==9,"starting deck nine");
-                Check(player.Deck.Cards.Count(c=>c is StrikeIronclad)==4 && player.Deck.Cards.Count(c=>c is DefendIronclad)==4 && player.Deck.Cards.Count(c=>c is PortableFurnace)==1,"deck composition 4/4/1");
+                Check(player.Deck.Cards.Count(c=>c is StrikeIronclad)==3 && player.Deck.Cards.Count(c=>c is DefendIronclad)==3
+                    && player.Deck.Cards.Count(c=>c is EarthenGuard)==1 && player.Deck.Cards.Count(c=>c is SoothingMist)==1
+                    && player.Deck.Cards.Count(c=>c is InstantAlchemy)==1,"deck composition 3/3/earth/water/instant");
+                Check(ModelDb.Potion<EarthPhial>() is not null && ModelDb.Potion<WaterPhial>() is not null
+                    && ModelDb.Potion<FirePhial>() is not null && ModelDb.Potion<AirPhial>() is not null,
+                    "workshop-only potion models registered without a random-drop pool");
                 var box = player.GetRelic<MaterialBox>()!;
                 Check(box.Inventory.Total==0,"starter inventory empty");
                 box.Inventory.Grant("a",Alchemist.Core.Material.Iron);

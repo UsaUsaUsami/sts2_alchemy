@@ -13,7 +13,9 @@ using MegaCrit.Sts2.Core.ValueProps;
 
 namespace Alchemist;
 
-public sealed class EarthPhial() : CustomPotionModel
+// These potions are crafted directly in the workshop. Passing false keeps BaseLib from adding them
+// to a random-drop potion pool while still registering their model types with ModelDb.
+public sealed class EarthPhial() : CustomPotionModel(false)
 {
     public override PotionRarity Rarity=>PotionRarity.Common; public override PotionUsage Usage=>PotionUsage.CombatOnly; public override TargetType TargetType=>TargetType.AnyPlayer;
     public override string? CustomPackedImagePath=>ModelDb.Potion<BlockPotion>().ImagePath;
@@ -21,7 +23,7 @@ public sealed class EarthPhial() : CustomPotionModel
     public override List<(string,string)> Localization=>new PotionLoc("地相の小瓶","{Block}[gold]ブロック[/gold]を得る。");
     protected override Task OnUse(PlayerChoiceContext c,Creature? target){PotionModel.AssertValidForTargetedPotion(target);return CreatureCmd.GainBlock(target!,DynamicVars.Block,null);}
 }
-public sealed class WaterPhial() : CustomPotionModel
+public sealed class WaterPhial() : CustomPotionModel(false)
 {
     public override PotionRarity Rarity=>PotionRarity.Common; public override PotionUsage Usage=>PotionUsage.CombatOnly; public override TargetType TargetType=>TargetType.AnyEnemy;
     public override string? CustomPackedImagePath=>ModelDb.Potion<WeakPotion>().ImagePath;
@@ -30,7 +32,7 @@ public sealed class WaterPhial() : CustomPotionModel
     public override List<(string,string)> Localization=>new PotionLoc("水相の小瓶","[gold]脱力[/gold]{WeakPower}を与える。");
     protected override Task OnUse(PlayerChoiceContext c,Creature? target){PotionModel.AssertValidForTargetedPotion(target);return PowerCmd.Apply<WeakPower>(c,target!,DynamicVars.Weak.BaseValue,Owner.Creature,null);}
 }
-public sealed class FirePhial() : CustomPotionModel
+public sealed class FirePhial() : CustomPotionModel(false)
 {
     public override PotionRarity Rarity=>PotionRarity.Common; public override PotionUsage Usage=>PotionUsage.CombatOnly; public override TargetType TargetType=>TargetType.AnyEnemy;
     public override string? CustomPackedImagePath=>ModelDb.Potion<FirePotion>().ImagePath;
@@ -38,7 +40,7 @@ public sealed class FirePhial() : CustomPotionModel
     public override List<(string,string)> Localization=>new PotionLoc("火相の小瓶","{Damage}ダメージを与える。");
     protected override Task OnUse(PlayerChoiceContext c,Creature? target){PotionModel.AssertValidForTargetedPotion(target);return CreatureCmd.Damage(c,target!,DynamicVars.Damage.BaseValue,DynamicVars.Damage.Props,Owner.Creature,null,null);}
 }
-public sealed class AirPhial() : CustomPotionModel
+public sealed class AirPhial() : CustomPotionModel(false)
 {
     public override PotionRarity Rarity=>PotionRarity.Common; public override PotionUsage Usage=>PotionUsage.CombatOnly; public override TargetType TargetType=>TargetType.AnyPlayer;
     public override string? CustomPackedImagePath=>ModelDb.Potion<SwiftPotion>().ImagePath;
