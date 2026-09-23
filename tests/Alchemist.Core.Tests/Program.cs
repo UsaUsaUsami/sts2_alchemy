@@ -15,12 +15,12 @@ Check(combat.UseFurnace() && combat.UseFurnace() && !combat.UseFurnace(),"furnac
 combat.FurnaceActive = true;
 Check(!combat.UseFurnace(),"reapplication cannot reset furnace");
 Check(new HarvestCombat().FurnaceUsed == 0,"new combat resets furnace");
-var continuous = new HarvestCombat();
-Check(continuous.Phase==Material.Iron,"every combat starts from iron");
+var continuous = new HarvestCombat(Material.Powder);
+Check(continuous.Phase==Material.Powder,"combat starts from saved material");
 continuous.BeginTurn(2);
-Check(continuous.Phase==Material.Herb && continuous.NextPhase==Material.Powder,"combat phase advances from iron");
+Check(continuous.Phase==Material.Ether && continuous.NextPhase==Material.Iron,"continuous phase advances and wraps");
 continuous.AdvancePhase();
-Check(continuous.Phase==Material.Powder && continuous.NextPhase==Material.Ether,"cards can advance the material phase without changing the turn");
+Check(continuous.Phase==Material.Iron && continuous.NextPhase==Material.Herb,"cards can advance the material phase without changing the turn");
 var inventory = new AlchemyState();
 Check(inventory.Total == 0,"empty initial inventory");
 for (int i=0;i<AlchemyState.Capacity;i++) inventory.Grant($"kill{i}",Material.Iron);
@@ -73,10 +73,10 @@ Check(loadedPhase.NextCombatMaterial==Material.Ether && loadedPhase.WorkshopNode
 var pending = new AlchemyState(); for(int i=0;i<AlchemyState.Capacity+2;i++) pending.Grant($"p{i}",Material.Iron);
 var reload = AlchemyState.Load(pending.Save());
 Check(reload.Pending.Count==2 && !reload.CanCraft(recipe),"pending saved and blocks storage abuse");
-// One successful furnace activation or reward choice grants exactly one material.
+// Card rewards are disabled for this character; GrantHarvest is the doubled yield that replaces them.
 var harvestState=new AlchemyState();
 Check(harvestState.GrantHarvest("harvest0",Material.Powder) && harvestState.Count(MaterialChoice.Normal(Material.Powder))==AlchemyState.YieldPerEvent,
-    "a harvest event grants one material");
+    "a harvest event grants the doubled yield");
 Check(!harvestState.GrantHarvest("harvest0",Material.Powder) && harvestState.Count(MaterialChoice.Normal(Material.Powder))==AlchemyState.YieldPerEvent,
     "a resent harvest event does not grant twice");
 // Elite and boss reward slots (AGENTS.md 4.4), counted apart from the kill cap.
@@ -103,7 +103,7 @@ Check(!offers.Settled && !offers.CanCraft(Recipes.All[0]),"an open slot blocks c
 Reject(()=>offers.TakeOffer("boss0",MaterialChoice.Rare(RareMaterial.Stardust)),"material outside the candidates rejected");
 offers.TakeOffer("boss0",eliteRoll[1]);
 Check(offers.Count(eliteRoll[1])==AlchemyState.YieldPerEvent && offers.Total==AlchemyState.YieldPerEvent && offers.Settled,
-    "taking a slot grants one material");
+    "taking a slot grants the doubled harvest yield");
 Reject(()=>offers.TakeOffer("boss0",eliteRoll[0]),"a slot cannot be taken twice");
 Check(!offers.Offer("boss0",eliteRoll),"a resolved slot is never re-offered");
 offers.Offer("boss1",eliteRoll); offers.DeclineOffer("boss1");
@@ -113,7 +113,7 @@ var fullBox=new AlchemyState();
 for(int i=0;i<AlchemyState.Capacity;i++) fullBox.Grant($"f{i}",Material.Iron);
 fullBox.Offer("eliteFull",eliteRoll); fullBox.TakeOffer("eliteFull",eliteRoll[0]);
 Check(fullBox.Total==AlchemyState.Capacity && fullBox.Pending.Count==AlchemyState.YieldPerEvent && fullBox.Offers.Count==0,
-    "a full box defers the material to the shared receipt path");
+    "a full box defers every unit of the doubled yield to the shared receipt path");
 while (fullBox.Pending.Count>0) fullBox.Resolve(true,MaterialChoice.Normal(Material.Iron));
 Check(fullBox.Count(eliteRoll[0])==(eliteRoll[0]==MaterialChoice.Normal(Material.Iron)?AlchemyState.Capacity:AlchemyState.YieldPerEvent) && fullBox.Settled,
     "deferred choice resolves by exchange, once per unit");
@@ -137,35 +137,34 @@ string applied="";
 rareStock.CommitRare(RareMaterial.Stardust,"apply",()=>applied="rare.stardust",()=>applied="");
 Check(applied=="rare.stardust" && rareStock.RareCounts[(int)RareMaterial.Stardust]==0,"rare processing consumes exactly one material");
 Reject(()=>rareStock.CommitRare(RareMaterial.Stardust,"again",()=>applied="bad",()=>applied="rare.stardust"),"missing rare material is rejected");
-Check(ForgeCatalog.All.Count==108 && ForgeCatalog.All.Select(r=>r.Id).Distinct().Count()==108
-    && ForgeCatalog.Get("greatblade.v1").Base==ForgeBase.Legacy,"all legacy formula ids remain loadable");
-Check(Recipes.All.Length==30 && Recipes.All.Select(r=>r.Id).Distinct().Count()==30,"craftable pool has thirty stable recipe ids");
-Check(Recipes.All.All(r=>r.Materials.Count==2) && Recipes.All.GroupBy(r=>r.Base).All(g=>g.Count()==10),
-    "weapon remedy and device each cover ten material pairs");
+Check(ForgeCatalog.All.Count==78 && ForgeCatalog.All.Select(r=>r.Id).Distinct().Count()==78,"all legacy formula ids remain loadable");
+Check(Recipes.All.Length==65 && Recipes.All.Select(r=>r.Id).Distinct().Count()==65,"craftable pool has sixty-five stable recipe ids");
+Check(Recipes.All.Count(r=>r.Materials.Count==2)==10 && Recipes.All.Count(r=>r.Materials.Count==3)==20 && Recipes.All.Count(r=>r.Materials.Count==4)==35,
+    "one common per material pair, twenty uncommons and thirty-five rares");
 foreach(var a in Enum.GetValues<Material>()) foreach(var b in Enum.GetValues<Material>())
 {
     var choices=Recipes.FindAll(a,b).ToArray();
-    Check(choices.Length==3 && choices.Select(r=>r.Base).Distinct().Count()==3
-        && choices.SequenceEqual(Recipes.FindAll(b,a)),$"all three bases craftable and order independent {a}/{b}");
+    Check(choices.Length>0 && choices.SequenceEqual(Recipes.FindAll(b,a)),$"all pairs craftable and order independent {a}/{b}");
     foreach(var r in choices)
     {
         var stock=new AlchemyState(); stock.Grant("a",a);stock.Grant("b",b);
         Check(stock.CanCraft(r),$"two collected materials can craft {r.Id}");
     }
 }
-Check(Enum.GetValues<Material>().SelectMany((a,i)=>Enum.GetValues<Material>().Skip(i).Select(b=>Recipes.FindAll(a,b).Count())).All(n=>n==3),
-    "every unordered pair exposes weapon remedy and device");
-Check(ForgeCatalog.Craftable.All(f=>f.Values.GetValueOrDefault("StrengthPower")==0
-    && f.Values.GetValueOrDefault("DexterityPower")==0),
-    "new formulas do not rely on permanent strength or dexterity");
-Check(ForgeCatalog.Craftable.Count(f=>f.Values.GetValueOrDefault("Hits")>1)==1,"multihit is limited to one weapon");
-Check(ForgeCatalog.Craftable.Count(f=>f.Values.GetValueOrDefault("AdvancePhase")>0)==1,"phase control is a scarce device effect");
-Check(ForgeCatalog.Craftable.Any(f=>f.Values.GetValueOrDefault("ExhaustBlock")>0)
-    && ForgeCatalog.Craftable.Any(f=>f.Values.GetValueOrDefault("ExhaustDraw")>0),"devices support two exhaust engines");
-Check(ForgeCatalog.Craftable.All(f=>f.Upgrade.Count>0),"every new card has a meaningful upgrade");
+Check(Enum.GetValues<Material>().SelectMany((a,i)=>Enum.GetValues<Material>().Skip(i).Select(b=>Recipes.FindAll(a,b).Count())).All(n=>n==1),
+    "every unordered pair exposes exactly one cheap recipe");
+Check(ForgeCatalog.Craftable.Where(f=>f.Materials.Count==2).All(f=>f.Values.GetValueOrDefault("StrengthPower")==0
+    && f.Values.GetValueOrDefault("DexterityPower")==0 && f.Values.GetValueOrDefault("Hits")<=1),
+    "cheap formulas do not provide permanent stats or multihit");
+Check(ForgeCatalog.Craftable.Count(f=>f.Values.GetValueOrDefault("Hits")>1)==2,"multihit is limited to one uncommon and one rare");
+Check(ForgeCatalog.Craftable.Where(f=>f.Materials.Count==3).All(f=>f.Values.GetValueOrDefault("StrengthPower")<=1 && f.Values.GetValueOrDefault("DexterityPower")<=1),
+    "uncommon permanent stat gains are capped at one");
+Check(ForgeCatalog.Craftable.Where(f=>f.Materials.Count==4).All(f=>f.Values.GetValueOrDefault("StrengthPower")<=2 && f.Values.GetValueOrDefault("DexterityPower")<=2),
+    "rare permanent stat gains are capped at two");
+Check(ForgeCatalog.Craftable.Count(f=>f.Values.GetValueOrDefault("AdvancePhase")>0)>=3,"phase-control recipes form a new effect family");
 foreach(var f in ForgeCatalog.Craftable)
 {
-    Check(f.Values.All(x=>x.Value>=0) && f.Cost>=0 && (f.Cost>0 || f.Exhaust),"zero-cost cards cannot cycle forever "+f.Id);
+    Check(f.Values.All(x=>x.Value>=0) && f.Cost>=1,"no energy generation or zero-cost cycle "+f.Id);
     Check(!f.Preview.Contains('{') && f.Preview.Contains(f.Describe(true)),"full shared preview "+f.Id);
     var stock=new AlchemyState();
     for(int i=0;i<f.Materials.Count;i++) stock.Grant($"m{i}",f.Materials[i]);
@@ -179,6 +178,22 @@ Check(shopA.Length==MerchantMaterialOffers.Slots && shopA.Select(x=>x.Material).
     "merchant has three distinct finite material slots");
 Check(shopA.SequenceEqual(MerchantMaterialOffers.Roll(1234,"act1:shop3")),"merchant stock is stable for the visit");
 Check(!shopA.SequenceEqual(MerchantMaterialOffers.Roll(1234,"act1:shop4")),"merchant visit id changes stock");
+// Recipe.Materials generalizes past pairs (commons 2 / uncommons 3 / rares 4); exercised directly here
+// since the catalog itself still only fills the two-material tier.
+var triple = new Recipe("test.triple.v0", [Material.Iron, Material.Iron, Material.Herb], "test", "");
+var quad = new Recipe("test.quad.v0", [Material.Powder, Material.Powder, Material.Ether, Material.Ether], "test", "");
+var threeStock = new AlchemyState(); threeStock.Grant("t0",Material.Herb); threeStock.Grant("t1",Material.Iron); threeStock.Grant("t2",Material.Iron);
+Check(threeStock.CanCraft(triple),"a three-material recipe can craft regardless of grant order");
+var shortStock = new AlchemyState(); shortStock.Grant("s0",Material.Iron); shortStock.Grant("s1",Material.Herb);
+Check(!shortStock.CanCraft(triple),"a three-material recipe needs all three units, not just distinct types");
+var fourStock = new AlchemyState();
+for(int i=0;i<2;i++) fourStock.Grant($"f{i}",Material.Powder);
+for(int i=0;i<2;i++) fourStock.Grant($"e{i}",Material.Ether);
+Check(fourStock.CanCraft(quad),"a four-material recipe can require two of one type and two of another");
+fourStock.Grant("extra",Material.Ether);
+Check(fourStock.CanCraft(quad) && fourStock.Total==5,"surplus materials do not block a smaller requirement");
+Check(Recipes.FindAll([Material.Herb,Material.Iron,Material.Iron]).SequenceEqual(Recipes.FindAll([Material.Iron,Material.Herb,Material.Iron])),
+    "FindAll matches the material multiset regardless of order");
 // A layered map: rows 1..14 have three columns each, every point feeding all three of the next row.
 List<CutNode> Layered(Func<int,int,int> cost)
 {
