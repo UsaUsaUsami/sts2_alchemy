@@ -19,13 +19,13 @@ public sealed class AlchemistCharacter : PlaceholderCharacterModel
     public override PotionPoolModel PotionPool => ModelDb.PotionPool<IroncladPotionPool>();
     public override IEnumerable<CardModel> StartingDeck => [
         ModelDb.Card<StrikeIronclad>(), ModelDb.Card<StrikeIronclad>(),
-        ModelDb.Card<StrikeIronclad>(), ModelDb.Card<StrikeIronclad>(),
+        ModelDb.Card<StrikeIronclad>(),
         ModelDb.Card<DefendIronclad>(), ModelDb.Card<DefendIronclad>(),
-        ModelDb.Card<DefendIronclad>(), ModelDb.Card<DefendIronclad>(),
-        ModelDb.Card<PortableFurnace>()];
+        ModelDb.Card<DefendIronclad>(),
+        ModelDb.Card<EarthenGuard>(), ModelDb.Card<SoothingMist>(), ModelDb.Card<InstantAlchemy>()];
     public override IReadOnlyList<RelicModel> StartingRelics => [ModelDb.Relic<MaterialBox>()];
     public override List<(string, string)> Localization => new CharacterLoc(
-        "錬金術師", "錬金術師", "カードを廃棄する時機を見極め、素材を採取する。\n工房で素材をカードへ錬成する旅人。\n【試作版：外見は仮】",
+        "錬金術師", "錬金術師", "四元素の相を切り替えて戦い、現在相から素材を採取する。\n工房で錬成・改造・調薬・付与を行う旅人。\n【試作版：外見は仮】",
         "彼ら", "彼ら", "彼らの", "彼らの", "薬草と鉄", "次の相へ。", "炉の火が消えた。", "まだ火は残っている。", "次の工房に備えよう。", "錬金術師のカード", "錬金術師のカードを使う。");
 }
 
@@ -36,8 +36,10 @@ public sealed class AlchemyCardPool : CustomCardPoolModel
     public override Color DeckEntryCardColor => new("73d6b2");
     public override bool IsColorless => false;
     public override Color ShaderColor => new("73d6b2");
-    // M1では標準の成長機会を残すため、通常報酬はIroncladプールを暫定利用する。
-    protected override CardModel[] GenerateAllCards() => ModelDb.CardPool<IroncladCardPool>().AllCards.ToArray();
+    protected override CardModel[] GenerateAllCards() => [
+        ModelDb.Card<EarthenGuard>(),ModelDb.Card<StoneEdge>(),ModelDb.Card<SoothingMist>(),ModelDb.Card<TidalGuard>(),
+        ModelDb.Card<Ignition>(),ModelDb.Card<FlashPowder>(),ModelDb.Card<Tailwind>(),ModelDb.Card<Slipstream>(),
+        ModelDb.Card<InstantAlchemy>()];
 }
 
 public sealed class AlchemyRelicPool : CustomRelicPoolModel

@@ -17,6 +17,7 @@ namespace Alchemist;
 public abstract class AlchemyCard(int cost, CardType type, CardRarity rarity, TargetType target)
     : CustomCardModel(cost, type, rarity, target)
 {
+    public virtual AlchemyPhase Element => AlchemyPhase.None;
     protected virtual CardModel Artwork => ModelDb.Card<TrueGrit>();
     public override string PortraitPath => Artwork.PortraitPath;
     public override string? CustomPortraitPath => Artwork.PortraitPath;
@@ -30,8 +31,8 @@ public sealed class PortableFurnace() : AlchemyCard(1, CardType.Power, CardRarit
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
     {
         var combat = Owner.GetRelic<MaterialBox>()?.Combat;
-        if (combat is null || combat.FurnaceActive) return;
-        combat.FurnaceActive = true;
+        if (combat is null || combat.FurnaceTokensGranted) return;
+        combat.FurnaceTokensGranted = true;
         var cards = Enumerable.Range(0, 2).Select(_ => CombatState!.CreateCard<FurnaceActivation>(Owner)).ToArray();
         await CardPileCmd.AddGeneratedCardsToCombat(cards, PileType.Hand, Owner);
     }
@@ -42,26 +43,18 @@ public sealed class FurnaceActivation() : AlchemyCard(0, CardType.Skill, CardRar
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust, CardKeyword.Retain];
     public override List<(string, string)> Localization => new CardLoc("炉の起動",
-        "手札1枚を廃棄し、現在相の素材を2個得る。さらに現在相の効果を得る。\n鉄：4ブロック。薬草：敵全体に脱力1。\n火薬：敵全体に3ダメージ。エーテル：1枚ドロー。\n戦闘全体で2回まで。");
+        "手札1枚を廃棄し、現在相に対応する素材を2個得る。無相では使用できない。\n地：鉄、水：薬草、火：火薬、風：エーテル。戦闘全体で2回まで。");
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
     {
         var box = Owner.GetRelic<MaterialBox>();
         var combat = box?.Combat;
-        if (combat is null || !combat.FurnaceActive || combat.FurnaceUsed >= 2) return;
+        if (combat is null || combat.FurnaceUsed >= 2 || combat.Phases.Current==AlchemyPhase.None) return;
         var card = (await CardSelectCmd.FromHand(choiceContext, Owner,
             new CardSelectorPrefs(CardSelectorPrefs.ExhaustSelectionPrompt, 1), null, this)).FirstOrDefault();
         if (card is null) return;
-        var phase = combat.Phase;
         await CardCmd.Exhaust(choiceContext, card);
         if (!combat.UseFurnace()) return;
-        box!.GrantFromFurnace(phase);
-        switch (phase)
-        {
-            case Material.Iron: await CreatureCmd.GainBlock(Owner.Creature, 4, ValueProp.Unpowered, cardPlay); break;
-            case Material.Herb: await PowerCmd.Apply<WeakPower>(choiceContext, CombatState!.HittableEnemies, 1, Owner.Creature, this); break;
-            case Material.Powder: await DamageCmd.Attack(3).FromCard(this, cardPlay).TargetingAllOpponents(CombatState!).Execute(choiceContext); break;
-            case Material.Ether: await CardPileCmd.Draw(choiceContext, 1, Owner); break;
-        }
+        box!.GrantFromFurnace();
     }
     protected override void OnUpgrade() { }
 }

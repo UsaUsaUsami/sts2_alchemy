@@ -33,6 +33,7 @@ public static class WorkshopUi
     private static bool mapWorkshop;
     private static bool upgradeMode;
     private static bool rareMode;
+    private static bool potionMode;
     private static string status = "";
     private static bool craftableOnly;
     private static bool materialCraftMode;
@@ -77,7 +78,7 @@ public static class WorkshopUi
         }
         var combat = box.Combat;
         launcher!.Text = combat is null ? $"素材・工房  {box.Inventory.Total}/{AlchemyState.Capacity}"
-            : $"素材 {box.Inventory.Total}/{AlchemyState.Capacity}  炉 {combat.FurnaceUsed}/2\n{Recipes.Name(combat.Phase)} → {Recipes.Name((Core.Material)(((int)combat.Phase+1)%4))} → {Recipes.Name((Core.Material)(((int)combat.Phase+2)%4))}";
+            : $"素材 {box.Inventory.Total}/{AlchemyState.Capacity}  炉 {combat.FurnaceUsed}/2\n現在相：{MaterialBox.PhaseName(combat.Phases.Current)}"+(combat.LastTransition.Length>0?$"　{combat.LastTransition}":"");
         // Unresolved reward slots are reached from the rewards screen button, so only overflow receipts
         // open this screen on their own.
         if (box.Inventory.Pending.Count > 0 && !CombatManager.Instance.IsInProgress && !IsOpen) Open();
@@ -166,6 +167,7 @@ public static class WorkshopUi
         workshop=true;
         upgradeMode=false;
         rareMode=false;
+        potionMode=false;
         craftableOnly=false;
         materialCraftMode=false;
         craftInputs.Clear();
@@ -408,7 +410,7 @@ public static class WorkshopUi
     }
     private static void Confirmation(Recipe recipe)
     {
-        bool canCraft = box!.Inventory.CanCraft(recipe);
+        bool canCraft = box!.Inventory.CanCraft(recipe) && box.Inventory.CanUseFacility(box.Owner.RunState.TotalFloor,WorkshopFacility.Synthesis);
         Text("このカードを錬成しますか？",32,content,new Color("f2d18b"));
         var row = new HBoxContainer();
         row.AddThemeConstantOverride("separation",28);
@@ -428,31 +430,30 @@ public static class WorkshopUi
     }
     private static void UpgradeGallery()
     {
-        var cards=box!.Owner.Deck.Cards.Where(c=>c.IsUpgradable).ToArray();
-        Text("強化するカードを選ぶ",32,content,new Color("f2d18b"));
-        Text("1つの工房につき1枚だけ強化できます。アタックは鉄＋火薬、スキルは薬草＋エーテル、パワーは火薬＋エーテルを消費します。",19);
-        if(box.Inventory.WorkshopUpgradeFloor==box.Owner.RunState.TotalFloor)
-            Text("この工房での強化は使用済みです。カード錬成は引き続き行えます。",20,content,new Color("d8c082"));
+        var cards=box!.Owner.Deck.Cards.Where(c=>c is AlchemyCard && c.Enchantment is null).ToArray();
+        Text("改造するカードを選ぶ",32,content,new Color("f2d18b"));
+        Text("錬金術師カードへ「相転移の基本効果+1」を恒久付与します。通常のアップグレードとは別です。",19);
+        if(!box.Inventory.CanUseFacility(box.Owner.RunState.TotalFloor,WorkshopFacility.Modification))
+            Text("この工房の改造設備は使用済みです。",20,content,new Color("d8c082"));
         var grid=new GridContainer { Columns=3,SizeFlagsHorizontal=Control.SizeFlags.ExpandFill };
         grid.AddThemeConstantOverride("h_separation",10);grid.AddThemeConstantOverride("v_separation",16);
         content!.AddChild(grid);
         foreach(var card in cards) grid.AddChild(DeckCardDisplay(card,0.62f,true));
-        if(cards.Length==0) Text("強化できるカードはありません。",22);
+        if(cards.Length==0) Text("改造できる未加工カードはありません。",22);
     }
     private static void UpgradeConfirmation(CardModel card)
     {
         var cost=UpgradeCost(card);
-        bool can=card.IsUpgradable && box!.Owner.Deck.Cards.Contains(card)
+        bool can=card is AlchemyCard && card.Enchantment is null && box!.Owner.Deck.Cards.Contains(card)
             && box.Inventory.CanUpgradeAt(box.Owner.RunState.TotalFloor,cost.First,cost.Second);
-        Text("このカードを強化しますか？",32,content,new Color("f2d18b"));
+        Text("このカードを改造しますか？",32,content,new Color("f2d18b"));
         var row=new HBoxContainer(); row.AddThemeConstantOverride("separation",12); content!.AddChild(row);
         var current=new VBoxContainer(); row.AddChild(current); Text("現在",21,current); current.AddChild(DeckCardDisplay(card,0.72f,false));
-        Text("→",34,row,new Color("f2d18b"));
-        var upgraded=new VBoxContainer(); row.AddChild(upgraded); Text("強化後",21,upgraded); upgraded.AddChild(DeckCardDisplay(card,0.72f,false,true));
         var actions=new VBoxContainer { SizeFlagsHorizontal=Control.SizeFlags.ExpandFill }; row.AddChild(actions);
+        Text("工房改造：このカードで起こす相転移の基本効果+1",20,actions,new Color("8fd6a5"));
         Text($"必要素材\n{Recipes.Name(cost.First)} ＋ {Recipes.Name(cost.Second)}",22,actions);
         if(!can) Text("素材が不足しています。",19,actions,new Color("d88b82"));
-        Button(can?"このカードを強化する":"強化できません",()=>UpgradeCard(card),!can,actions);
+        Button(can?"このカードを改造する":"改造できません",()=>UpgradeCard(card),!can,actions);
         Button("一覧へ戻る",()=>{selectedUpgrade=null;Refresh();},parent:actions);
     }
     private static void RareGallery()
@@ -492,11 +493,44 @@ public static class WorkshopUi
                 RareMaterial.VoidCrystal => card.Formula.Cost>0 || !card.Keywords.Contains(CardKeyword.Exhaust),
                 _ => true
             };
-            bool can=valid && meaningful && box.Inventory.CanApplyRare(rare.Material);
+            bool can=valid && meaningful && box.Inventory.CanApplyRareAt(box.Owner.RunState.TotalFloor,rare.Material);
             string owned=$"所持 {box.Inventory.RareCounts[(int)rare.Material]}個";
             Button($"{rare.Name}【{rare.EffectName}】　{rare.Description}\n{owned}",()=>ApplyRare(card,rare),!can);
         }
         Button("カード一覧へ戻る",()=>{selectedRareCard=null;Refresh();});
+    }
+    private static void PotionWorkshop()
+    {
+        int floor=box!.Owner.RunState.TotalFloor;
+        bool unused=box.Inventory.CanUseFacility(floor,WorkshopFacility.Brewing);
+        Text("調薬",32,content,new Color("76cfe0"));
+        Text("通常素材1個からポーションを1本作ります。この工房では1回だけ使用できます。",20);
+        if(!box.Owner.HasOpenPotionSlots) Text("ポーション枠が満杯です。空きを作ってから調薬してください。",20,content,new Color("d88b82"));
+        foreach(var (material,name,effect) in new[]{
+            (Core.Material.Iron,"地相の小瓶","12ブロック"),(Core.Material.Herb,"水相の小瓶","脱力2"),
+            (Core.Material.Powder,"火相の小瓶","15ダメージ"),(Core.Material.Ether,"風相の小瓶","2枚ドロー＋1エナジー")})
+        {
+            bool can=unused && box.Owner.HasOpenPotionSlots && box.Inventory.Counts[(int)material]>0;
+            Button($"{name}　—　{effect}\n必要：{Recipes.Name(material)}1個（所持 {box.Inventory.Counts[(int)material]}）",()=>_ = BrewPotion(material),!can);
+        }
+    }
+    private static async Task<bool> Procure<T>() where T:PotionModel
+        => (await PotionCmd.TryToProcure(ModelDb.Potion<T>().ToMutable(),box!.Owner)).success;
+    private static async Task BrewPotion(Core.Material material)
+    {
+        if(box is null || busy || !workshop || !CanEnterWorkshop(box)) return;
+        busy=true;
+        try
+        {
+            await box.Inventory.CommitBrewAtAsync(box.Owner.RunState.TotalFloor,material,Guid.NewGuid().ToString("N"),()=>material switch
+            {
+                Core.Material.Iron=>Procure<EarthPhial>(),Core.Material.Herb=>Procure<WaterPhial>(),
+                Core.Material.Powder=>Procure<FirePhial>(),_=>Procure<AirPhial>()
+            });
+            status="ポーションを調合しました。";
+        }
+        catch(Exception ex){status=$"調薬できませんでした：{ex.Message}";GD.PushError(ex.ToString());}
+        finally{busy=false;if(IsOpen)Refresh();}
     }
     private static void Refresh()
     {
@@ -542,10 +576,21 @@ public static class WorkshopUi
         if (workshop)
         {
             var modes=new HBoxContainer(); sidebar.AddChild(modes);
-            Button("カード錬成",()=>{upgradeMode=false;rareMode=false;selectedUpgrade=null;selectedRareCard=null;Refresh();},!upgradeMode&&!rareMode,modes);
-            Button("既存カード強化",()=>{upgradeMode=true;rareMode=false;selectedRecipe=null;selectedRareCard=null;Refresh();},upgradeMode,modes);
-            Button("希少加工",()=>{upgradeMode=false;rareMode=true;selectedRecipe=null;selectedUpgrade=null;Refresh();},rareMode,modes);
-            if(rareMode && selectedRareCard is not null) RareConfirmation(selectedRareCard);
+            var currentBox=box;
+            int floor=currentBox.Owner.RunState.TotalFloor;
+            bool synthesisReady=Recipes.All.Any(currentBox.Inventory.CanCraft);
+            bool modificationReady=currentBox.Owner.Deck.Cards.Where(c=>c is AlchemyCard && c.Enchantment is null)
+                .Any(c=>{var cost=UpgradeCost(c);return currentBox.Inventory.CanSpend(cost.First,cost.Second);});
+            bool brewingReady=currentBox.Owner.HasOpenPotionSlots && currentBox.Inventory.Counts.Any(n=>n>0);
+            bool enchantmentReady=currentBox.Inventory.RareCounts.Any(n=>n>0)
+                && currentBox.Owner.Deck.Cards.OfType<ForgedCard>().Any(c=>c.AlchemistRareModifier.Length==0);
+            string S(WorkshopFacility f,bool affordable)=>currentBox.Inventory.FacilityStatus(floor,f,affordable);
+            Button($"錬成\n{S(WorkshopFacility.Synthesis,synthesisReady)}",()=>{upgradeMode=false;rareMode=false;potionMode=false;selectedUpgrade=null;selectedRareCard=null;Refresh();},!upgradeMode&&!rareMode&&!potionMode,modes);
+            Button($"改造\n{S(WorkshopFacility.Modification,modificationReady)}",()=>{upgradeMode=true;rareMode=false;potionMode=false;selectedRecipe=null;selectedRareCard=null;Refresh();},upgradeMode,modes);
+            Button($"調薬\n{S(WorkshopFacility.Brewing,brewingReady)}",()=>{upgradeMode=false;rareMode=false;potionMode=true;selectedRecipe=null;selectedUpgrade=null;Refresh();},potionMode,modes);
+            Button($"付与\n{S(WorkshopFacility.Enchantment,enchantmentReady)}",()=>{upgradeMode=false;rareMode=true;potionMode=false;selectedRecipe=null;selectedUpgrade=null;Refresh();},rareMode,modes);
+            if(potionMode) PotionWorkshop();
+            else if(rareMode && selectedRareCard is not null) RareConfirmation(selectedRareCard);
             else if(rareMode) RareGallery();
             else if(upgradeMode && selectedUpgrade is not null) UpgradeConfirmation(selectedUpgrade);
             else if(upgradeMode) UpgradeGallery();
@@ -712,8 +757,9 @@ public static class WorkshopUi
         try
         {
             var cost=UpgradeCost(card);
-            box.Inventory.CommitUpgrade(box.Owner.RunState.TotalFloor,cost.First,cost.Second,Guid.NewGuid().ToString("N"),()=>CardCmd.Upgrade(card,CardPreviewStyle.EventLayout));
-            status=$"{card.Title}を強化しました。";
+            box.Inventory.CommitUpgrade(box.Owner.RunState.TotalFloor,cost.First,cost.Second,Guid.NewGuid().ToString("N"),()=>
+            { if(CardCmd.Enchant<WorkshopTuning>(card,1) is null) throw new InvalidOperationException("改造を付与できませんでした。"); });
+            status=$"{card.Title}を工房改造しました。";
             selectedUpgrade=null;
         }
         catch(Exception ex) { status=$"強化できませんでした：{ex.Message}"; GD.PushError(ex.ToString()); }
@@ -727,7 +773,7 @@ public static class WorkshopUi
         string before=card.AlchemistRareModifier;
         try
         {
-            box.Inventory.CommitRare(rare.Material,Guid.NewGuid().ToString("N"),
+            box.Inventory.CommitRareAt(box.Owner.RunState.TotalFloor,rare.Material,Guid.NewGuid().ToString("N"),
                 ()=>card.AlchemistRareModifier=rare.Id,()=>card.AlchemistRareModifier=before);
             status=$"{card.Title}に{rare.Name}の「{rare.EffectName}」を刻みました。";
             selectedRareCard=null;
@@ -750,7 +796,7 @@ public static class WorkshopUi
         var b = box;
         try
         {
-            await b.Inventory.CommitAsync(recipe,Guid.NewGuid().ToString("N"),async () =>
+            await b.Inventory.CommitCraftAtAsync(b.Owner.RunState.TotalFloor,recipe,Guid.NewGuid().ToString("N"),async () =>
             {
                 created = b.Owner.RunState.CreateCard(recipe.FormulaId is null ? Canonical(recipe) : ModelDb.Card<ForgedCard>(),b.Owner);
                 if(created is ForgedCard forged) forged.AlchemistFormula=recipe.FormulaId!;
