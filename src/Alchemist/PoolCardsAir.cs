@@ -95,7 +95,7 @@ public sealed class AirGift() : ElementCard(0,CardType.Skill,CardRarity.Rare,Tar
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords=>[CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new DynamicVar("Energy",2)];
-    public override List<(string,string)> Localization=>new CardLoc("風の贈り物","エナジーを{Energy:diff()}得る。\n[gold]風相[/gold] [gold]廃棄[/gold]");
+    public override List<(string,string)> Localization=>new CardLoc("風の贈り物","エナジーを{Energy:diff()}得る。\n[gold]風相[/gold]");
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>Energy(DynamicVars["Energy"].BaseValue);
     protected override void OnUpgrade()=>DynamicVars["Energy"].UpgradeValueBy(1);
 }
@@ -103,7 +103,7 @@ public sealed class AirRevelation() : ElementCard(1,CardType.Skill,CardRarity.Ra
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords=>[CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new CardsVar(3),new DynamicVar("Energy",1)];
-    public override List<(string,string)> Localization=>new CardLoc("天啓","カードを{Cards:diff()}枚引き、エナジーを{Energy:diff()}得る。\n[gold]風相[/gold] [gold]廃棄[/gold]");
+    public override List<(string,string)> Localization=>new CardLoc("天啓","カードを{Cards:diff()}枚引き、エナジーを{Energy:diff()}得る。\n[gold]風相[/gold]");
     protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p){await Draw(c,DynamicVars.Cards.BaseValue);await Energy(DynamicVars["Energy"].BaseValue);}
     protected override void OnUpgrade()=>DynamicVars.Cards.UpgradeValueBy(1);
 }

@@ -48,6 +48,7 @@ public sealed class MaterialBox : CustomRelicModel
     }
     public override async Task BeforeSideTurnStart(PlayerChoiceContext context, CombatSide side, IReadOnlyList<Creature> participants, ICombatState cs)
     {
+        if(side==CombatSide.Player) Combat?.Phases.StartTurn();
         if(side==CombatSide.Player && Combat is { FurnaceTokensGranted:false } combat)
         {
             combat.FurnaceTokensGranted=true;

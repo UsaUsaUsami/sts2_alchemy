@@ -5,16 +5,15 @@ namespace Alchemist.Core;
 public enum Material { Iron, Herb, Powder, Ether }
 public sealed record Harvest(string Id, MaterialChoice Material);
 // Materials is unordered and allows repeats (e.g. two Iron): recipes key on the material multiset, not on
-// slot position. Commons consume 2, uncommons 3, rares 4 (AGENTS.md 4.8 base grammar, extended past pairs).
+// slot position.
 public sealed record Recipe(string Id, IReadOnlyList<Material> Materials, string Name, string Preview,
-    string Role = "基礎強化", string Plan = "", string? FormulaId = null);
+    string Role = "", string Plan = "");
 
 public static class Recipes
 {
     // v0.17: the workshop makes phase-manipulating cards the reward pool never offers. Exactly one recipe per
     // unordered pair of normal materials (10). Same material twice gives a power that strengthens transitions
-    // into that element; two different materials give a card that enters both elements in turn. The 65 older
-    // ForgeCatalog formulas remain loadable for saved cards but are no longer craftable.
+    // into that element; two different materials give a card that enters both elements in turn.
     public static readonly Recipe[] All = [
         new("craft.earth_core.v1", [Material.Iron, Material.Iron], "大地の心核", "1コスト / パワー / 自身 / 地相\n地相への相転移の効果を3強化する。強化後0コスト。", "純相", "地へ移るたびの守りを厚くする。"),
         new("craft.water_core.v1", [Material.Herb, Material.Herb], "流水の心核", "1コスト / パワー / 自身 / 水相\n水相への相転移の効果を1強化する。強化後0コスト。", "純相", "水へ移るたびの脱力を重くする。"),

@@ -33,8 +33,11 @@ Check(PhaseRules.Elements.All(e=>PhaseRules.PhaseFor(PhaseRules.MaterialFor(e)!.
 Check(PhaseRules.FromMaterials([Material.Herb,Material.Iron,Material.Herb])==AlchemyPhase.Water
     && PhaseRules.FromMaterials([Material.Powder,Material.Iron])==AlchemyPhase.Fire
     && PhaseRules.FromMaterials([])==AlchemyPhase.None,"crafted element follows the dominant material, ties to the first listed");
-Check(ForgeCatalog.All.All(f=>PhaseRules.IsElement(f.Element)),"every forged formula belongs to an element");
-Check(PhaseRules.Elements.All(e=>ForgeCatalog.Craftable.Any(f=>f.Element==e)),"every element has craftable forged cards");
+var turn=new AlchemyPhaseState();
+turn.Enter(AlchemyPhase.Earth); turn.Enter(AlchemyPhase.Fire); turn.Enter(AlchemyPhase.Air);
+Check(turn.TransitionsThisTurn==2 && turn.TransitionCount==2,"per-turn transitions count only real transitions");
+turn.StartTurn(); turn.Enter(AlchemyPhase.Air); turn.Enter(AlchemyPhase.Water);
+Check(turn.TransitionsThisTurn==1 && turn.TransitionCount==3 && turn.Current==AlchemyPhase.Water,"a new turn resets only the per-turn count; the phase carries over");
 var triggered=new AlchemyPhaseState(triggerFromNone:true);
 Check(triggered.Enter(AlchemyPhase.Fire).Triggered,"the first transition from the neutral phase can be switched on");
 var inventory = new AlchemyState();
@@ -179,12 +182,10 @@ string applied="";
 rareStock.CommitRare(RareMaterial.Stardust,"apply",()=>applied="rare.stardust",()=>applied="");
 Check(applied=="rare.stardust" && rareStock.RareCounts[(int)RareMaterial.Stardust]==0,"rare processing consumes exactly one material");
 Reject(()=>rareStock.CommitRare(RareMaterial.Stardust,"again",()=>applied="bad",()=>applied="rare.stardust"),"missing rare material is rejected");
-Check(ForgeCatalog.All.Count==78 && ForgeCatalog.All.Select(r=>r.Id).Distinct().Count()==78,"all legacy formula ids remain loadable");
-Check(Recipes.All.Length==10 && Recipes.All.Select(r=>r.Id).Distinct().Count()==10 && Recipes.All.All(r=>r.Materials.Count==2 && r.FormulaId is null),
+Check(Recipes.All.Length==10 && Recipes.All.Select(r=>r.Id).Distinct().Count()==10 && Recipes.All.All(r=>r.Materials.Count==2),
     "the workshop crafts ten two-material cards with stable ids");
 Check(Recipes.All.Count(r=>r.Materials[0]==r.Materials[1])==4 && Recipes.All.Count(r=>r.Materials[0]!=r.Materials[1])==6,
     "four pure-phase recipes and six dual-phase recipes");
-Check(Recipes.All.All(r=>!ForgeCatalog.All.Any(f=>f.Id==r.Id)),"new recipe ids never reuse a legacy formula id");
 foreach(var a in Enum.GetValues<Material>()) foreach(var b in Enum.GetValues<Material>())
 {
     var choices=Recipes.FindAll(a,b).ToArray();
@@ -197,23 +198,6 @@ foreach(var a in Enum.GetValues<Material>()) foreach(var b in Enum.GetValues<Mat
 }
 Check(Enum.GetValues<Material>().SelectMany((a,i)=>Enum.GetValues<Material>().Skip(i).Select(b=>Recipes.FindAll(a,b).Count())).All(n=>n==1),
     "every unordered pair exposes exactly one cheap recipe");
-Check(ForgeCatalog.Craftable.Where(f=>f.Materials.Count==2).All(f=>f.Values.GetValueOrDefault("StrengthPower")==0
-    && f.Values.GetValueOrDefault("DexterityPower")==0 && f.Values.GetValueOrDefault("Hits")<=1),
-    "cheap formulas do not provide permanent stats or multihit");
-Check(ForgeCatalog.Craftable.Count(f=>f.Values.GetValueOrDefault("Hits")>1)==2,"multihit is limited to one uncommon and one rare");
-Check(ForgeCatalog.Craftable.Where(f=>f.Materials.Count==3).All(f=>f.Values.GetValueOrDefault("StrengthPower")<=1 && f.Values.GetValueOrDefault("DexterityPower")<=1),
-    "uncommon permanent stat gains are capped at one");
-Check(ForgeCatalog.Craftable.Where(f=>f.Materials.Count==4).All(f=>f.Values.GetValueOrDefault("StrengthPower")<=2 && f.Values.GetValueOrDefault("DexterityPower")<=2),
-    "rare permanent stat gains are capped at two");
-Check(ForgeCatalog.Craftable.Count(f=>f.Values.GetValueOrDefault("AdvancePhase")>0)>=3,"phase-control recipes form a new effect family");
-foreach(var f in ForgeCatalog.Craftable)
-{
-    Check(f.Values.All(x=>x.Value>=0) && f.Cost>=1,"no energy generation or zero-cost cycle "+f.Id);
-    Check(!f.Preview.Contains('{') && f.Preview.Contains(f.Describe(true)),"full shared preview "+f.Id);
-    var stock=new AlchemyState();
-    for(int i=0;i<f.Materials.Count;i++) stock.Grant($"m{i}",f.Materials[i]);
-    Check(!Recipes.All.Any(r=>r.FormulaId==f.Id),"legacy formula is no longer craftable "+f.Id);
-}
 foreach(var r in Recipes.All)
 {
     var stock=new AlchemyState();
@@ -222,7 +206,6 @@ foreach(var r in Recipes.All)
     await stock.CommitAsync(r,r.Id,()=>{created++;return Task.CompletedTask;},()=>created--);
     Check(created==1 && stock.Total==0,"recipe consumes exactly its two materials "+r.Id);
 }
-Reject(()=>ForgeCatalog.Get("unknown.v99"),"unknown formula not reset");
 var shopA=MerchantMaterialOffers.Roll(1234,"act1:shop3");
 Check(shopA.Length==MerchantMaterialOffers.Slots && shopA.Select(x=>x.Material).Distinct().Count()==MerchantMaterialOffers.Slots,
     "merchant has three distinct finite material slots");

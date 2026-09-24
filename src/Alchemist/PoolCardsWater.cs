@@ -106,7 +106,7 @@ public sealed class WaterRequiem() : ElementCard(1,CardType.Skill,CardRarity.Rar
     public override IEnumerable<CardKeyword> CanonicalKeywords=>[CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new DynamicVar("Bonus",3)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<StrengthPower>()];
-    public override List<(string,string)> Localization=>new CardLoc("鎮魂","対象の[gold]筋力[/gold]を{Bonus:diff()}下げる。\n[gold]水相[/gold] [gold]廃棄[/gold]");
+    public override List<(string,string)> Localization=>new CardLoc("鎮魂","対象の[gold]筋力[/gold]を{Bonus:diff()}下げる。\n[gold]水相[/gold]");
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>ApplyTo<StrengthPower>(c,p.Target!,-DynamicVars["Bonus"].BaseValue);
     protected override void OnUpgrade()=>DynamicVars["Bonus"].UpgradeValueBy(1);
 }

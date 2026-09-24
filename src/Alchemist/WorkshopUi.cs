@@ -221,9 +221,8 @@ public static class WorkshopUi
         .Where(x=>x.Count>0).Select(x=>$"{Recipes.Name(x.Material)} {x.Count}個"));
     private static CardModel CreatePreviewCard(Recipe recipe)
     {
-        var card = (recipe.FormulaId is null ? CraftedCards.ForRecipe(recipe.Id) : ModelDb.Card<ForgedCard>()).ToMutable();
+        var card = CraftedCards.ForRecipe(recipe.Id).ToMutable();
         card.Owner = box!.Owner;
-        if (card is ForgedCard forged) forged.AlchemistFormula = recipe.FormulaId!;
         card.AfterCreated();
         previewCards.Add(card);
         return card;
@@ -807,8 +806,7 @@ public static class WorkshopUi
         {
             await b.Inventory.CommitCraftAtAsync(b.Owner.RunState.TotalFloor,recipe,Guid.NewGuid().ToString("N"),async () =>
             {
-                created = b.Owner.RunState.CreateCard(recipe.FormulaId is null ? CraftedCards.ForRecipe(recipe.Id) : ModelDb.Card<ForgedCard>(),b.Owner);
-                if(created is ForgedCard forged) forged.AlchemistFormula=recipe.FormulaId!;
+                created = b.Owner.RunState.CreateCard(CraftedCards.ForRecipe(recipe.Id),b.Owner);
                 var result = await CardPileCmd.Add(created,PileType.Deck,skipVisuals:true);
                 added = result.cardAdded;
                 if (!result.success || !b.Owner.Deck.Cards.Contains(added)) throw new InvalidOperationException("カードの追加が拒否されました。");

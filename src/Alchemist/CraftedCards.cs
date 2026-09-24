@@ -1,6 +1,8 @@
 using Alchemist.Core;
 using BaseLib.Abstracts;
 using BaseLib.Utils;
+using HarmonyLib;
+using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.HoverTips;
@@ -164,4 +166,16 @@ public static class CraftedCards
         "craft.fire_whirl.v1" => ModelDb.Card<FireWhirl>(),
         _ => throw new InvalidOperationException($"未対応レシピ: {id}")
     };
+}
+
+/// <summary>Shows the inscribed variant of a crafted card's description.</summary>
+[HarmonyPatch(typeof(CardModel),nameof(CardModel.Description),MethodType.Getter)]
+public static class CraftedDescriptionPatch
+{
+    public static bool Prefix(CardModel __instance, ref LocString __result)
+    {
+        if (__instance is not CraftedCard { AlchemistRareModifier.Length: > 0 } crafted) return true;
+        __result = new LocString("cards", $"{crafted.Id.Entry}.{crafted.AlchemistRareModifier}.description");
+        return false;
+    }
 }

@@ -71,7 +71,7 @@ public sealed class Tailwind() : ElementCard(0,CardType.Skill,CardRarity.Common,
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords=>[CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new CardsVar(1)];
-    public override List<(string,string)> Localization=>new CardLoc("追い風","カードを{Cards:diff()}枚引く。\n[gold]風相[/gold] [gold]廃棄[/gold]");
+    public override List<(string,string)> Localization=>new CardLoc("追い風","カードを{Cards:diff()}枚引く。\n[gold]風相[/gold]");
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>CardPileCmd.Draw(c,DynamicVars.Cards.BaseValue,Owner);
     protected override void OnUpgrade()=>DynamicVars.Cards.UpgradeValueBy(1);
 }
@@ -86,7 +86,7 @@ public sealed class Slipstream() : ElementCard(1,CardType.Skill,CardRarity.Commo
 public sealed class InstantAlchemy() : AlchemyCard(1,CardType.Skill,CardRarity.Common,TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords=>[CardKeyword.Exhaust];
-    public override List<(string,string)> Localization=>new CardLoc("即席錬成","通常素材を1個選んで消費する。対応する0コストの一時カードを手札に加える。 [gold]廃棄[/gold]",("selectionScreenPrompt","消費する素材を選択"));
+    public override List<(string,string)> Localization=>new CardLoc("即席錬成","通常素材を1個選んで消費する。対応する0コストの一時カードを手札に加える。",("selectionScreenPrompt","消費する素材を選択"));
     protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p)
     {
         var box=Owner.GetRelic<MaterialBox>(); if(box is null) return;
@@ -108,13 +108,13 @@ public sealed class InstantAlchemy() : AlchemyCard(1,CardType.Skill,CardRarity.C
 public abstract class ImprovisationCard(AlchemyPhase phase):ElementCard(0,CardType.Skill,CardRarity.Token,TargetType.Self,phase)
 { public override IEnumerable<CardKeyword> CanonicalKeywords=>[CardKeyword.Exhaust]; }
 public sealed class IronImprovisation():ImprovisationCard(AlchemyPhase.Earth)
-{ protected override IEnumerable<DynamicVar> CanonicalVars=>[new BlockVar(7,ValueProp.Move)];public override List<(string,string)> Localization=>new CardLoc("即席の鉄壁","{Block}[gold]ブロック[/gold]を得る。 [gold]地相 廃棄[/gold]");protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>CreatureCmd.GainBlock(Owner.Creature,DynamicVars.Block,p);protected override void OnUpgrade(){} }
+{ protected override IEnumerable<DynamicVar> CanonicalVars=>[new BlockVar(7,ValueProp.Move)];public override List<(string,string)> Localization=>new CardLoc("即席の鉄壁","{Block}[gold]ブロック[/gold]を得る。\n[gold]地相[/gold]");protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>CreatureCmd.GainBlock(Owner.Creature,DynamicVars.Block,p);protected override void OnUpgrade(){} }
 public sealed class HerbImprovisation():ImprovisationCard(AlchemyPhase.Water)
-{ public override TargetType TargetType=>TargetType.AnyEnemy;protected override IEnumerable<DynamicVar> CanonicalVars=>[new PowerVar<WeakPower>(1)];public override List<(string,string)> Localization=>new CardLoc("即席の鎮静薬","[gold]脱力[/gold]{WeakPower}を与える。 [gold]水相 廃棄[/gold]");protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>PowerCmd.Apply<WeakPower>(c,p.Target!,DynamicVars.Weak.BaseValue,Owner.Creature,this);protected override void OnUpgrade(){} }
+{ public override TargetType TargetType=>TargetType.AnyEnemy;protected override IEnumerable<DynamicVar> CanonicalVars=>[new PowerVar<WeakPower>(1)];public override List<(string,string)> Localization=>new CardLoc("即席の鎮静薬","[gold]脱力[/gold]{WeakPower}を与える。\n[gold]水相[/gold]");protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>PowerCmd.Apply<WeakPower>(c,p.Target!,DynamicVars.Weak.BaseValue,Owner.Creature,this);protected override void OnUpgrade(){} }
 public sealed class PowderImprovisation():ImprovisationCard(AlchemyPhase.Fire)
-{ public override TargetType TargetType=>TargetType.AnyEnemy;protected override IEnumerable<DynamicVar> CanonicalVars=>[new DamageVar(8,ValueProp.Move)];public override List<(string,string)> Localization=>new CardLoc("即席の炸薬","{Damage}ダメージ。 [gold]火相 廃棄[/gold]");protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>DamageCmd.Attack(DynamicVars.Damage.BaseValue).FromCard(this,p).Targeting(p.Target!).Execute(c);protected override void OnUpgrade(){} }
+{ public override TargetType TargetType=>TargetType.AnyEnemy;protected override IEnumerable<DynamicVar> CanonicalVars=>[new DamageVar(8,ValueProp.Move)];public override List<(string,string)> Localization=>new CardLoc("即席の炸薬","{Damage}ダメージ。\n[gold]火相[/gold]");protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>DamageCmd.Attack(DynamicVars.Damage.BaseValue).FromCard(this,p).Targeting(p.Target!).Execute(c);protected override void OnUpgrade(){} }
 public sealed class EtherImprovisation():ImprovisationCard(AlchemyPhase.Air)
-{ protected override IEnumerable<DynamicVar> CanonicalVars=>[new CardsVar(2)];public override List<(string,string)> Localization=>new CardLoc("即席の霊風","カードを{Cards}枚引く。 [gold]風相 廃棄[/gold]");protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>CardPileCmd.Draw(c,DynamicVars.Cards.BaseValue,Owner);protected override void OnUpgrade(){} }
+{ protected override IEnumerable<DynamicVar> CanonicalVars=>[new CardsVar(2)];public override List<(string,string)> Localization=>new CardLoc("即席の霊風","カードを{Cards}枚引く。\n[gold]風相[/gold]");protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>CardPileCmd.Draw(c,DynamicVars.Cards.BaseValue,Owner);protected override void OnUpgrade(){} }
 
 // The pool needs at least one Power: the merchant stocks one character card of each type and fails to
 // populate without it. This one is also the reference use of the transition-listener hook.

@@ -91,10 +91,18 @@ public sealed class AlchPhilosophersStone() : AlchemyCard(3,CardType.Power,CardR
 public sealed class AlchFlux() : AlchemyCard(1,CardType.Skill,CardRarity.Rare,TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords=>[CardKeyword.Retain];
-    public override List<(string,string)> Localization=>new CardLoc("万象流転","好きな相へ移る（素材は消費しない。鉄＝地、薬草＝水、火薬＝火、エーテル＝風）。\n[gold]保留[/gold]",("selectionScreenPrompt","移る相を素材で選択"));
+    public override List<(string,string)> Localization=>new CardLoc("万象流転","好きな相へ移る（素材は消費しない。鉄＝地、薬草＝水、火薬＝火、エーテル＝風）。",("selectionScreenPrompt","移る相を素材で選択"));
     protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p)
     {
         if(await ChooseMaterial(c,ownedOnly:false) is { } m) await PhaseTransitions.Enter(c,Owner,PhaseRules.PhaseFor(m),this,null,p);
     }
     protected override void OnUpgrade()=>EnergyCost.UpgradeBy(-1);
+}
+public sealed class AlchChainReaction() : AlchemyCard(1,CardType.Attack,CardRarity.Rare,TargetType.AnyEnemy)
+{
+    protected override IEnumerable<DynamicVar> CanonicalVars=>[new DynamicVar("Bonus",10)];
+    public override List<(string,string)> Localization=>new CardLoc("連鎖反応","このターンに起きた相転移1回につき{Bonus:diff()}ダメージを与える。");
+    // Phase-less, so playing it never adds a transition of its own before counting.
+    protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>TransitionsThisTurn>0?Hit(c,p,TransitionsThisTurn*DynamicVars["Bonus"].BaseValue):Task.CompletedTask;
+    protected override void OnUpgrade()=>DynamicVars["Bonus"].UpgradeValueBy(3);
 }

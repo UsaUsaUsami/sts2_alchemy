@@ -12,6 +12,9 @@ public sealed class AlchemyPhaseState(bool triggerFromNone = false)
     public AlchemyPhase Previous { get; private set; } = AlchemyPhase.None;
     public bool TriggerFromNone { get; } = triggerFromNone;
     public int TransitionCount { get; private set; }
+    /// Transitions since the start of the current player turn.
+    public int TransitionsThisTurn { get; private set; }
+    public void StartTurn() => TransitionsThisTurn = 0;
 
     public PhaseTransition Enter(AlchemyPhase next)
     {
@@ -21,7 +24,7 @@ public sealed class AlchemyPhaseState(bool triggerFromNone = false)
         Previous = from;
         Current = next;
         bool triggered = from != AlchemyPhase.None || TriggerFromNone;
-        if (triggered) TransitionCount++;
+        if (triggered) { TransitionCount++; TransitionsThisTurn++; }
         return new(from, next, triggered);
     }
 
@@ -77,8 +80,7 @@ public static class PhaseRules
         _ => AlchemyPhase.None
     };
 
-    /// Default element of a crafted card: the most used material, ties going to the one listed first.
-    /// Formulas may override this, since a compound card need not share its ingredients' element.
+    /// The most used material's element, ties going to the one listed first.
     public static AlchemyPhase FromMaterials(IReadOnlyList<Material> materials)
     {
         if (materials.Count == 0) return AlchemyPhase.None;

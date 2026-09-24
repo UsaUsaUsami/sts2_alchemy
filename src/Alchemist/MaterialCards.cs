@@ -12,9 +12,9 @@ namespace Alchemist;
 // WorkshopUi (CreatePreviewCard), never added to a pile or RunState, and never actually played.
 // AlchemyState.Counts/RareCounts stay the source of truth; these only give the box a card-like
 // look. One small class per material keeps each card's art and text fixed, instead of one generic
-// class needing per-instance dynamic localization the way ForgedCard needs for its 78 formulas.
+// class needing per-instance dynamic localization.
 // Type/Rarity match every other card already proven through this exact NCard.Create preview path
-// (ForgedCard and the five base recipe cards all use Skill/Event); CardType.Status and
+// (the workshop cards use Event too); CardType.Status and
 // CardRarity.Token were never exercised through that pipeline and stalled it out in practice.
 public abstract class MaterialCard() : AlchemyCard(0, CardType.Skill, CardRarity.Event, TargetType.Self)
 {
