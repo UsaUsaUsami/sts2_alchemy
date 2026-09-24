@@ -36,10 +36,10 @@ public sealed class AlchemyCardPool : CustomCardPoolModel
     public override Color DeckEntryCardColor => new("73d6b2");
     public override bool IsColorless => false;
     public override Color ShaderColor => new("73d6b2");
-    protected override CardModel[] GenerateAllCards() => [
-        ModelDb.Card<EarthenGuard>(),ModelDb.Card<StoneEdge>(),ModelDb.Card<SoothingMist>(),ModelDb.Card<TidalGuard>(),
-        ModelDb.Card<Ignition>(),ModelDb.Card<FlashPowder>(),ModelDb.Card<Tailwind>(),ModelDb.Card<Slipstream>(),
-        ModelDb.Card<InstantAlchemy>(),ModelDb.Card<PhaseResonance>()];
+    // Membership comes from the [Pool] attribute every AlchemyCard inherits; BaseLib adds those cards
+    // itself, so GenerateAllCards stays empty (listing them again doubled every card, v0.15-v0.16).
+    // Rewards and the merchant roll only Common/Uncommon/Rare: 16 cards per element plus 11 phase-less
+    // ones (75). Workshop-only cards use Event and tokens use Token, so they are never offered.
 }
 
 public sealed class AlchemyRelicPool : CustomRelicPoolModel

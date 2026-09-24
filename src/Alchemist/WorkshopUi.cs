@@ -43,7 +43,7 @@ public static class WorkshopUi
     private static TaskCompletionSource<bool>? offerResult;
     private static Recipe? selectedRecipe;
     private static CardModel? selectedUpgrade;
-    private static ForgedCard? selectedRareCard;
+    private static CardModel? selectedRareCard;
     private static readonly List<Core.Material> craftInputs = [];
     private static readonly List<CardModel> previewCards = [];
     public static bool IsOpen => GodotObject.IsInstanceValid(overlay);
@@ -221,7 +221,7 @@ public static class WorkshopUi
         .Where(x=>x.Count>0).Select(x=>$"{Recipes.Name(x.Material)} {x.Count}個"));
     private static CardModel CreatePreviewCard(Recipe recipe)
     {
-        var card = (recipe.FormulaId is null ? Canonical(recipe) : ModelDb.Card<ForgedCard>()).ToMutable();
+        var card = (recipe.FormulaId is null ? CraftedCards.ForRecipe(recipe.Id) : ModelDb.Card<ForgedCard>()).ToMutable();
         card.Owner = box!.Owner;
         if (card is ForgedCard forged) forged.AlchemistFormula = recipe.FormulaId!;
         card.AfterCreated();
@@ -375,14 +375,13 @@ public static class WorkshopUi
         content!.AddChild(grid);
         foreach (var recipe in recipes) grid.AddChild(CardDisplay(recipe,0.62f,true));
     }
-    // Commons take 2 materials, uncommons 3, rares 4 (AlchemyState.Recipes); the slot row exposes all of
-    // them and a recipe only appears once the placed count exactly matches its material count.
+    // Every workshop recipe takes exactly two materials (v0.17); the slot row matches that.
     private const int MinCraftSlots = 2;
-    private const int MaxCraftSlots = 4;
+    private const int MaxCraftSlots = 2;
     private static void MaterialCrafting()
     {
         Text("素材から錬成",32,content,new Color("f2d18b"));
-        Text($"素材を{MinCraftSlots}〜{MaxCraftSlots}個置くと、その組み合わせから作れるカードが表示されます。順番は問いません。",19);
+        Text("素材を2個置くと、その組み合わせから作れるカードが表示されます。順番は問いません。同じ素材2個なら純相のパワー、違う素材なら2つの相へ続けて移るカードになります。",19);
         var slots=new HBoxContainer();slots.AddThemeConstantOverride("separation",18);content!.AddChild(slots);
         for(int i=0;i<MaxCraftSlots;i++)
         {
@@ -472,7 +471,7 @@ public static class WorkshopUi
     }
     private static void RareGallery()
     {
-        var cards=box!.Owner.Deck.Cards.OfType<ForgedCard>().Where(c=>c.AlchemistRareModifier.Length==0).ToArray();
+        var cards=box!.Owner.Deck.Cards.Where(c=>c is IRareInscribable { AlchemistRareModifier.Length: 0 }).ToArray();
         Text("希少加工する錬成カードを選ぶ",32,content,new Color("d8b4ff"));
         Text("希少素材を1個消費し、カードに解除不能の特殊効果を1つ刻みます。1枚につき1回までです。",19);
         var grid=new GridContainer { Columns=3,SizeFlagsHorizontal=Control.SizeFlags.ExpandFill };
@@ -481,7 +480,7 @@ public static class WorkshopUi
         foreach(var card in cards) grid.AddChild(RareCardDisplay(card));
         if(cards.Length==0) Text("加工できる未加工の錬成カードがありません。",22);
     }
-    private static Control RareCardDisplay(ForgedCard card)
+    private static Control RareCardDisplay(CardModel card)
     {
         var wrapper=new VBoxContainer { CustomMinimumSize=new(235,340),Alignment=BoxContainer.AlignmentMode.Center };
         var stage=new Control { CustomMinimumSize=new(225,285) };wrapper.AddChild(stage);
@@ -494,9 +493,10 @@ public static class WorkshopUi
         Text("選んで希少効果を確認",16,wrapper,new Color("d8b4ff"));
         return wrapper;
     }
-    private static void RareConfirmation(ForgedCard card)
+    private static void RareConfirmation(CardModel card)
     {
-        bool valid=box!.Owner.Deck.Cards.Contains(card) && card.AlchemistRareModifier.Length==0;
+        if(card is not IRareInscribable inscribable) { selectedRareCard=null; return; }
+        bool valid=box!.Owner.Deck.Cards.Contains(card) && inscribable.AlchemistRareModifier.Length==0;
         Text("刻む希少効果を選ぶ",32,content,new Color("d8b4ff"));
         Text($"対象：{card.Title}\n加工後は取り外し・上書きできません。",21);
         foreach(var rare in RareMaterials.All)
@@ -504,7 +504,7 @@ public static class WorkshopUi
             bool meaningful=rare.Material switch
             {
                 RareMaterial.Mercury => !card.Keywords.Contains(CardKeyword.Retain),
-                RareMaterial.VoidCrystal => card.Formula.Cost>0 || !card.Keywords.Contains(CardKeyword.Exhaust),
+                RareMaterial.VoidCrystal => inscribable.InscriptionBaseCost>0 || !card.Keywords.Contains(CardKeyword.Exhaust),
                 _ => true
             };
             bool can=valid && meaningful && box.Inventory.CanApplyRareAt(box.Owner.RunState.TotalFloor,rare.Material);
@@ -597,7 +597,7 @@ public static class WorkshopUi
                 .Any(c=>{var cost=UpgradeCost(c);return currentBox.Inventory.CanSpend(cost.First,cost.Second);});
             bool brewingReady=currentBox.Owner.HasOpenPotionSlots && currentBox.Inventory.Counts.Any(n=>n>0);
             bool enchantmentReady=currentBox.Inventory.RareCounts.Any(n=>n>0)
-                && currentBox.Owner.Deck.Cards.OfType<ForgedCard>().Any(c=>c.AlchemistRareModifier.Length==0);
+                && currentBox.Owner.Deck.Cards.Any(c=>c is IRareInscribable { AlchemistRareModifier.Length: 0 });
             string S(WorkshopFacility f,bool affordable)=>currentBox.Inventory.FacilityStatus(floor,f,affordable);
             Button($"錬成\n{S(WorkshopFacility.Synthesis,synthesisReady)}",()=>{upgradeMode=false;rareMode=false;potionMode=false;selectedUpgrade=null;selectedRareCard=null;Refresh();},!upgradeMode&&!rareMode&&!potionMode,modes);
             Button($"改造\n{S(WorkshopFacility.Modification,modificationReady)}",()=>{upgradeMode=true;rareMode=false;potionMode=false;selectedRecipe=null;selectedRareCard=null;Refresh();},upgradeMode,modes);
@@ -779,27 +779,22 @@ public static class WorkshopUi
         catch(Exception ex) { status=$"改造できませんでした：{ex.Message}"; GD.PushError(ex.ToString()); }
         finally { busy=false;if(IsOpen)Refresh(); }
     }
-    private static void ApplyRare(ForgedCard card,RareMaterialDefinition rare)
+    private static void ApplyRare(CardModel target,RareMaterialDefinition rare)
     {
-        if(box is null || busy || !workshop || !CanEnterWorkshop(box) || !box.Owner.Deck.Cards.Contains(card)
-            || card.AlchemistRareModifier.Length>0) return;
+        if(box is null || busy || !workshop || !CanEnterWorkshop(box) || !box.Owner.Deck.Cards.Contains(target)
+            || target is not IRareInscribable { AlchemistRareModifier.Length: 0 } card) return;
         busy=true;
         string before=card.AlchemistRareModifier;
         try
         {
             box.Inventory.CommitRareAt(box.Owner.RunState.TotalFloor,rare.Material,Guid.NewGuid().ToString("N"),
                 ()=>card.AlchemistRareModifier=rare.Id,()=>card.AlchemistRareModifier=before);
-            status=$"{card.Title}に{rare.Name}の「{rare.EffectName}」を刻みました。";
+            status=$"{target.Title}に{rare.Name}の「{rare.EffectName}」を刻みました。";
             selectedRareCard=null;
         }
         catch(Exception ex) { status=$"希少加工できませんでした：{ex.Message}";GD.PushError(ex.ToString()); }
         finally { busy=false;if(IsOpen)Refresh(); }
     }
-    private static CardModel Canonical(Recipe recipe) => recipe.Id switch {
-        "iron_guard.v1" => ModelDb.Card<IronGuard>(), "herbal_edge.v1" => ModelDb.Card<HerbalEdge>(),
-        "blast.v1" => ModelDb.Card<AlchemicalBlast>(), "ether_lens.v1" => ModelDb.Card<EtherLens>(),
-        "herbal_guard.v1" => ModelDb.Card<HerbalGuard>(), _ => throw new InvalidOperationException("未対応レシピ") };
-
     private static async Task Craft(Recipe recipe)
     {
         if (box is null || busy || !workshop || !CanEnterWorkshop(box)) return;
@@ -812,7 +807,7 @@ public static class WorkshopUi
         {
             await b.Inventory.CommitCraftAtAsync(b.Owner.RunState.TotalFloor,recipe,Guid.NewGuid().ToString("N"),async () =>
             {
-                created = b.Owner.RunState.CreateCard(recipe.FormulaId is null ? Canonical(recipe) : ModelDb.Card<ForgedCard>(),b.Owner);
+                created = b.Owner.RunState.CreateCard(recipe.FormulaId is null ? CraftedCards.ForRecipe(recipe.Id) : ModelDb.Card<ForgedCard>(),b.Owner);
                 if(created is ForgedCard forged) forged.AlchemistFormula=recipe.FormulaId!;
                 var result = await CardPileCmd.Add(created,PileType.Deck,skipVisuals:true);
                 added = result.cardAdded;

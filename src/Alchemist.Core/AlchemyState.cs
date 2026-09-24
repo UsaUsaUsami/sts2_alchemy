@@ -11,15 +11,21 @@ public sealed record Recipe(string Id, IReadOnlyList<Material> Materials, string
 
 public static class Recipes
 {
-    // Exactly one cheap recipe is exposed for each unordered two-material pair. Older v1 formulas stay
-    // in ForgeCatalog so cards already present in a save still load, but redundant cheap variants are hidden.
+    // v0.17: the workshop makes phase-manipulating cards the reward pool never offers. Exactly one recipe per
+    // unordered pair of normal materials (10). Same material twice gives a power that strengthens transitions
+    // into that element; two different materials give a card that enters both elements in turn. The 65 older
+    // ForgeCatalog formulas remain loadable for saved cards but are no longer craftable.
     public static readonly Recipe[] All = [
-        new("iron_guard.v1", [Material.Iron, Material.Iron], "鍛鉄の護り", "1コスト / スキル / 自身 / 地相\n10ブロック。強化後13ブロック。", "防御", "そのターンを守る、鉄の基本錬成。"),
-        new("herbal_edge.v1", [Material.Iron, Material.Herb], "薬刃", "1コスト / アタック / 敵1体 / 地相\n8ダメージ、弱体1。強化後11ダメージ、弱体2。", "攻撃の準備", "弱体を付け、後続の攻撃を通す。"),
-        new("blast.v1", [Material.Powder, Material.Powder], "炸裂弾", "1コスト / アタック / 敵全体 / 火相\n8ダメージ。強化後11。", "集団戦", "複数の敵へ均等に圧力をかける。"),
-        new("ether_lens.v1", [Material.Ether, Material.Ether], "エーテルレンズ", "1コスト / スキル / 自身 / 風相\n4ブロック、2枚ドロー。強化後7ブロック。", "手札調整", "守りながら必要なカードを探す。"),
-        new("herbal_guard.v1", [Material.Herb, Material.Herb], "薬草の被膜", "1コスト / スキル / 自身 / 水相\n8ブロック、敵全体に脱力1。強化後11ブロック。", "弱体防御", "敵の攻撃を弱め、毒が回る時間を作る。"),
-        ..ForgeCatalog.Craftable.Select(f=>new Recipe(f.Id,f.Materials,f.Name,f.Preview,f.Role,f.Plan,f.Id))];
+        new("craft.earth_core.v1", [Material.Iron, Material.Iron], "大地の心核", "1コスト / パワー / 自身 / 地相\n地相への相転移の効果を3強化する。強化後0コスト。", "純相", "地へ移るたびの守りを厚くする。"),
+        new("craft.water_core.v1", [Material.Herb, Material.Herb], "流水の心核", "1コスト / パワー / 自身 / 水相\n水相への相転移の効果を1強化する。強化後0コスト。", "純相", "水へ移るたびの脱力を重くする。"),
+        new("craft.fire_core.v1", [Material.Powder, Material.Powder], "劫火の心核", "1コスト / パワー / 自身 / 火相\n火相への相転移の効果を3強化する。強化後0コスト。", "純相", "火へ移るたびの火力を上げる。"),
+        new("craft.air_core.v1", [Material.Ether, Material.Ether], "疾風の心核", "1コスト / パワー / 自身 / 風相\n風相への相転移の効果を1強化する。強化後0コスト。", "純相", "風へ移るたびのドローを増やす。"),
+        new("craft.mud_rampart.v1", [Material.Iron, Material.Herb], "泥の城壁", "1コスト / スキル / 敵1体 / 地相→水相\n7ブロック、脱力1。強化後10ブロック、脱力2。", "複相", "守りながら地と水へ続けて移る。"),
+        new("craft.lava_shot.v1", [Material.Iron, Material.Powder], "溶岩弾", "1コスト / アタック / 敵1体 / 地相→火相\n9ダメージ、4ブロック。強化後12ダメージ、6ブロック。", "複相", "攻防を1枚で行い、地と火へ続けて移る。"),
+        new("craft.sandstorm.v1", [Material.Iron, Material.Ether], "砂嵐", "1コスト / スキル / 自身 / 地相→風相\n6ブロック、1ドロー。強化後9ブロック、2ドロー。", "複相", "守りと手札補充を兼ね、地と風へ続けて移る。"),
+        new("craft.steam_burst.v1", [Material.Herb, Material.Powder], "蒸気爆発", "1コスト / アタック / 敵全体 / 水相→火相\n敵全体に6ダメージと脱力1。強化後9ダメージ。", "複相", "集団戦で水と火へ続けて移る。"),
+        new("craft.drizzle.v1", [Material.Herb, Material.Ether], "毒霧雨", "1コスト / スキル / 敵1体 / 水相→風相\n毒4、1ドロー。強化後毒7。", "複相", "毒を撒き、水と風へ続けて移る。"),
+        new("craft.fire_whirl.v1", [Material.Powder, Material.Ether], "火炎旋風", "1コスト / アタック / 敵全体 / 火相→風相\n敵全体に4ダメージを2回。強化後6ダメージを2回。", "複相", "集団戦で火と風へ続けて移る。")];
     private static bool SameMultiset(IReadOnlyList<Material> a, IReadOnlyList<Material> b)
         => a.Count == b.Count && a.OrderBy(m => m).SequenceEqual(b.OrderBy(m => m));
     public static IEnumerable<Recipe> FindAll(IReadOnlyList<Material> materials) => All.Where(r => SameMultiset(r.Materials, materials));

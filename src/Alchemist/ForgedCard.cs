@@ -17,7 +17,8 @@ using MegaCrit.Sts2.Core.ValueProps;
 namespace Alchemist;
 
 // Formula variants share execution, preview and persistence instead of one class per crafted card.
-public sealed class ForgedCard() : AlchemyCard(2,CardType.Attack,CardRarity.Event,TargetType.AnyEnemy)
+// Legacy (v0.2-v0.16) workshop card: formulas are no longer craftable but saved cards still load.
+public sealed class ForgedCard() : AlchemyCard(2,CardType.Attack,CardRarity.Event,TargetType.AnyEnemy), IRareInscribable
 {
     private string formulaId = "greatblade.v1";
     private string rareModifierId = "";
@@ -59,6 +60,7 @@ public sealed class ForgedCard() : AlchemyCard(2,CardType.Attack,CardRarity.Even
         if(Formula.Retain || RareModifier?.Material==RareMaterial.Mercury) AddKeyword(CardKeyword.Retain);
     }
     public override AlchemyPhase Element => Formula.Element;
+    public int InscriptionBaseCost => Formula.Cost;
     public override string Title => Formula.Name + (IsUpgraded ? "+" : "");
     public override CardType Type => Formula.Kind switch { ForgeKind.Attack=>CardType.Attack,ForgeKind.Skill=>CardType.Skill,_=>CardType.Power };
     public override TargetType TargetType => Formula.Target switch { ForgeTarget.Enemy=>TargetType.AnyEnemy,ForgeTarget.AllEnemies=>TargetType.AllEnemies,_=>TargetType.Self };
@@ -139,6 +141,11 @@ public static class ForgedDescriptionPatch
 {
     public static bool Prefix(CardModel __instance,ref LocString __result)
     {
+        if(__instance is CraftedCard { AlchemistRareModifier.Length: > 0 } crafted)
+        {
+            __result=new LocString("cards",$"{crafted.Id.Entry}.{crafted.AlchemistRareModifier}.description");
+            return false;
+        }
         if(__instance is not ForgedCard card) return true;
         string suffix=card.AlchemistRareModifier.Length==0 ? "" : $".{card.AlchemistRareModifier}";
         __result=new LocString("cards",$"{card.Id.Entry}.formula.{card.AlchemistFormula}{suffix}.description");

@@ -180,9 +180,11 @@ rareStock.CommitRare(RareMaterial.Stardust,"apply",()=>applied="rare.stardust",(
 Check(applied=="rare.stardust" && rareStock.RareCounts[(int)RareMaterial.Stardust]==0,"rare processing consumes exactly one material");
 Reject(()=>rareStock.CommitRare(RareMaterial.Stardust,"again",()=>applied="bad",()=>applied="rare.stardust"),"missing rare material is rejected");
 Check(ForgeCatalog.All.Count==78 && ForgeCatalog.All.Select(r=>r.Id).Distinct().Count()==78,"all legacy formula ids remain loadable");
-Check(Recipes.All.Length==65 && Recipes.All.Select(r=>r.Id).Distinct().Count()==65,"craftable pool has sixty-five stable recipe ids");
-Check(Recipes.All.Count(r=>r.Materials.Count==2)==10 && Recipes.All.Count(r=>r.Materials.Count==3)==20 && Recipes.All.Count(r=>r.Materials.Count==4)==35,
-    "one common per material pair, twenty uncommons and thirty-five rares");
+Check(Recipes.All.Length==10 && Recipes.All.Select(r=>r.Id).Distinct().Count()==10 && Recipes.All.All(r=>r.Materials.Count==2 && r.FormulaId is null),
+    "the workshop crafts ten two-material cards with stable ids");
+Check(Recipes.All.Count(r=>r.Materials[0]==r.Materials[1])==4 && Recipes.All.Count(r=>r.Materials[0]!=r.Materials[1])==6,
+    "four pure-phase recipes and six dual-phase recipes");
+Check(Recipes.All.All(r=>!ForgeCatalog.All.Any(f=>f.Id==r.Id)),"new recipe ids never reuse a legacy formula id");
 foreach(var a in Enum.GetValues<Material>()) foreach(var b in Enum.GetValues<Material>())
 {
     var choices=Recipes.FindAll(a,b).ToArray();
@@ -210,9 +212,15 @@ foreach(var f in ForgeCatalog.Craftable)
     Check(!f.Preview.Contains('{') && f.Preview.Contains(f.Describe(true)),"full shared preview "+f.Id);
     var stock=new AlchemyState();
     for(int i=0;i<f.Materials.Count;i++) stock.Grant($"m{i}",f.Materials[i]);
-    var r=Recipes.All.Single(r=>r.FormulaId==f.Id);int created=0;
-    await stock.CommitAsync(r,f.Id,()=>{created++;return Task.CompletedTask;},()=>created--);
-    Check(created==1 && stock.Total==0,$"formula consumes exactly {f.Materials.Count} "+f.Id);
+    Check(!Recipes.All.Any(r=>r.FormulaId==f.Id),"legacy formula is no longer craftable "+f.Id);
+}
+foreach(var r in Recipes.All)
+{
+    var stock=new AlchemyState();
+    for(int i=0;i<r.Materials.Count;i++) stock.Grant($"m{i}",r.Materials[i]);
+    int created=0;
+    await stock.CommitAsync(r,r.Id,()=>{created++;return Task.CompletedTask;},()=>created--);
+    Check(created==1 && stock.Total==0,"recipe consumes exactly its two materials "+r.Id);
 }
 Reject(()=>ForgeCatalog.Get("unknown.v99"),"unknown formula not reset");
 var shopA=MerchantMaterialOffers.Roll(1234,"act1:shop3");

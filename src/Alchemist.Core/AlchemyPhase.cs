@@ -8,6 +8,8 @@ public readonly record struct PhaseTransition(AlchemyPhase From, AlchemyPhase To
 public sealed class AlchemyPhaseState(bool triggerFromNone = false)
 {
     public AlchemyPhase Current { get; private set; } = AlchemyPhase.None;
+    /// The phase held before Current, for "return to the previous phase" effects. None until the second element.
+    public AlchemyPhase Previous { get; private set; } = AlchemyPhase.None;
     public bool TriggerFromNone { get; } = triggerFromNone;
     public int TransitionCount { get; private set; }
 
@@ -16,6 +18,7 @@ public sealed class AlchemyPhaseState(bool triggerFromNone = false)
         if (!PhaseRules.IsElement(next)) throw new ArgumentOutOfRangeException(nameof(next));
         var from = Current;
         if (from == next) return new(from, next, false);
+        Previous = from;
         Current = next;
         bool triggered = from != AlchemyPhase.None || TriggerFromNone;
         if (triggered) TransitionCount++;

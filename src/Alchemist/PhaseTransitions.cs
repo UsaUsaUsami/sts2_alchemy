@@ -27,7 +27,11 @@ public sealed class PhaseTransitionContext(PlayerChoiceContext choice, Player ow
     public Creature? Target { get; } = target;
     public CardPlay? Play { get; } = play;
     public int Amount { get; set; } = PhaseRules.BaseAmount(to);
+    /// How many times the destination effect resolves. Modifiers raise this for "trigger twice" effects.
+    public int Repeats { get; set; } = 1;
     public bool Suppressed { get; set; }
+    /// True for Echo: the effect resolves without the phase actually changing.
+    public bool IsEcho { get; init; }
 }
 
 /// <summary>
@@ -67,9 +71,29 @@ public static class PhaseTransitions
         foreach (var modifier in Hooks<IPhaseTransitionModifier>(owner, source)) modifier.ModifyPhaseTransition(transition);
         combat.LastTransition = $"{PhaseRules.Name(change.From)}→{PhaseRules.Name(change.To)}";
         Feedback(box, transition);
-        if (!transition.Suppressed && transition.Amount > 0) await Resolve(transition);
+        if (!transition.Suppressed && transition.Amount > 0)
+            for (int i = 0; i < transition.Repeats; i++) await Resolve(transition);
         foreach (var listener in Hooks<IPhaseTransitionListener>(owner, source)) await listener.AfterPhaseTransition(transition);
         return change;
+    }
+
+    /// Resolves the current phase's destination effect again without changing the phase. Modifiers apply,
+    /// but it is not a transition: it neither counts nor notifies listeners, so echoes cannot chain.
+    public static async Task Echo(PlayerChoiceContext choice, Player owner, CardModel? source = null, Creature? target = null, CardPlay? play = null)
+    {
+        var current = owner.GetRelic<MaterialBox>()?.Combat?.Phases.Current ?? AlchemyPhase.None;
+        if (!PhaseRules.IsElement(current)) return;
+        var echo = new PhaseTransitionContext(choice, owner, current, current, source, target, play) { IsEcho = true };
+        foreach (var modifier in Hooks<IPhaseTransitionModifier>(owner, source)) modifier.ModifyPhaseTransition(echo);
+        if (!echo.Suppressed && echo.Amount > 0)
+            for (int i = 0; i < echo.Repeats; i++) await Resolve(echo);
+    }
+
+    /// Returns to the element held before the current one, which is a normal transition.
+    public static Task ReturnToPrevious(PlayerChoiceContext choice, Player owner, CardModel? source = null, Creature? target = null, CardPlay? play = null)
+    {
+        var previous = owner.GetRelic<MaterialBox>()?.Combat?.Phases.Previous ?? AlchemyPhase.None;
+        return PhaseRules.IsElement(previous) ? Enter(choice, owner, previous, source, target, play) : Task.CompletedTask;
     }
 
     /// Moves to the next element in the Earth→Water→Fire→Air cycle. Without an element there is nothing to

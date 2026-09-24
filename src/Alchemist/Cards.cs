@@ -3,6 +3,7 @@ using BaseLib.Abstracts;
 using BaseLib.Utils;
 using MegaCrit.Sts2.Core.CardSelection;
 using MegaCrit.Sts2.Core.Commands;
+using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
@@ -18,10 +19,69 @@ public abstract class AlchemyCard(int cost, CardType type, CardRarity rarity, Ta
     : CustomCardModel(cost, type, rarity, target)
 {
     public virtual AlchemyPhase Element => AlchemyPhase.None;
-    protected virtual CardModel Artwork => ModelDb.Card<TrueGrit>();
+    // Placeholder art borrowed from base-game cards until the mod has its own.
+    protected virtual CardModel Artwork => Type switch
+    {
+        CardType.Attack => ModelDb.Card<Thunderclap>(),
+        CardType.Power => ModelDb.Card<Inflame>(),
+        _ => ModelDb.Card<TrueGrit>()
+    };
     public override string PortraitPath => Artwork.PortraitPath;
     public override string? CustomPortraitPath => Artwork.PortraitPath;
     public override string BetaPortraitPath => Artwork.BetaPortraitPath;
+
+    // Shared vocabulary for card effects, so individual cards stay declarative.
+    protected MaterialBox? Box => Owner.GetRelic<MaterialBox>();
+    protected AlchemyPhase CurrentPhase => Box?.Combat?.Phases.Current ?? AlchemyPhase.None;
+    protected int TransitionCount => Box?.Combat?.Phases.TransitionCount ?? 0;
+    /// Checked inside OnPlay, before MaterialBox moves the phase to this card's element.
+    protected bool WillTransition => PhaseRules.IsElement(Element) && PhaseRules.IsElement(CurrentPhase) && CurrentPhase != Element;
+    protected bool InOwnPhase => PhaseRules.IsElement(Element) && CurrentPhase == Element;
+    protected bool HasNormalMaterial => Box?.Inventory is { Settled: true } inventory && inventory.Counts.Any(n => n > 0);
+
+    protected async Task Hit(PlayerChoiceContext c, CardPlay p, decimal damage, int hits = 1)
+    {
+        for (int i = 0; i < hits; i++) await DamageCmd.Attack(damage).FromCard(this, p).Targeting(p.Target!).Execute(c);
+    }
+    protected async Task HitAll(PlayerChoiceContext c, CardPlay p, decimal damage, int hits = 1)
+    {
+        for (int i = 0; i < hits; i++) await DamageCmd.Attack(damage).FromCard(this, p).TargetingAllOpponents(CombatState!).Execute(c);
+    }
+    protected Task Block(CardPlay p, decimal amount) => CreatureCmd.GainBlock(Owner.Creature, amount, ValueProp.Move, p);
+    /// Block from the card's own BlockVar, so upgrades and previews stay in sync.
+    protected Task CardBlock(CardPlay p) => CreatureCmd.GainBlock(Owner.Creature, DynamicVars.Block, p);
+    protected Task ApplySelf<T>(PlayerChoiceContext c, decimal amount) where T : PowerModel
+        => PowerCmd.Apply<T>(c, Owner.Creature, amount, Owner.Creature, this);
+    protected Task ApplyTo<T>(PlayerChoiceContext c, Creature target, decimal amount) where T : PowerModel
+        => PowerCmd.Apply<T>(c, target, amount, Owner.Creature, this);
+    protected Task ApplyAll<T>(PlayerChoiceContext c, decimal amount) where T : PowerModel
+        => PowerCmd.Apply<T>(c, CombatState!.HittableEnemies, amount, Owner.Creature, this);
+    protected Task Draw(PlayerChoiceContext c, decimal count) => CardPileCmd.Draw(c, count, Owner);
+    protected Task Energy(decimal amount) => PlayerCmd.GainEnergy(amount, Owner);
+
+    /// Lets the player pick a normal material through the material-box cards. With ownedOnly, only
+    /// materials the box holds are offered. Needs a "selectionScreenPrompt" entry in the card's loc.
+    protected async Task<Material?> ChooseMaterial(PlayerChoiceContext c, bool ownedOnly)
+    {
+        var box = Box;
+        if (box is null) return null;
+        List<(Material Material, CardModel Card)> options = [];
+        void Offer<T>(Material m) where T : CardModel
+        {
+            if (ownedOnly && box.Inventory.Counts[(int)m] <= 0) return;
+            var card = ModelDb.Card<T>().ToMutable(); card.Owner = Owner; card.AfterCreated();
+            options.Add((m, card));
+        }
+        Offer<IronMaterialCard>(Material.Iron); Offer<HerbMaterialCard>(Material.Herb);
+        Offer<PowderMaterialCard>(Material.Powder); Offer<EtherMaterialCard>(Material.Ether);
+        if (options.Count == 0) return null;
+        var chosen = (await CardSelectCmd.FromSimpleGrid(c, options.Select(o => o.Card).ToList(), Owner, new CardSelectorPrefs(SelectionScreenPrompt, 1))).FirstOrDefault();
+        foreach (var o in options) o.Card.Owner = null!;
+        return options.FirstOrDefault(o => o.Card == chosen) is { Card: not null } picked ? picked.Material : null;
+    }
+    /// Picks an owned normal material and removes it from the run inventory.
+    protected async Task<Material?> SpendMaterial(PlayerChoiceContext c)
+        => await ChooseMaterial(c, ownedOnly: true) is { } m && Box!.Inventory.TryConsume(m) ? m : null;
 }
 
 // Legacy (v0.8-v0.14 starter). No longer dealt or offered: the starter relic hands out the furnace

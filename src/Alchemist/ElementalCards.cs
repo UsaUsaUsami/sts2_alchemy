@@ -127,14 +127,3 @@ public sealed class PhaseResonance() : AlchemyCard(1,CardType.Power,CardRarity.U
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>PowerCmd.Apply<PhaseResonancePower>(c,Owner.Creature,DynamicVars["PhaseResonancePower"].BaseValue,Owner.Creature,this);
     protected override void OnUpgrade()=>DynamicVars["PhaseResonancePower"].UpgradeValueBy(1);
 }
-
-public sealed class PhaseResonancePower : CustomPowerModel, IPhaseTransitionListener
-{
-    public override PowerType Type=>PowerType.Buff;
-    public override PowerStackType StackType=>PowerStackType.Counter;
-    public override string? CustomPackedIconPath=>ModelDb.Power<PlatingPower>().PackedIconPath;
-    public override string? CustomBigIconPath=>"res://images/powers/plating_power.png";
-    public override List<(string,string)> Localization=>new PowerLoc("相の共鳴","相転移するたび、ブロックを得る。","相転移するたび、[gold]ブロック[/gold]を{Amount}得る。");
-    public Task AfterPhaseTransition(PhaseTransitionContext transition)
-        => transition.Owner.Creature==Owner ? CreatureCmd.GainBlock(Owner,Amount,ValueProp.Unpowered,null) : Task.CompletedTask;
-}
