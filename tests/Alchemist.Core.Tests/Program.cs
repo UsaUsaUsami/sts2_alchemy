@@ -21,12 +21,29 @@ Check(AlchemyPhaseState.MaterialFor(AlchemyPhase.Earth)==Material.Iron
 var emptyCombat=new HarvestCombat();
 Check(!emptyCombat.UseFurnace(),"furnace cannot harvest in no phase");
 emptyCombat.Phases.Enter(AlchemyPhase.Fire);
-Check(emptyCombat.UseFurnace() && emptyCombat.UseFurnace() && !emptyCombat.UseFurnace(),"furnace has a shared cap of two uses");
+Check(emptyCombat.CanUseFurnace && emptyCombat.UseFurnace() && emptyCombat.UseFurnace() && !emptyCombat.UseFurnace() && !emptyCombat.CanUseFurnace,
+    "furnace has a shared cap of two uses and reports it before play");
 Check(new HarvestCombat().FurnaceUsed == 0 && new HarvestCombat().Phases.Current==AlchemyPhase.None,"new combat resets furnace and phase");
-combat.AdvancePhase();
-Check(combat.Phases.Current==AlchemyPhase.Fire,"legacy phase-advance cards remain loadable on the elemental cycle");
+Check(PhaseRules.Next(AlchemyPhase.Earth)==AlchemyPhase.Water && PhaseRules.Next(AlchemyPhase.Air)==AlchemyPhase.Earth
+    && PhaseRules.Next(AlchemyPhase.None)==AlchemyPhase.None,"advance effects cycle the four elements and do nothing without one");
+Reject(()=>combat.Phases.Enter(AlchemyPhase.None),"nothing can transition back to the neutral phase");
+Check(PhaseRules.Elements.All(e=>PhaseRules.BaseAmount(e)>0) && PhaseRules.BaseAmount(AlchemyPhase.None)==0,
+    "each destination has one base effect amount and the neutral phase has none");
+Check(PhaseRules.Elements.All(e=>PhaseRules.PhaseFor(PhaseRules.MaterialFor(e)!.Value)==e),"phase and material mappings are inverse");
+Check(PhaseRules.FromMaterials([Material.Herb,Material.Iron,Material.Herb])==AlchemyPhase.Water
+    && PhaseRules.FromMaterials([Material.Powder,Material.Iron])==AlchemyPhase.Fire
+    && PhaseRules.FromMaterials([])==AlchemyPhase.None,"crafted element follows the dominant material, ties to the first listed");
+Check(ForgeCatalog.All.All(f=>PhaseRules.IsElement(f.Element)),"every forged formula belongs to an element");
+Check(PhaseRules.Elements.All(e=>ForgeCatalog.Craftable.Any(f=>f.Element==e)),"every element has craftable forged cards");
+var triggered=new AlchemyPhaseState(triggerFromNone:true);
+Check(triggered.Enter(AlchemyPhase.Fire).Triggered,"the first transition from the neutral phase can be switched on");
 var inventory = new AlchemyState();
 Check(inventory.Total == 0,"empty initial inventory");
+var legacyFull=new AlchemyState();
+legacyFull.Counts[0]=15;
+var legacyLoaded=AlchemyState.Load(legacyFull.Save());
+Check(legacyLoaded.Total==15 && legacyLoaded.Grant("after-shrink",Material.Herb) && legacyLoaded.Pending.Count==1 && legacyLoaded.Total==15,
+    "a pre-v0.16 box over the new capacity loads and only queues new receipts");
 for (int i=0;i<AlchemyState.Capacity;i++) inventory.Grant($"kill{i}",Material.Iron);
 Check(inventory.Total == AlchemyState.Capacity,"capacity cap, same type counts individually");
 Check(!inventory.Grant("kill0",Material.Iron),"grant is idempotent");

@@ -34,8 +34,10 @@ public sealed class MaterialBox : CustomRelicModel
     public const string RewardLocKey = "materialReward";
     public const string RewardIconPath = "res://images/relics/burning_blood.png";
     public override List<(string,string)> Localization => new RelicLoc("素材ボックス",
-        "属性カードを使うと地・水・火・風の相が変化する。異なる相へ移ると相転移効果が発動する。\n戦闘開始時は無相。炉の起動は常に手札へ加わり、現在相に対応する素材を採取する。\nエリート報酬は1枠、ボス報酬は2枠。希少素材は工房で恒久加工できる。", "相を変え、素材を選ぶ。",
-        (RewardLocKey, "素材を選ぶ"));
+        "属性カードを使うと地・水・火・風の相が変化する。異なる相へ移ると相転移効果が発動する。\n戦闘開始時は無相。各戦闘の最初に炉の起動が手札へ加わり、現在相に対応する素材を採取する（戦闘全体で2回まで）。\nエリート報酬は1枠、ボス報酬は2枠。希少素材は工房で恒久加工できる。", "相を変え、素材を選ぶ。",
+        (RewardLocKey, "素材を選ぶ"),
+        ("phaseShift.Earth", "地相へ転移"), ("phaseShift.Water", "水相へ転移"),
+        ("phaseShift.Fire", "火相へ転移"), ("phaseShift.Air", "風相へ転移"));
     [SavedProperty]
     public string AlchemistState { get => Inventory.Save(); set => state = AlchemyState.Load(value); }
     protected override void AfterCloned() { base.AfterCloned(); state = null; Combat = null; }
@@ -55,7 +57,7 @@ public sealed class MaterialBox : CustomRelicModel
     }
     public bool GrantFromFurnace()
     {
-        if (Combat is null || Combat.FurnaceUsed is < 1 or > 2 || AlchemyPhaseState.MaterialFor(Combat.Phases.Current) is not { } material) return false;
+        if (Combat is null || Combat.FurnaceUsed is < 1 or > HarvestCombat.FurnaceLimit || AlchemyPhaseState.MaterialFor(Combat.Phases.Current) is not { } material) return false;
         bool granted = Inventory.GrantHarvest($"{Owner.RunState.TotalFloor}:{Owner.RunState.CurrentRoom?.Id}:furnace{Combat.FurnaceUsed}", material);
         if (granted) InvokeDisplayAmountChanged();
         return granted;
@@ -65,23 +67,14 @@ public sealed class MaterialBox : CustomRelicModel
         Combat = null;
         return Task.CompletedTask;
     }
+    // Cards only declare an element; PhaseTransitions decides whether that is a transition and what it does.
+    // Replays of the same play (IsFirstInSeries false) do not move the phase again.
     public override async Task AfterCardPlayed(PlayerChoiceContext context, CardPlay cardPlay)
     {
         if(Combat is null || cardPlay.Player!=Owner || !cardPlay.IsFirstInSeries || cardPlay.Card is not AlchemyCard { Element:not AlchemyPhase.None } card) return;
-        var change=Combat.Phases.Enter(card.Element);
-        if(!change.Triggered) { Combat.LastTransition=$"現在相：{PhaseName(change.To)}"; return; }
-        Combat.LastTransition=$"相転移：{PhaseName(change.From)} → {PhaseName(change.To)}";
-        var target=cardPlay.Target?.Side==CombatSide.Enemy ? cardPlay.Target : card.CombatState?.HittableEnemies.FirstOrDefault();
-        int amount=card.Enchantment is WorkshopTuning ? 2 : 1;
-        switch(change.To)
-        {
-            case AlchemyPhase.Earth: await CreatureCmd.GainBlock(Owner.Creature,1+amount,ValueProp.Unpowered,cardPlay); break;
-            case AlchemyPhase.Water when target is not null: await PowerCmd.Apply<WeakPower>(context,target,amount,Owner.Creature,card); break;
-            case AlchemyPhase.Fire when target is not null: await CreatureCmd.Damage(context,target,2+amount,ValueProp.Unpowered,Owner.Creature,card,cardPlay); break;
-            case AlchemyPhase.Air: await CardPileCmd.Draw(context,amount,Owner); break;
-        }
+        await PhaseTransitions.Enter(context,Owner,card.Element,card,cardPlay.Target,cardPlay);
     }
-    public static string PhaseName(AlchemyPhase phase)=>phase switch { AlchemyPhase.Earth=>"地",AlchemyPhase.Water=>"水",AlchemyPhase.Fire=>"火",AlchemyPhase.Air=>"風",_=>"無相" };
+    public static string PhaseName(AlchemyPhase phase)=>PhaseRules.Name(phase);
     // Material slots are additional to normal card, gold, relic and potion rewards.
     private string OfferId(AbstractRoom room, int slot) => $"{Owner.RunState.TotalFloor}:{room.Id}:reward{slot}";
     public override bool TryModifyRewards(Player player, List<Reward> rewards, AbstractRoom? room)

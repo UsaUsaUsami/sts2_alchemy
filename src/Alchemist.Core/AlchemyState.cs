@@ -14,11 +14,11 @@ public static class Recipes
     // Exactly one cheap recipe is exposed for each unordered two-material pair. Older v1 formulas stay
     // in ForgeCatalog so cards already present in a save still load, but redundant cheap variants are hidden.
     public static readonly Recipe[] All = [
-        new("iron_guard.v1", [Material.Iron, Material.Iron], "鍛鉄の護り", "1コスト / スキル / 自身\n10ブロック。強化後13ブロック。", "防御", "そのターンを守る、鉄の基本錬成。"),
-        new("herbal_edge.v1", [Material.Iron, Material.Herb], "薬刃", "1コスト / アタック / 敵1体\n8ダメージ、弱体1。強化後11ダメージ、弱体2。", "攻撃の準備", "弱体を付け、後続の攻撃を通す。"),
-        new("blast.v1", [Material.Powder, Material.Powder], "炸裂弾", "1コスト / アタック / 敵全体\n8ダメージ。強化後11。", "集団戦", "複数の敵へ均等に圧力をかける。"),
-        new("ether_lens.v1", [Material.Ether, Material.Ether], "エーテルレンズ", "1コスト / スキル / 自身\n4ブロック、2枚ドロー。強化後7ブロック。", "手札調整", "守りながら必要なカードを探す。"),
-        new("herbal_guard.v1", [Material.Herb, Material.Herb], "薬草の被膜", "1コスト / スキル / 自身\n8ブロック、敵全体に脱力1。強化後11ブロック。", "弱体防御", "敵の攻撃を弱め、毒が回る時間を作る。"),
+        new("iron_guard.v1", [Material.Iron, Material.Iron], "鍛鉄の護り", "1コスト / スキル / 自身 / 地相\n10ブロック。強化後13ブロック。", "防御", "そのターンを守る、鉄の基本錬成。"),
+        new("herbal_edge.v1", [Material.Iron, Material.Herb], "薬刃", "1コスト / アタック / 敵1体 / 地相\n8ダメージ、弱体1。強化後11ダメージ、弱体2。", "攻撃の準備", "弱体を付け、後続の攻撃を通す。"),
+        new("blast.v1", [Material.Powder, Material.Powder], "炸裂弾", "1コスト / アタック / 敵全体 / 火相\n8ダメージ。強化後11。", "集団戦", "複数の敵へ均等に圧力をかける。"),
+        new("ether_lens.v1", [Material.Ether, Material.Ether], "エーテルレンズ", "1コスト / スキル / 自身 / 風相\n4ブロック、2枚ドロー。強化後7ブロック。", "手札調整", "守りながら必要なカードを探す。"),
+        new("herbal_guard.v1", [Material.Herb, Material.Herb], "薬草の被膜", "1コスト / スキル / 自身 / 水相\n8ブロック、敵全体に脱力1。強化後11ブロック。", "弱体防御", "敵の攻撃を弱め、毒が回る時間を作る。"),
         ..ForgeCatalog.Craftable.Select(f=>new Recipe(f.Id,f.Materials,f.Name,f.Preview,f.Role,f.Plan,f.Id))];
     private static bool SameMultiset(IReadOnlyList<Material> a, IReadOnlyList<Material> b)
         => a.Count == b.Count && a.OrderBy(m => m).SequenceEqual(b.OrderBy(m => m));
@@ -31,10 +31,15 @@ public static class Recipes
 
 public sealed class AlchemyState
 {
-    public const int Capacity = 20;
+    // v0.16.0: back to the AGENTS.md trial values. The workshop now spends only a few materials per visit,
+    // so a large box and doubled yield left nothing to decide between the workshop and Instant Alchemy.
+    public const int Capacity = 10;
+    // Saves from v0.11-v0.15 could hold up to 20. They still load; the box simply accepts nothing new
+    // (it queues receipts instead) until it drops below Capacity.
+    public const int LegacyCapacity = 20;
     // Each furnace activation or selected material reward grants this many units. Standard card rewards
     // are available independently and do not pass through this inventory.
-    public const int YieldPerEvent = 2;
+    public const int YieldPerEvent = 1;
     // 1: harvest-only. 2: reward slots. 3: rare inventory. 4: upgrade floor. 5: facility usage.
     public const int CurrentSchema = 5;
     public int Schema { get; set; } = CurrentSchema;
@@ -281,8 +286,8 @@ public sealed class AlchemyState
         }
         else s = JsonSerializer.Deserialize<AlchemyState>(json) ?? throw new InvalidDataException("錬金術のセーブが空です。");
         if (schema is not (1 or 2 or 3 or 4 or 5) || s.Counts is not { Length: 4 } || s.RareCounts is not { Length: 3 }
-            || s.Counts.Any(n => n < 0 || n > Capacity) || s.RareCounts.Any(n => n < 0 || n > Capacity)
-            || s.Total > Capacity || s.Pending is null || s.Received is null || s.Committed is null || s.WorkshopNodes is null
+            || s.Counts.Any(n => n < 0 || n > LegacyCapacity) || s.RareCounts.Any(n => n < 0 || n > LegacyCapacity)
+            || s.Total > LegacyCapacity || s.Pending is null || s.Received is null || s.Committed is null || s.WorkshopNodes is null
             || s.Offers is null || s.WorkshopFacilityUses is null
             || !Enum.IsDefined(s.NextCombatMaterial)
             || s.Pending.Any(p => p is null || !p.Material.IsValid || !s.Received.Contains(p.Id))
@@ -320,25 +325,13 @@ public sealed class HarvestCombat
     public int FurnaceUsed { get; private set; }
     public bool FurnaceTokensGranted { get; set; }
     public string LastTransition { get; set; } = "";
+    public const int FurnaceLimit = 2;
+    public bool CanUseFurnace => FurnaceUsed < FurnaceLimit && Phases.Current != AlchemyPhase.None;
     public bool UseFurnace()
     {
-        if (FurnaceUsed >= 2 || Phases.Current == AlchemyPhase.None) return false;
+        if (!CanUseFurnace) return false;
         FurnaceUsed++;
         return true;
-    }
-    // Compatibility for cards created by the pre-element recipe system. New cards enter a named
-    // element directly, while an old "advance" card walks through the same four phases.
-    public void AdvancePhase(int amount = 1)
-    {
-        if (Phases.Current == AlchemyPhase.None || amount <= 0) return;
-        for (int i = 0; i < amount; i++)
-            Phases.Enter(Phases.Current switch
-            {
-                AlchemyPhase.Earth => AlchemyPhase.Water,
-                AlchemyPhase.Water => AlchemyPhase.Fire,
-                AlchemyPhase.Fire => AlchemyPhase.Air,
-                _ => AlchemyPhase.Earth
-            });
     }
 }
 

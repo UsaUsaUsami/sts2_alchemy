@@ -58,6 +58,7 @@ public sealed class ForgedCard() : AlchemyCard(2,CardType.Attack,CardRarity.Even
         if(Formula.Exhaust || voided) AddKeyword(CardKeyword.Exhaust);
         if(Formula.Retain || RareModifier?.Material==RareMaterial.Mercury) AddKeyword(CardKeyword.Retain);
     }
+    public override AlchemyPhase Element => Formula.Element;
     public override string Title => Formula.Name + (IsUpgraded ? "+" : "");
     public override CardType Type => Formula.Kind switch { ForgeKind.Attack=>CardType.Attack,ForgeKind.Skill=>CardType.Skill,_=>CardType.Power };
     public override TargetType TargetType => Formula.Target switch { ForgeTarget.Enemy=>TargetType.AnyEnemy,ForgeTarget.AllEnemies=>TargetType.AllEnemies,_=>TargetType.Self };
@@ -78,10 +79,11 @@ public sealed class ForgedCard() : AlchemyCard(2,CardType.Attack,CardRarity.Even
         new PowerVar<StrengthPower>(0),new PowerVar<DexterityPower>(0),new DynamicVar("Hits",0),
         new DynamicVar("ExhaustBlock",0),new DynamicVar("ExhaustDraw",0),new DynamicVar("Fumes",0),
         new DynamicVar("AdvancePhase",0)];
+    private static string ElementLine(ForgeFormula f)=>$"\n[gold]{PhaseRules.Name(f.Element)}相[/gold]";
     public override List<(string,string)> Localization => [
-        ("title","錬成カード"),("description",ForgeCatalog.Get("greatblade.v1").Text),
-        ..ForgeCatalog.All.Select(f=>($"formula.{f.Id}.description",f.Text)),
-        ..ForgeCatalog.All.SelectMany(f=>RareMaterials.All.Select(r=>($"formula.{f.Id}.{r.Id}.description",$"{f.Text}\n[gold]{r.EffectName}[/gold]：{r.Description}")))];
+        ("title","錬成カード"),("description",ForgeCatalog.Get("greatblade.v1").Text+ElementLine(ForgeCatalog.Get("greatblade.v1"))),
+        ..ForgeCatalog.All.Select(f=>($"formula.{f.Id}.description",f.Text+ElementLine(f))),
+        ..ForgeCatalog.All.SelectMany(f=>RareMaterials.All.Select(r=>($"formula.{f.Id}.{r.Id}.description",$"{f.Text}\n[gold]{r.EffectName}[/gold]：{r.Description}{ElementLine(f)}")))];
     protected override IEnumerable<IHoverTip> ExtraHoverTips
     {
         get
@@ -125,8 +127,10 @@ public sealed class ForgedCard() : AlchemyCard(2,CardType.Attack,CardRarity.Even
         if(DynamicVars["ExhaustBlock"].BaseValue>0) await PowerCmd.Apply<FeelNoPainPower>(c,Owner.Creature,DynamicVars["ExhaustBlock"].BaseValue,Owner.Creature,this);
         if(DynamicVars["ExhaustDraw"].BaseValue>0) await PowerCmd.Apply<DarkEmbracePower>(c,Owner.Creature,DynamicVars["ExhaustDraw"].BaseValue,Owner.Creature,this);
         if(DynamicVars["Fumes"].BaseValue>0) await PowerCmd.Apply<NoxiousFumesPower>(c,Owner.Creature,DynamicVars["Fumes"].BaseValue,Owner.Creature,this);
+        // Advancing goes through the shared transition path, so it triggers the destination effect like any
+        // other transition. The card's own element is entered afterwards by MaterialBox.AfterCardPlayed.
         if(DynamicVars["AdvancePhase"].BaseValue>0)
-            Owner.GetRelic<MaterialBox>()?.Combat?.AdvancePhase(DynamicVars["AdvancePhase"].IntValue);
+            await PhaseTransitions.Advance(c,Owner,DynamicVars["AdvancePhase"].IntValue,this,p.Target,p);
     }
 }
 

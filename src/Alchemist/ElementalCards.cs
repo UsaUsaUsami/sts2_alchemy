@@ -4,6 +4,7 @@ using BaseLib.Utils;
 using MegaCrit.Sts2.Core.CardSelection;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
@@ -114,3 +115,26 @@ public sealed class PowderImprovisation():ImprovisationCard(AlchemyPhase.Fire)
 { public override TargetType TargetType=>TargetType.AnyEnemy;protected override IEnumerable<DynamicVar> CanonicalVars=>[new DamageVar(8,ValueProp.Move)];public override List<(string,string)> Localization=>new CardLoc("即席の炸薬","{Damage}ダメージ。 [gold]火相 廃棄[/gold]");protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>DamageCmd.Attack(DynamicVars.Damage.BaseValue).FromCard(this,p).Targeting(p.Target!).Execute(c);protected override void OnUpgrade(){} }
 public sealed class EtherImprovisation():ImprovisationCard(AlchemyPhase.Air)
 { protected override IEnumerable<DynamicVar> CanonicalVars=>[new CardsVar(2)];public override List<(string,string)> Localization=>new CardLoc("即席の霊風","カードを{Cards}枚引く。 [gold]風相 廃棄[/gold]");protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>CardPileCmd.Draw(c,DynamicVars.Cards.BaseValue,Owner);protected override void OnUpgrade(){} }
+
+// The pool needs at least one Power: the merchant stocks one character card of each type and fails to
+// populate without it. This one is also the reference use of the transition-listener hook.
+public sealed class PhaseResonance() : AlchemyCard(1,CardType.Power,CardRarity.Uncommon,TargetType.Self)
+{
+    protected override CardModel Artwork=>ModelDb.Card<Inflame>();
+    protected override IEnumerable<DynamicVar> CanonicalVars=>[new PowerVar<PhaseResonancePower>(2)];
+    protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<PhaseResonancePower>()];
+    public override List<(string,string)> Localization=>new CardLoc("相の共鳴","相転移するたび、{PhaseResonancePower:diff()}[gold]ブロック[/gold]を得る。");
+    protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>PowerCmd.Apply<PhaseResonancePower>(c,Owner.Creature,DynamicVars["PhaseResonancePower"].BaseValue,Owner.Creature,this);
+    protected override void OnUpgrade()=>DynamicVars["PhaseResonancePower"].UpgradeValueBy(1);
+}
+
+public sealed class PhaseResonancePower : CustomPowerModel, IPhaseTransitionListener
+{
+    public override PowerType Type=>PowerType.Buff;
+    public override PowerStackType StackType=>PowerStackType.Counter;
+    public override string? CustomPackedIconPath=>ModelDb.Power<PlatingPower>().PackedIconPath;
+    public override string? CustomBigIconPath=>"res://images/powers/plating_power.png";
+    public override List<(string,string)> Localization=>new PowerLoc("相の共鳴","相転移するたび、ブロックを得る。","相転移するたび、[gold]ブロック[/gold]を{Amount}得る。");
+    public Task AfterPhaseTransition(PhaseTransitionContext transition)
+        => transition.Owner.Creature==Owner ? CreatureCmd.GainBlock(Owner,Amount,ValueProp.Unpowered,null) : Task.CompletedTask;
+}

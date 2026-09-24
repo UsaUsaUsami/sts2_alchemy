@@ -35,6 +35,8 @@ using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Nodes.Screens.Shops;
 using MegaCrit.Sts2.Core.TestSupport;
 using MegaCrit.Sts2.addons.mega_text;
+using MegaCrit.Sts2.Core.Entities.CardRewardAlternatives;
+using MegaCrit.Sts2.Core.Entities.Creatures;
 
 [ModInitializer(nameof(Initialize))]
 public static class Smoke
@@ -77,6 +79,11 @@ public static class Smoke
                     Check(restored.IsUpgraded && restored.Id==mutable.Id,"upgraded card save "+canonical.Id);
                 }
                 Check(ResourceLoader.Exists(box.PackedIconPath),"relic portrait");
+                var resonance=ModelDb.Power<PhaseResonancePower>();
+                Check(ResourceLoader.Exists(resonance.CustomPackedIconPath!) && ResourceLoader.Exists(resonance.CustomBigIconPath!),"phase resonance power icons exist");
+                Check(new[]{CardType.Attack,CardType.Skill,CardType.Power}.All(t=>ModelDb.CardPool<AlchemyCardPool>().AllCards
+                    .Any(c=>c.Type==t && c.Rarity is CardRarity.Common or CardRarity.Uncommon or CardRarity.Rare)),
+                    "the pool has an attack, a skill and a power for the merchant");
                 bool mapsOk=true,everyRouteOk=true; int convertedFights=0,totalChosen=0,uncovered=0,midMiss=0,lateMiss=0;
                 for(int seed=0;seed<100;seed++)
                 {
@@ -282,14 +289,85 @@ public static class Smoke
                 "workshop permanently applies and consumes stardust");
             var restoredRare=(ForgedCard)CardModel.FromSerializable(rareCard.ToSerializable());
             Check(restoredRare.AlchemistRareModifier=="rare.stardust","rare modifier survives card serialization");
+            box.Inventory.Grant("second-craft-iron-1",Alchemist.Core.Material.Iron);
+            box.Inventory.Grant("second-craft-iron-2",Alchemist.Core.Material.Iron);
+            await (Task)AccessTools.Method(typeof(WorkshopUi),"Craft").Invoke(null,[Recipes.All[0]])!;
+            Check(player.Deck.Cards.Count(c=>c is IronGuard)==1 && box.Inventory.Counts[(int)Alchemist.Core.Material.Iron]==2,
+                "synthesis is limited to once per workshop visit even with materials left");
+            int potionsBefore=player.Potions.Count();
+            await (Task)AccessTools.Method(typeof(WorkshopUi),"BrewPotion").Invoke(null,[Alchemist.Core.Material.Iron])!;
+            Check(player.Potions.Count(p=>p is EarthPhial)==1 && player.Potions.Count()==potionsBefore+1
+                && box.Inventory.Counts[(int)Alchemist.Core.Material.Iron]==1,"brewing turns one iron into an earth phial in a potion slot");
+            await (Task)AccessTools.Method(typeof(WorkshopUi),"BrewPotion").Invoke(null,[Alchemist.Core.Material.Iron])!;
+            Check(player.Potions.Count()==potionsBefore+1 && box.Inventory.Counts[(int)Alchemist.Core.Material.Iron]==1,
+                "brewing is limited to once per workshop visit");
+            AccessTools.Field(typeof(WorkshopUi),"rareMode").SetValue(null,false);
+            AccessTools.Method(typeof(WorkshopUi),"Refresh").Invoke(null,null);
+            var facilityButtons=Descendants<Button>(uiOverlay!).Select(b=>b.Text).ToArray();
+            Check(new[]{"錬成","改造","調薬","付与"}.All(f=>facilityButtons.Any(t=>t.StartsWith(f+"\n") && t.Contains("使用済み"))),
+                "all four facilities were usable in one visit and now read as used");
             await (Task)AccessTools.Method(typeof(WorkshopUi),"LeaveMapWorkshop").Invoke(null,null)!;
             await RunManager.Instance.EnterRoomDebug(RoomType.Monster,model:ModelDb.Encounter<BowlbugsWeak>().ToMutable(),showTransition:false);
             await Until(()=>box.Combat != null && player.PlayerCombatState?.Hand.Cards.Count>0,"second battle ready");
             Check(box.Combat!.Phases.Current==AlchemyPhase.None,"next battle resets the elemental phase");
+            // Wait for the opening draw and the relic's tokens to finish; playing earlier races the turn-start draw.
+            await Until(()=>player.PlayerCombatState!.Hand.Cards.OfType<FurnaceActivation>().Count()==HarvestCombat.FurnaceLimit
+                && player.PlayerCombatState.Hand.Cards.Count>=5+HarvestCombat.FurnaceLimit,"opening hand and furnace tokens dealt");
+            await Task.Delay(600);
+            var tokens=player.PlayerCombatState!.Hand.Cards.OfType<FurnaceActivation>().ToArray();
+            Check(tokens.Length==HarvestCombat.FurnaceLimit && tokens.All(t=>!t.CanPlay()),
+                "the starter relic deals the furnace every combat, unplayable in the neutral phase");
             var card=player.PlayerCombatState!.AllCards.OfType<IronGuard>().Single();
             int before=player.Creature.Block;
             await CardCmd.AutoPlay(new ThrowingPlayerChoiceContext(),card,null,skipCardPileVisuals:true);
-            Check(player.Creature.Block==before+16,"crafted card usable next battle");
+            Check(player.Creature.Block==before+card.DynamicVars.Block.IntValue && box.Combat.Phases.Current==AlchemyPhase.Earth,
+                $"crafted card usable next battle and entering the first element triggers nothing (block {player.Creature.Block-before})");
+            Check(tokens.All(t=>t.CanPlay()),"furnace becomes playable once an element is active");
+            var cs=player.Creature.CombatState!;
+            var foe=cs.Enemies[0];
+            foe.SetMaxHpInternal(999);foe.SetCurrentHpInternal(999);
+            async Task Play(CardModel c,Creature? target)
+            {
+                await CardPileCmd.AddGeneratedCardsToCombat([c],PileType.Hand,player);
+                await CardCmd.AutoPlay(new ThrowingPlayerChoiceContext(),c,target,skipCardPileVisuals:true);
+            }
+            await Play(cs.CreateCard<SoothingMist>(player),foe);
+            Check(box.Combat.Phases.Current==AlchemyPhase.Water && foe.GetPower<WeakPower>()?.Amount==2+PhaseRules.BaseAmount(AlchemyPhase.Water),
+                $"earth to water adds the water transition's weak (weak {foe.GetPower<WeakPower>()?.Amount})");
+            int hpBefore=foe.CurrentHp;
+            await Play(cs.CreateCard<Alchemist.Ignition>(player),foe);
+            Check(box.Combat.Phases.Current==AlchemyPhase.Fire && hpBefore-foe.CurrentHp==10+PhaseRules.BaseAmount(AlchemyPhase.Fire),
+                $"water to fire adds the fire transition's damage (dealt {hpBefore-foe.CurrentHp})");
+            hpBefore=foe.CurrentHp;
+            await Play(cs.CreateCard<FlashPowder>(player),null);
+            Check(box.Combat.Phases.TransitionCount==2 && hpBefore-foe.CurrentHp==6,"a same-element card does not transition again");
+            var tailwind=cs.CreateCard<Tailwind>(player);
+            await CardPileCmd.AddGeneratedCardsToCombat([tailwind],PileType.Hand,player);
+            // Count the draw pile: an exhausting card can still sit in the hand when AutoPlay returns.
+            int drawBefore=player.PlayerCombatState.DrawPile.Cards.Count;
+            await CardCmd.AutoPlay(new ThrowingPlayerChoiceContext(),tailwind,null,skipCardPileVisuals:true);
+            int drawn=drawBefore-player.PlayerCombatState.DrawPile.Cards.Count;
+            Check(box.Combat.Phases.Current==AlchemyPhase.Air && drawn==tailwind.DynamicVars.Cards.IntValue+PhaseRules.BaseAmount(AlchemyPhase.Air),
+                $"fire to air adds the air transition's draw (drew {drawn})");
+            var tuned=cs.CreateCard<EarthenGuard>(player);
+            Check(CardCmd.Enchant<WorkshopTuning>(tuned,1) is not null,"workshop tuning attaches to an elemental card");
+            int blockBefore=player.Creature.Block;
+            await Play(tuned,null);
+            Check(player.Creature.Block-blockBefore==8+PhaseRules.BaseAmount(AlchemyPhase.Earth)+WorkshopTuning.Bonus,
+                $"a tuned card strengthens its own transition (block {player.Creature.Block-blockBefore})");
+            box.Inventory.Grant("instant-herb",Alchemist.Core.Material.Herb);
+            int herbBefore=box.Inventory.Counts[(int)Alchemist.Core.Material.Herb];
+            var picker=new PickSelector(c=>c is HerbImprovisation);
+            using(CardSelectCmd.UseSelector(picker))
+                await Play(cs.CreateCard<InstantAlchemy>(player),null);
+            Check(picker.Offered.All(c=>box.Inventory.Counts[(int)(c switch{IronImprovisation=>Alchemist.Core.Material.Iron,HerbImprovisation=>Alchemist.Core.Material.Herb,PowderImprovisation=>Alchemist.Core.Material.Powder,_=>Alchemist.Core.Material.Ether})]>0 || c is HerbImprovisation),
+                "instant alchemy offers only materials the box holds");
+            Check(box.Inventory.Counts[(int)Alchemist.Core.Material.Herb]==herbBefore-1 && player.PlayerCombatState.Hand.Cards.OfType<HerbImprovisation>().Count()==1,
+                "instant alchemy spends one run material for a temporary water card");
+            await Play(cs.CreateCard<PhaseResonance>(player),null);
+            int resonanceBefore=player.Creature.Block;
+            await Play(cs.CreateCard<SoothingMist>(player),foe);
+            Check(player.Creature.Block-resonanceBefore==2,$"phase resonance reacts to a transition through the listener hook (block {player.Creature.Block-resonanceBefore})");
             var replayCard=player.PlayerCombatState.AllCards.OfType<ForgedCard>().Single(c=>c.AlchemistRareModifier=="rare.stardust");
             var replayTarget=player.Creature.CombatState!.Enemies[0];
             replayTarget.SetMaxHpInternal(999);replayTarget.SetCurrentHpInternal(999);
@@ -424,13 +502,14 @@ public static class Smoke
                     foreach(var enemy in hitTargets) { enemy.SetMaxHpInternal(999); enemy.SetCurrentHpInternal(999); }
                 await CardCmd.AutoPlay(new ThrowingPlayerChoiceContext(),forged,target,skipCardPileVisuals:true);
                 if(f.Values.TryGetValue("Fumes",out int fumes)) Check(player.Creature.GetPower<NoxiousFumesPower>()?.Amount==fumes,"culture power applied");
-                if(f.Values.TryGetValue("ExhaustBlock",out int block)) Check(player.Creature.GetPower<FeelNoPainPower>()?.Amount==block && player.Creature.GetPower<DarkEmbracePower>()?.Amount==1,"recycling powers applied");
+                if(f.Values.TryGetValue("ExhaustBlock",out int block)) Check(player.Creature.GetPower<FeelNoPainPower>()?.Amount==block && (player.Creature.GetPower<DarkEmbracePower>()?.Amount ?? 0)==f.Values.GetValueOrDefault("ExhaustDraw"),"recycling powers applied "+f.Id);
                 if(f.Values.TryGetValue("StrengthPower",out int strength)) Check(player.Creature.GetPower<StrengthPower>()?.Amount==strength,"strength applied "+f.Id);
                 if(f.Values.TryGetValue("DexterityPower",out int dexterity)) Check(player.Creature.GetPower<DexterityPower>()?.Amount==dexterity,"dexterity applied "+f.Id);
                 if(f.Values.TryGetValue("Hits",out int hits) && hits>1)
                     Check(hitTargets.All(enemy=>999-enemy.CurrentHp>=f.Values["Damage"]*hits),"all multihit strikes land "+f.Id);
                 if(f.Values.TryGetValue("AdvancePhase",out int phaseSteps) && phaseSteps>0)
-                    Check(box.Combat!.Phases.Current==AlchemyPhase.None,"legacy phase-control formulas are harmless when no element is active "+f.Id);
+                    Check(box.Combat!.Phases.Current==f.Element && box.Combat.Phases.TransitionCount==0,"advance formulas do nothing without an element, then enter their own "+f.Id);
+                Check(box.Combat!.Phases.Current==f.Element,"forged card enters its element "+f.Id);
                 Check(forged.Pile?.Type==(f.Exhaust?PileType.Exhaust:f.Kind==ForgeKind.Power?PileType.None:PileType.Discard) || f.Kind==ForgeKind.Power,"formula executes "+f.Id);
             }
             var furnace=player.Creature.CombatState!.CreateCard<PortableFurnace>(player);
@@ -461,6 +540,17 @@ public static class Smoke
             GD.Print("ALCHEMIST_LOOP_COMPLETE");
         }
         catch(Exception ex) { GD.PushError("ALCHEMIST_LOOP_FAIL "+ex); }
+    }
+    private sealed class PickSelector(Func<CardModel,bool> pick) : ICardSelector
+    {
+        public List<CardModel> Offered { get; } = [];
+        public Task<IEnumerable<CardModel>> GetSelectedCards(IEnumerable<CardModel> options,int minSelect,int maxSelect)
+        {
+            Offered.AddRange(options);
+            return Task.FromResult<IEnumerable<CardModel>>(Offered.Where(pick).Take(maxSelect).ToArray());
+        }
+        public CardRewardSelection GetSelectedCardReward(IReadOnlyList<CardCreationResult> options,IReadOnlyList<CardRewardAlternative> alternatives)
+            => throw new NotSupportedException();
     }
     private static IEnumerable<T> Descendants<T>(Node node) where T : Node
     {

@@ -8,8 +8,10 @@ public enum ForgeTarget { Self, Enemy, AllEnemies }
 public sealed record ForgeFormula(string Id, string Name, IReadOnlyList<Material> Materials,
     string Role, string Plan, int Cost, ForgeKind Kind, ForgeTarget Target,
     string Text, IReadOnlyDictionary<string,int> Values, IReadOnlyDictionary<string,int> Upgrade,
-    bool Exhaust = false, bool Retain = false)
+    bool Exhaust = false, bool Retain = false, AlchemyPhase? ElementOverride = null)
 {
+    /// The phase this card enters when played. Derived from the materials unless the formula names one.
+    public AlchemyPhase Element => ElementOverride ?? PhaseRules.FromMaterials(Materials);
     public string Describe(bool upgraded = false)
     {
         string result = Text;
@@ -17,7 +19,7 @@ public sealed record ForgeFormula(string Id, string Name, IReadOnlyList<Material
             result = result.Replace("{"+key+":diff()}", (value + (upgraded ? Upgrade.GetValueOrDefault(key) : 0)).ToString());
         return result;
     }
-    public string Preview => $"{Cost}コスト / {Kind switch { ForgeKind.Attack => "アタック", ForgeKind.Skill => "スキル", _ => "パワー" }} / {Target switch { ForgeTarget.Enemy => "敵1体", ForgeTarget.AllEnemies => "敵全体", _ => "自身" }}\n"
+    public string Preview => $"{Cost}コスト / {Kind switch { ForgeKind.Attack => "アタック", ForgeKind.Skill => "スキル", _ => "パワー" }} / {Target switch { ForgeTarget.Enemy => "敵1体", ForgeTarget.AllEnemies => "敵全体", _ => "自身" }} / {PhaseRules.Name(Element)}相\n"
         + Describe() + (Retain ? "\n保留。" : "") + (Exhaust ? "\n廃棄。" : "") + "\n強化後：" + Describe(true);
 }
 
@@ -30,7 +32,7 @@ public static class ForgeCatalog
         new("siege_shell.v1","徹甲榴弾",[Material.Iron,Material.Powder],"切り札","先に弱体を入れてから命中。次の攻撃も通しやすくする。",2,ForgeKind.Attack,ForgeTarget.Enemy,
             "弱体{VulnerablePower:diff()}を与え、その後{Damage:diff()}ダメージ。",
             new Dictionary<string,int>{{"Damage",14},{"VulnerablePower",1}}, new Dictionary<string,int>{{"Damage",4},{"VulnerablePower",1}}),
-        new("recycling_reactor.v1","循環錬成炉",[Material.Iron,Material.Ether],"デッキの軸","携帯錬金炉や廃棄カードを、ドローと防御に変える。",2,ForgeKind.Power,ForgeTarget.Self,
+        new("recycling_reactor.v1","循環錬成炉",[Material.Iron,Material.Ether],"デッキの軸","炉の起動や廃棄カードを、ドローと防御に変える。",2,ForgeKind.Power,ForgeTarget.Self,
             "カードを廃棄するたび、{ExhaustBlock:diff()}ブロックを得る。",
             new Dictionary<string,int>{{"ExhaustBlock",3}}, new Dictionary<string,int>{{"ExhaustBlock",2}}),
         new("virulent_culture.v1","猛毒培養槽",[Material.Herb,Material.Herb],"デッキの軸","守っている間も毒を重ねる、長期戦の勝ち筋。",1,ForgeKind.Power,ForgeTarget.Self,
@@ -115,7 +117,7 @@ public static class ForgeCatalog
             "{Block:diff()}ブロックを得る。敏捷{DexterityPower:diff()}を得る。カードを{Cards:diff()}枚引く。",
             new Dictionary<string,int>{{"Block",10},{"DexterityPower",2},{"Cards",1}}, new Dictionary<string,int>{{"Block",4}}),
         new("u_ipe.v1","回生の砲撃",[Material.Iron,Material.Powder,Material.Ether],"切り札","一撃を叩き込みつつ、廃棄して手札を整える。",2,ForgeKind.Attack,ForgeTarget.Enemy,
-            "{Damage:diff()}ダメージ。カードを{Cards:diff()}枚引く。素材相を{AdvancePhase:diff()}つ進める。",
+            "{Damage:diff()}ダメージ。カードを{Cards:diff()}枚引く。相を{AdvancePhase:diff()}つ進める（地→水→火→風）。",
             new Dictionary<string,int>{{"Damage",16},{"Cards",1},{"AdvancePhase",1}}, new Dictionary<string,int>{{"Damage",5}},Exhaust:true),
         new("u_hpe.v1","毒煙の残響",[Material.Herb,Material.Powder,Material.Ether],"集団戦","全体攻撃と毒に、引き込みまで添える。",2,ForgeKind.Attack,ForgeTarget.AllEnemies,
             "敵全体に{Damage:diff()}ダメージと毒{PoisonPower:diff()}を与える。カードを{Cards:diff()}枚引く。",
@@ -136,7 +138,7 @@ public static class ForgeCatalog
             "毒{PoisonPower:diff()}を与える。{Damage:diff()}ダメージ。",
             new Dictionary<string,int>{{"PoisonPower",10},{"Damage",6}}, new Dictionary<string,int>{{"PoisonPower",4}}),
         new("u_hhe.v1","霧毒の看破",[Material.Herb,Material.Herb,Material.Ether],"切り札","毒を撒きながら、次の一手を引き込む。",1,ForgeKind.Skill,ForgeTarget.Enemy,
-            "毒{PoisonPower:diff()}を与える。カードを{Cards:diff()}枚引く。素材相を{AdvancePhase:diff()}つ進める。",
+            "毒{PoisonPower:diff()}を与える。カードを{Cards:diff()}枚引く。相を{AdvancePhase:diff()}つ進める（地→水→火→風）。",
             new Dictionary<string,int>{{"PoisonPower",8},{"Cards",1},{"AdvancePhase",1}}, new Dictionary<string,int>{{"PoisonPower",3}}),
         new("u_ipp.v1","砲身の鉄楯",[Material.Iron,Material.Powder,Material.Powder],"攻防一体","大きく撃ち抜きつつ、その場も固める。",1,ForgeKind.Attack,ForgeTarget.Enemy,
             "{Damage:diff()}ダメージを{Hits:diff()}回与える。{Block:diff()}ブロックを得る。",
@@ -262,7 +264,7 @@ public static class ForgeCatalog
             "{Block:diff()}ブロックを得る。カードを{Cards:diff()}枚引く。敏捷{DexterityPower:diff()}を得る。筋力{StrengthPower:diff()}を得る。",
             new Dictionary<string,int>{{"Block",7},{"Cards",2},{"DexterityPower",2},{"StrengthPower",1}}, new Dictionary<string,int>{{"Block",3}}),
         new("r_ihpe.v1","四相統合・賢者の一撃",[Material.Iron,Material.Herb,Material.Powder,Material.Ether],"切り札","四つの素材全てを注ぎ込む、錬金術師の集大成。",3,ForgeKind.Attack,ForgeTarget.Enemy,
-            "{Damage:diff()}ダメージ。{Block:diff()}ブロックを得る。毒{PoisonPower:diff()}を与える。カードを{Cards:diff()}枚引く。素材相を{AdvancePhase:diff()}つ進める。",
+            "{Damage:diff()}ダメージ。{Block:diff()}ブロックを得る。毒{PoisonPower:diff()}を与える。カードを{Cards:diff()}枚引く。相を{AdvancePhase:diff()}つ進める（地→水→火→風）。",
             new Dictionary<string,int>{{"Damage",16},{"Block",8},{"PoisonPower",6},{"Cards",1},{"AdvancePhase",1}}, new Dictionary<string,int>{{"Damage",6}},Exhaust:true)
     }.Select(Balance).ToArray());
 

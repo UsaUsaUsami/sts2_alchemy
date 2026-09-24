@@ -13,7 +13,7 @@ public sealed class AlchemyPhaseState(bool triggerFromNone = false)
 
     public PhaseTransition Enter(AlchemyPhase next)
     {
-        if (next == AlchemyPhase.None) throw new ArgumentOutOfRangeException(nameof(next));
+        if (!PhaseRules.IsElement(next)) throw new ArgumentOutOfRangeException(nameof(next));
         var from = Current;
         if (from == next) return new(from, next, false);
         Current = next;
@@ -22,6 +22,40 @@ public sealed class AlchemyPhaseState(bool triggerFromNone = false)
         return new(from, next, triggered);
     }
 
+    public static Material? MaterialFor(AlchemyPhase phase) => PhaseRules.MaterialFor(phase);
+}
+
+/// <summary>
+/// The only phase rules the rest of the mod may depend on. The effect of a transition is decided by the
+/// destination alone, so four base amounts are all a player has to learn; powers, relics and enchantments
+/// adjust these through the game-side transition hooks instead of new tables.
+/// </summary>
+public static class PhaseRules
+{
+    public static readonly IReadOnlyList<AlchemyPhase> Elements = [AlchemyPhase.Earth, AlchemyPhase.Water, AlchemyPhase.Fire, AlchemyPhase.Air];
+
+    public static bool IsElement(AlchemyPhase phase) => phase is AlchemyPhase.Earth or AlchemyPhase.Water or AlchemyPhase.Fire or AlchemyPhase.Air;
+
+    /// Earth: block, Water: weak, Fire: damage, Air: draw.
+    public static int BaseAmount(AlchemyPhase to) => to switch
+    {
+        AlchemyPhase.Earth => 2,
+        AlchemyPhase.Water => 1,
+        AlchemyPhase.Fire => 3,
+        AlchemyPhase.Air => 1,
+        _ => 0
+    };
+
+    /// Used by effects that "advance" the phase rather than naming one.
+    public static AlchemyPhase Next(AlchemyPhase phase) => phase switch
+    {
+        AlchemyPhase.Earth => AlchemyPhase.Water,
+        AlchemyPhase.Water => AlchemyPhase.Fire,
+        AlchemyPhase.Fire => AlchemyPhase.Air,
+        AlchemyPhase.Air => AlchemyPhase.Earth,
+        _ => AlchemyPhase.None
+    };
+
     public static Material? MaterialFor(AlchemyPhase phase) => phase switch
     {
         AlchemyPhase.Earth => Material.Iron,
@@ -29,6 +63,34 @@ public sealed class AlchemyPhaseState(bool triggerFromNone = false)
         AlchemyPhase.Fire => Material.Powder,
         AlchemyPhase.Air => Material.Ether,
         _ => null
+    };
+
+    public static AlchemyPhase PhaseFor(Material material) => material switch
+    {
+        Material.Iron => AlchemyPhase.Earth,
+        Material.Herb => AlchemyPhase.Water,
+        Material.Powder => AlchemyPhase.Fire,
+        Material.Ether => AlchemyPhase.Air,
+        _ => AlchemyPhase.None
+    };
+
+    /// Default element of a crafted card: the most used material, ties going to the one listed first.
+    /// Formulas may override this, since a compound card need not share its ingredients' element.
+    public static AlchemyPhase FromMaterials(IReadOnlyList<Material> materials)
+    {
+        if (materials.Count == 0) return AlchemyPhase.None;
+        var dominant = materials.Select((m, i) => (m, i)).GroupBy(x => x.m)
+            .OrderByDescending(g => g.Count()).ThenBy(g => g.Min(x => x.i)).First().Key;
+        return PhaseFor(dominant);
+    }
+
+    public static string Name(AlchemyPhase phase) => phase switch
+    {
+        AlchemyPhase.Earth => "地",
+        AlchemyPhase.Water => "水",
+        AlchemyPhase.Fire => "火",
+        AlchemyPhase.Air => "風",
+        _ => "無相"
     };
 }
 

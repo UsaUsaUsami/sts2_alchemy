@@ -39,7 +39,7 @@ public sealed class AlchemyCardPool : CustomCardPoolModel
     protected override CardModel[] GenerateAllCards() => [
         ModelDb.Card<EarthenGuard>(),ModelDb.Card<StoneEdge>(),ModelDb.Card<SoothingMist>(),ModelDb.Card<TidalGuard>(),
         ModelDb.Card<Ignition>(),ModelDb.Card<FlashPowder>(),ModelDb.Card<Tailwind>(),ModelDb.Card<Slipstream>(),
-        ModelDb.Card<InstantAlchemy>()];
+        ModelDb.Card<InstantAlchemy>(),ModelDb.Card<PhaseResonance>()];
 }
 
 public sealed class AlchemyRelicPool : CustomRelicPoolModel

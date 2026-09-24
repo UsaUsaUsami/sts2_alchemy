@@ -78,11 +78,22 @@ public static class WorkshopUi
         }
         var combat = box.Combat;
         launcher!.Text = combat is null ? $"素材・工房  {box.Inventory.Total}/{AlchemyState.Capacity}"
-            : $"素材 {box.Inventory.Total}/{AlchemyState.Capacity}  炉 {combat.FurnaceUsed}/2\n現在相：{MaterialBox.PhaseName(combat.Phases.Current)}"+(combat.LastTransition.Length>0?$"　{combat.LastTransition}":"");
+            : $"素材 {box.Inventory.Total}/{AlchemyState.Capacity}  炉 {combat.FurnaceUsed}/{HarvestCombat.FurnaceLimit}\n現在相：{MaterialBox.PhaseName(combat.Phases.Current)}"+(combat.LastTransition.Length>0?$"　（{combat.LastTransition}）":"");
+        // Phase colour keeps the current phase readable at a glance; outside combat the button is neutral.
+        launcher.AddThemeColorOverride("font_color", PhaseTint(combat?.Phases.Current ?? AlchemyPhase.None));
         // Unresolved reward slots are reached from the rewards screen button, so only overflow receipts
         // open this screen on their own.
         if (box.Inventory.Pending.Count > 0 && !CombatManager.Instance.IsInProgress && !IsOpen) Open();
     }
+
+    private static Color PhaseTint(AlchemyPhase phase) => phase switch
+    {
+        AlchemyPhase.Earth => new Color("e0b46c"),
+        AlchemyPhase.Water => new Color("7cc4f0"),
+        AlchemyPhase.Fire => new Color("f0806a"),
+        AlchemyPhase.Air => new Color("9be39b"),
+        _ => new Color("f2f2f2")
+    };
 
     public static void Open(Node? parent = null)
     {
@@ -307,6 +318,9 @@ public static class WorkshopUi
         else if (clickable) Text("選んで詳細を確認",16,wrapper,new Color("aebbc0"));
         return wrapper;
     }
+    // Modification is independent of the rest site's Upgrade: an upgraded card can still be modified, and
+    // only cards that cause transitions (an element, no enchantment yet) are candidates.
+    private static bool CanModify(CardModel card) => card is AlchemyCard { Element: not AlchemyPhase.None } && card.Enchantment is null;
     private static (Core.Material First,Core.Material Second) UpgradeCost(CardModel card) => card.Type switch
     {
         CardType.Attack => (Core.Material.Iron,Core.Material.Powder),
@@ -430,9 +444,9 @@ public static class WorkshopUi
     }
     private static void UpgradeGallery()
     {
-        var cards=box!.Owner.Deck.Cards.Where(c=>c is AlchemyCard && c.Enchantment is null).ToArray();
+        var cards=box!.Owner.Deck.Cards.Where(CanModify).ToArray();
         Text("改造するカードを選ぶ",32,content,new Color("f2d18b"));
-        Text("錬金術師カードへ「相転移の基本効果+1」を恒久付与します。通常のアップグレードとは別です。",19);
+        Text("相を持つ錬金術師カードへ「このカードによる相転移の効果+1」を恒久付与します。休憩所のアップグレードとは別で、強化済みのカードも改造できます。",19);
         if(!box.Inventory.CanUseFacility(box.Owner.RunState.TotalFloor,WorkshopFacility.Modification))
             Text("この工房の改造設備は使用済みです。",20,content,new Color("d8c082"));
         var grid=new GridContainer { Columns=3,SizeFlagsHorizontal=Control.SizeFlags.ExpandFill };
@@ -444,13 +458,13 @@ public static class WorkshopUi
     private static void UpgradeConfirmation(CardModel card)
     {
         var cost=UpgradeCost(card);
-        bool can=card is AlchemyCard && card.Enchantment is null && box!.Owner.Deck.Cards.Contains(card)
+        bool can=CanModify(card) && box!.Owner.Deck.Cards.Contains(card)
             && box.Inventory.CanUpgradeAt(box.Owner.RunState.TotalFloor,cost.First,cost.Second);
         Text("このカードを改造しますか？",32,content,new Color("f2d18b"));
         var row=new HBoxContainer(); row.AddThemeConstantOverride("separation",12); content!.AddChild(row);
         var current=new VBoxContainer(); row.AddChild(current); Text("現在",21,current); current.AddChild(DeckCardDisplay(card,0.72f,false));
         var actions=new VBoxContainer { SizeFlagsHorizontal=Control.SizeFlags.ExpandFill }; row.AddChild(actions);
-        Text("工房改造：このカードで起こす相転移の基本効果+1",20,actions,new Color("8fd6a5"));
+        Text("工房改造：このカードで起こす相転移の効果+1",20,actions,new Color("8fd6a5"));
         Text($"必要素材\n{Recipes.Name(cost.First)} ＋ {Recipes.Name(cost.Second)}",22,actions);
         if(!can) Text("素材が不足しています。",19,actions,new Color("d88b82"));
         Button(can?"このカードを改造する":"改造できません",()=>UpgradeCard(card),!can,actions);
@@ -579,7 +593,7 @@ public static class WorkshopUi
             var currentBox=box;
             int floor=currentBox.Owner.RunState.TotalFloor;
             bool synthesisReady=Recipes.All.Any(currentBox.Inventory.CanCraft);
-            bool modificationReady=currentBox.Owner.Deck.Cards.Where(c=>c is AlchemyCard && c.Enchantment is null)
+            bool modificationReady=currentBox.Owner.Deck.Cards.Where(CanModify)
                 .Any(c=>{var cost=UpgradeCost(c);return currentBox.Inventory.CanSpend(cost.First,cost.Second);});
             bool brewingReady=currentBox.Owner.HasOpenPotionSlots && currentBox.Inventory.Counts.Any(n=>n>0);
             bool enchantmentReady=currentBox.Inventory.RareCounts.Any(n=>n>0)
@@ -620,7 +634,7 @@ public static class WorkshopUi
         else
         {
             Text("素材の使い道",32,content,new Color("f2d18b"));
-            Text("《炉の起動》でカードを廃棄した時の素材相に応じて素材を獲得します。現在・次・次々の相は、戦闘中に左上のボタンで確認できます。",22);
+            Text("戦闘の最初に手札へ加わる《炉の起動》でカードを廃棄すると、現在相に対応する素材を獲得します（地＝鉄、水＝薬草、火＝火薬、風＝エーテル）。現在相は戦闘中に左上のボタンで確認できます。",22);
             Text("工房はマップ上の専用ノードから利用できます。",20);
             Button("レシピ一覧を見る",()=>{browsing=true;craftableOnly=false;Refresh();},parent:sidebar);
             if (InMerchantRoom) Button("商人で素材を買う",()=>{merchantMode=true;Refresh();},parent:sidebar);
@@ -752,7 +766,7 @@ public static class WorkshopUi
     }
     private static void UpgradeCard(CardModel card)
     {
-        if(box is null || busy || !workshop || !CanEnterWorkshop(box) || !card.IsUpgradable || !box.Owner.Deck.Cards.Contains(card)) return;
+        if(box is null || busy || !workshop || !CanEnterWorkshop(box) || !CanModify(card) || !box.Owner.Deck.Cards.Contains(card)) return;
         busy=true;
         try
         {
@@ -762,7 +776,7 @@ public static class WorkshopUi
             status=$"{card.Title}を工房改造しました。";
             selectedUpgrade=null;
         }
-        catch(Exception ex) { status=$"強化できませんでした：{ex.Message}"; GD.PushError(ex.ToString()); }
+        catch(Exception ex) { status=$"改造できませんでした：{ex.Message}"; GD.PushError(ex.ToString()); }
         finally { busy=false;if(IsOpen)Refresh(); }
     }
     private static void ApplyRare(ForgedCard card,RareMaterialDefinition rare)
