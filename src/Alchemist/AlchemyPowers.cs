@@ -109,11 +109,19 @@ public sealed class FireStormPower : TransitionListenerPower
     public override List<(string,string)> Localization => new PowerLoc("炎の嵐","相転移するたび、敵全体にダメージを与える。","相転移するたび、敵全体に{Amount}ダメージを与える。");
     protected override Task OnTransition(PhaseTransitionContext t) => DamageAllEnemies(t.Choice, Amount);
 }
-public sealed class SkyPower : TransitionListenerPower
+/// <summary>Pays next-turn energy when this turn saw at least Threshold transitions.</summary>
+public sealed class SkyPower : AlchemyPower
 {
+    public const int Threshold = 4;
     protected override PowerModel IconSource => ModelDb.Power<MachineLearningPower>();
-    public override List<(string,string)> Localization => new PowerLoc("天空","相転移するたび、カードを引く。","相転移するたび、カードを{Amount}枚引く。");
-    protected override Task OnTransition(PhaseTransitionContext t) => CardPileCmd.Draw(t.Choice, Amount, t.Owner);
+    public override List<(string,string)> Localization => new PowerLoc("天空",$"ターン終了時、このターンに相転移が{Threshold}回以上起きていれば、次のターンにエナジーを得る。",$"ターン終了時、このターンに相転移が{Threshold}回以上起きていれば、次のターン、エナジーを{{Amount}}得る。");
+    public override async Task BeforeSideTurnEndEarly(PlayerChoiceContext c, CombatSide side, IEnumerable<Creature> participants)
+    {
+        var phases = Owner.Player?.GetRelic<MaterialBox>()?.Combat?.Phases;
+        if (!participants.Contains(Owner) || phases is null || phases.TransitionsThisTurn < Threshold) return;
+        Flash();
+        await PowerCmd.Apply<EnergyNextTurnPower>(c, Owner, Amount, Owner, null);
+    }
 }
 
 /// <summary>Strengthens the next real transition once, then removes itself.</summary>
@@ -149,18 +157,44 @@ public sealed class EarthCorePower() : ElementCorePower(AlchemyPhase.Earth)
     protected override PowerModel IconSource => ModelDb.Power<PlatingPower>();
     public override List<(string,string)> Localization => new PowerLoc("大地の心核","地相への相転移の効果を強化する。","[gold]地相[/gold]への相転移の効果を{Amount}強化する。");
 }
-public sealed class WaterCorePower() : ElementCorePower(AlchemyPhase.Water)
+/// <summary>
+/// Water core (design-axes.md 7.2): transitions into water also apply Vulnerable, on the same enemy the weak
+/// went to. The weak itself is left at the base amount.
+/// </summary>
+public sealed class WaterCorePower : AlchemyPower, IPhaseTransitionListener
 {
     protected override PowerModel IconSource => ModelDb.Power<RegenPower>();
-    public override List<(string,string)> Localization => new PowerLoc("流水の心核","水相への相転移の効果を強化する。","[gold]水相[/gold]への相転移の効果を{Amount}強化する。");
+    public override List<(string,string)> Localization => new PowerLoc("流水の心核","水相へ転移するたび、脱力に加えて弱体を与える。","[gold]水相[/gold]へ転移するたび、[gold]脱力[/gold]に加えて[gold]弱体[/gold]{Amount}を与える。");
+    public async Task AfterPhaseTransition(PhaseTransitionContext t)
+    {
+        if (t.Owner.Creature != Owner || t.To != AlchemyPhase.Water || t.Suppressed) return;
+        var enemy = t.Target is { IsDead: false, Side: CombatSide.Enemy } ? t.Target : Owner.CombatState?.HittableEnemies.FirstOrDefault();
+        if (enemy is null) return;
+        Flash();
+        await PowerCmd.Apply<VulnerablePower>(t.Choice, enemy, Amount, Owner, null);
+    }
 }
 public sealed class FireCorePower() : ElementCorePower(AlchemyPhase.Fire)
 {
     protected override PowerModel IconSource => ModelDb.Power<InfernoPower>();
     public override List<(string,string)> Localization => new PowerLoc("劫火の心核","火相への相転移の効果を強化する。","[gold]火相[/gold]への相転移の効果を{Amount}強化する。");
 }
-public sealed class AirCorePower() : ElementCorePower(AlchemyPhase.Air)
+/// <summary>
+/// Air core (design-axes.md 7.2): entering air charges the next transition's base effect by Amount. The next
+/// transition always leaves air, so this never adds draw (原則5).
+/// </summary>
+public sealed class AirCorePower : AlchemyPower, IPhaseTransitionModifier, IPhaseTransitionListener
 {
+    private int charge;
     protected override PowerModel IconSource => ModelDb.Power<MachineLearningPower>();
-    public override List<(string,string)> Localization => new PowerLoc("疾風の心核","風相への相転移の効果を強化する。","[gold]風相[/gold]への相転移の効果を{Amount}強化する。");
+    public override List<(string,string)> Localization => new PowerLoc("疾風の心核","風相へ転移したとき、次の相転移の効果を強化する。","[gold]風相[/gold]へ転移したとき、次の相転移の効果を{Amount}強化する。");
+    public void ModifyPhaseTransition(PhaseTransitionContext t)
+    {
+        if (t.Owner.Creature == Owner && !t.IsEcho && t.To != AlchemyPhase.Air) t.Amount += charge;
+    }
+    public Task AfterPhaseTransition(PhaseTransitionContext t)
+    {
+        if (t.Owner.Creature == Owner) charge = t.To == AlchemyPhase.Air ? Amount : 0;
+        return Task.CompletedTask;
+    }
 }

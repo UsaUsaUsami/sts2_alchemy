@@ -35,18 +35,21 @@ public sealed class AirGale() : ElementCard(1,CardType.Attack,CardRarity.Uncommo
     protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p){await HitAll(c,p,DynamicVars.Damage.BaseValue);await Draw(c,DynamicVars.Cards.BaseValue);}
     protected override void OnUpgrade()=>DynamicVars.Damage.UpgradeValueBy(2);
 }
+// v0.19: drew a card when it transitioned; 原則5 forbids transitions adding draw, so it now blocks instead.
 public sealed class AirWindBlade() : ElementCard(0,CardType.Attack,CardRarity.Uncommon,TargetType.AnyEnemy,AlchemyPhase.Air)
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars=>[new DamageVar(4,ValueProp.Move),new CardsVar(1)];
-    public override List<(string,string)> Localization=>new CardLoc("風の刃","{Damage:diff()}ダメージ。このカードで相転移が起きるなら、カードを{Cards:diff()}枚引く。\n[gold]風相[/gold]");
-    protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p){bool shift=WillTransition;await Hit(c,p,DynamicVars.Damage.BaseValue);if(shift)await Draw(c,DynamicVars.Cards.BaseValue);}
+    protected override IEnumerable<DynamicVar> CanonicalVars=>[new DamageVar(4,ValueProp.Move),new BlockVar(3,ValueProp.Move)];
+    public override bool GainsBlock=>true;
+    public override List<(string,string)> Localization=>new CardLoc("風の刃","{Damage:diff()}ダメージ。このカードで相転移が起きるなら、{Block:diff()}[gold]ブロック[/gold]を得る。\n[gold]風相[/gold]");
+    protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p){bool shift=WillTransition;await Hit(c,p,DynamicVars.Damage.BaseValue);if(shift)await CardBlock(p);}
     protected override void OnUpgrade()=>DynamicVars.Damage.UpgradeValueBy(3);
 }
+// v0.19: the energy used to come back in the same turn, which with a 0-cost card made an infinite loop (原則4).
 public sealed class AirMomentum() : ElementCard(1,CardType.Skill,CardRarity.Uncommon,TargetType.Self,AlchemyPhase.Air)
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars=>[new CardsVar(2),new DynamicVar("Energy",1)];
-    public override List<(string,string)> Localization=>new CardLoc("勢い","カードを{Cards:diff()}枚引く。このカードで相転移が起きるなら、エナジーを{Energy:diff()}得る。\n[gold]風相[/gold]");
-    protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p){bool shift=WillTransition;await Draw(c,DynamicVars.Cards.BaseValue);if(shift)await Energy(DynamicVars["Energy"].BaseValue);}
+    protected override IEnumerable<DynamicVar> CanonicalVars=>[new CardsVar(2),new PowerVar<EnergyNextTurnPower>(1)];
+    public override List<(string,string)> Localization=>new CardLoc("勢い","カードを{Cards:diff()}枚引く。このカードで相転移が起きるなら、次のターン、エナジーを{EnergyNextTurnPower:diff()}得る。\n[gold]風相[/gold]");
+    protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p){bool shift=WillTransition;await Draw(c,DynamicVars.Cards.BaseValue);if(shift)await ApplySelf<EnergyNextTurnPower>(c,DynamicVars["EnergyNextTurnPower"].BaseValue);}
     protected override void OnUpgrade()=>DynamicVars.Cards.UpgradeValueBy(1);
 }
 public sealed class AirCurrent() : ElementCard(0,CardType.Skill,CardRarity.Uncommon,TargetType.Self,AlchemyPhase.Air)
@@ -114,11 +117,13 @@ public sealed class AirFavor() : ElementCard(1,CardType.Skill,CardRarity.Rare,Ta
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>ApplySelf<EnergyNextTurnPower>(c,DynamicVars["EnergyNextTurnPower"].BaseValue);
     protected override void OnUpgrade()=>DynamicVars["EnergyNextTurnPower"].UpgradeValueBy(1);
 }
+// v0.19: "draw whenever you transition" broke 原則5 and looped (原則4). Now a reward for many transitions
+// in one turn (原則7), paid next turn so it cannot feed the turn that earned it.
 public sealed class AirSky() : ElementCard(2,CardType.Power,CardRarity.Rare,TargetType.Self,AlchemyPhase.Air)
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars=>[new PowerVar<SkyPower>(1)];
+    protected override IEnumerable<DynamicVar> CanonicalVars=>[new PowerVar<SkyPower>(2),new DynamicVar("Threshold",SkyPower.Threshold)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<SkyPower>()];
-    public override List<(string,string)> Localization=>new CardLoc("天空","相転移するたび、カードを{SkyPower:diff()}枚引く。\n[gold]風相[/gold]");
+    public override List<(string,string)> Localization=>new CardLoc("天空","ターン終了時、このターンに相転移が{Threshold}回以上起きていれば、次のターン、エナジーを{SkyPower:diff()}得る。\n[gold]風相[/gold]");
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>ApplySelf<SkyPower>(c,DynamicVars["SkyPower"].BaseValue);
     protected override void OnUpgrade()=>EnergyCost.UpgradeBy(-1);
 }

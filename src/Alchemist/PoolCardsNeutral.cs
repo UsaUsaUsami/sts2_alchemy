@@ -52,7 +52,8 @@ public sealed class AlchSynergy() : AlchemyCard(1,CardType.Skill,CardRarity.Unco
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<SynergyPower>()];
     public override List<(string,string)> Localization=>new CardLoc("相乗","カードを{Cards:diff()}枚引く。次の相転移の効果が、追加で{SynergyPower:diff()}回発動する。");
     protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p){await Draw(c,DynamicVars.Cards.BaseValue);await ApplySelf<SynergyPower>(c,DynamicVars["SynergyPower"].BaseValue);}
-    protected override void OnUpgrade()=>EnergyCost.UpgradeBy(-1);
+    // v0.19: the upgrade used to make it cost 0, a card that replaced itself for free (原則4).
+    protected override void OnUpgrade()=>DynamicVars.Cards.UpgradeValueBy(1);
 }
 public sealed class AlchMaterialBomb() : MaterialSpendingCard(1,CardType.Attack,CardRarity.Uncommon,TargetType.AllEnemies)
 {

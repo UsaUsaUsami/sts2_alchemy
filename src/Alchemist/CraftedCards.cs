@@ -61,22 +61,28 @@ public abstract class CraftedCard(int cost, CardType type, TargetType target) : 
         ..RareMaterials.All.Select(r => ($"{r.Id}.description", $"{CardText}\n[gold]{r.EffectName}[/gold]：{r.Description}"))];
 }
 
-/// <summary>Same material twice: a power that strengthens transitions into its own element.</summary>
-public abstract class CorePowerCard<TPower>(AlchemyPhase element, int amount, string title)
+/// <summary>
+/// Same material twice: a power tied to its own element. Cores are designed per element rather than as one
+/// flat bonus (design-axes.md 7.2), so each may describe its own effect.
+/// </summary>
+public abstract class CorePowerCard<TPower>(AlchemyPhase element, int amount, string title, string? effect = null)
     : CraftedCard(1, CardType.Power, TargetType.Self) where TPower : PowerModel
 {
     public override AlchemyPhase Element => element;
     protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<TPower>(amount)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<TPower>()];
     protected override string CardTitle => title;
-    protected override string CardText => $"[gold]{PhaseRules.Name(element)}相[/gold]への相転移の効果を{{{typeof(TPower).Name}:diff()}}強化する。\n[gold]{PhaseRules.Name(element)}相[/gold]";
+    protected override string CardText => (effect ?? $"[gold]{PhaseRules.Name(element)}相[/gold]への相転移の効果を{{{typeof(TPower).Name}:diff()}}強化する。")
+        + $"\n[gold]{PhaseRules.Name(element)}相[/gold]";
     protected override Task OnPlay(PlayerChoiceContext c, CardPlay p) => ApplySelf<TPower>(c, DynamicVars[typeof(TPower).Name].BaseValue);
     protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }
 public sealed class EarthCore() : CorePowerCard<EarthCorePower>(AlchemyPhase.Earth, 3, "大地の心核");
-public sealed class WaterCore() : CorePowerCard<WaterCorePower>(AlchemyPhase.Water, 1, "流水の心核");
+public sealed class WaterCore() : CorePowerCard<WaterCorePower>(AlchemyPhase.Water, 1, "流水の心核",
+    "[gold]水相[/gold]へ転移するたび、[gold]脱力[/gold]に加えて[gold]弱体[/gold]{WaterCorePower:diff()}を与える。");
 public sealed class FireCore() : CorePowerCard<FireCorePower>(AlchemyPhase.Fire, 3, "劫火の心核");
-public sealed class AirCore() : CorePowerCard<AirCorePower>(AlchemyPhase.Air, 1, "疾風の心核");
+public sealed class AirCore() : CorePowerCard<AirCorePower>(AlchemyPhase.Air, 1, "疾風の心核",
+    "[gold]風相[/gold]へ転移したとき、次の相転移の効果を{AirCorePower:diff()}強化する。");
 
 /// <summary>
 /// Two different materials: after its effect the card enters its first element, then MaterialBox enters the

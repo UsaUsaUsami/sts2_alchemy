@@ -318,8 +318,9 @@ public static class WorkshopUi
         return wrapper;
     }
     // Modification is independent of the rest site's Upgrade: an upgraded card can still be modified, and
-    // only cards that cause transitions (an element, no enchantment yet) are candidates.
-    private static bool CanModify(CardModel card) => card is AlchemyCard { Element: not AlchemyPhase.None } && card.Enchantment is null;
+    // only cards that cause transitions (an element, no enchantment yet) are candidates. Air cards are out:
+    // their transition draw ignores modifiers (原則5), so tuning them would do nothing.
+    private static bool CanModify(CardModel card) => card is AlchemyCard { Element: not (AlchemyPhase.None or AlchemyPhase.Air) } && card.Enchantment is null;
     private static (Core.Material First,Core.Material Second) UpgradeCost(CardModel card) => card.Type switch
     {
         CardType.Attack => (Core.Material.Iron,Core.Material.Powder),

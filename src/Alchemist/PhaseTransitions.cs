@@ -69,6 +69,7 @@ public static class PhaseTransitions
         }
         var transition = new PhaseTransitionContext(choice, owner, change.From, change.To, source, target, play);
         foreach (var modifier in Hooks<IPhaseTransitionModifier>(owner, source)) modifier.ModifyPhaseTransition(transition);
+        ApplyFixedDraw(transition);
         combat.LastTransition = $"{PhaseRules.Name(change.From)}→{PhaseRules.Name(change.To)}";
         Feedback(box, transition);
         if (!transition.Suppressed && transition.Amount > 0)
@@ -85,6 +86,7 @@ public static class PhaseTransitions
         if (!PhaseRules.IsElement(current)) return;
         var echo = new PhaseTransitionContext(choice, owner, current, current, source, target, play) { IsEcho = true };
         foreach (var modifier in Hooks<IPhaseTransitionModifier>(owner, source)) modifier.ModifyPhaseTransition(echo);
+        ApplyFixedDraw(echo);
         if (!echo.Suppressed && echo.Amount > 0)
             for (int i = 0; i < echo.Repeats; i++) await Resolve(echo);
     }
@@ -108,6 +110,9 @@ public static class PhaseTransitions
             await Enter(choice, owner, PhaseRules.Next(current), source, target, play);
         }
     }
+
+    // 原則5: the air draw ignores modifiers. Suppression still applies, so an effect can seal it.
+    private static void ApplyFixedDraw(PhaseTransitionContext t) => (t.Amount, t.Repeats) = PhaseRules.Finalize(t.To, t.Amount, t.Repeats);
 
     private static async Task Resolve(PhaseTransitionContext t)
     {

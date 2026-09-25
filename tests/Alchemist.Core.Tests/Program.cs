@@ -263,4 +263,53 @@ Check(Routes(blockedGraph,new(0,0)).All(route=>route.Any(p=>aroundBlocked.Contai
 var uncoverable=WorkshopPlanner.SelectGuaranteed(Layered((col,_)=>col==0?WorkshopCut.Blocked:1),new(0,0),new(0,15),15);
 Check(!uncoverable.MidGuaranteed && !uncoverable.LateGuaranteed,"impossible coverage is reported, not patched over");
 Check(uncoverable.Coords.Count>0 && uncoverable.Coords.All(p=>p.Col!=0),"fallback still places a workshop without touching protected points");
+// Life axis (design-axes.md 3).
+Check(DrainRules.Damage(3)==3 && DrainRules.StacksAfterTrigger(3)==2 && DrainRules.StacksAfterTrigger(1)==0 && DrainRules.StacksAfterTrigger(0)==0,
+    "a drain trigger deals its stacks and then decays by one");
+Check(DrainRules.TotalOverTriggers(3,3)==6 && DrainRules.TotalOverTriggers(5,3)==12 && DrainRules.TotalOverTriggers(2,4)==3,
+    "repeated drain triggers decay each time and stop when the stacks run out");
+Check(DrainRules.HpLost(10,0)==10 && DrainRules.HpLost(10,7)==3 && DrainRules.HpLost(0,0)==0,
+    "overkill past the target's HP is not drained");
+var life=new HarvestCombat().Life;
+Check(life.HomunculusHp==0 && !life.HomunculusAppeared,"the homunculus is absent at the start of combat");
+life.GainHomunculus(0);
+Check(!life.HomunculusAppeared,"gaining nothing does not summon the homunculus");
+life.RecordDrain(4);
+Check(life.HomunculusHp==4 && life.HpDrainedThisCombat==4 && life.HomunculusAppeared,"drain adds the HP it took to the homunculus and appears it");
+life.GainHomunculus(10);
+Check(!life.TrySpendHomunculus(15) && life.HomunculusHp==14,"a fixed-cost exit fails whole when the homunculus is short");
+Check(life.TrySpendHomunculus(4) && life.HomunculusHp==10,"a fixed-cost exit spends exactly its cost");
+Check(life.SpendAllHomunculus()==10 && life.HomunculusHp==0 && life.HomunculusAppeared && life.HpDrainedThisCombat==4,
+    "spending everything keeps the vessel shown and does not undo drain progress");
+Check(new HarvestCombat().Life.HomunculusHp==0 && !new HarvestCombat().Life.HomunculusAppeared && new HarvestCombat().Life.HpDrainedThisCombat==0,
+    "the homunculus and drain totals reset with each combat");
+Check(DrainRules.ReducedCost(5,0,10)==5 && DrainRules.ReducedCost(5,29,10)==3 && DrainRules.ReducedCost(5,999,10)==0,
+    "the drain-scaled attack loses one cost per ten drained HP and never goes below zero");
+Check(DeathMarkRules.TriggersAt(DebuffSide.Player,DebuffSide.Player) && !DeathMarkRules.TriggersAt(DebuffSide.Player,DebuffSide.Enemy)
+    && DeathMarkRules.TriggersAt(DebuffSide.Enemy,DebuffSide.Enemy),
+    "death resolves at its owner's next turn start, so a copy on an enemy resolves on the enemy turn first");
+var transferred=DebuffTransfer.Plan([new("WEAK",2,true),new("STRENGTH",3,false),new("DEATH",1,true),new("FRAIL",0,true),new("STRENGTH_DOWN",-2,true)]);
+Check(transferred.Select(x=>(x.PowerId,x.Amount)).SequenceEqual([("WEAK",2),("DEATH",1),("STRENGTH_DOWN",-2)]),
+    "debuff transfer copies every current debuff at its amount, and no buffs");
+// 原則5: transitions never raise the number of cards drawn.
+Check(PhaseRules.Finalize(AlchemyPhase.Air,5,3)==(PhaseRules.BaseAmount(AlchemyPhase.Air),1)
+    && PhaseRules.Finalize(AlchemyPhase.Fire,6,2)==(6,2) && PhaseRules.Finalize(AlchemyPhase.Earth,5,1)==(5,1),
+    "modifiers strengthen every destination except the air draw");
+// Loop detection (原則4). Canaries first: the pre-v0.19 cards that fed loops must be caught.
+var spark=LoopProfiles.All.Single(c=>c.Id=="FireSpark");
+var oldWindBlade=new LoopCard("old AirWindBlade",0,LoopPhaseMove.Element,AlchemyPhase.Air,DrawIfTransition:1);
+var oldMomentum=new LoopCard("old AirMomentum",1,LoopPhaseMove.Element,AlchemyPhase.Air,Draw:2,EnergyIfTransition:1);
+var oldSynergy=new LoopCard("old AlchSynergy+",0,Draw:1);
+var oldSky=new LoopCard("old AirSky",2,IsPower:true,PowerDrawPerTransition:1);
+// A played card reaches the discard pile only after its own draw, so a pair that merely draws back what it
+// played thins the hand and stops; a loop needs more draws than plays.
+Check(LoopCheck.FindLoops([spark,oldWindBlade],2).Count==0,"a 0-cost pair that only replaces itself runs dry");
+Check(LoopCheck.FindLoops([spark,oldWindBlade,oldSky],3).Count>0,"loop check catches 0-cost transitions that draw more than they play");
+Check(LoopCheck.FindLoops([spark,oldMomentum],2).Count>0,"loop check catches an energy-neutral draw engine");
+Check(LoopCheck.FindLoops([oldSynergy],1).Count>0,"loop check catches a 0-cost card that replaces itself");
+Check(LoopCheck.FindLoops([spark,LoopProfiles.All.Single(c=>c.Id=="AlchFlux+"),oldSky],3).Count>0,"loop check catches a draw-per-transition power");
+Check(LoopCheck.FindLoops([spark,LoopProfiles.All.Single(c=>c.Id=="AlchFlux+")],2).Count==0,"alternating free cards alone only draw on every other transition and run dry");
+Check(LoopProfiles.All.Select(c=>c.Id).Distinct().Count()==LoopProfiles.All.Count,"loop profiles have unique ids");
+var poolLoops=LoopCheck.FindLoops(LoopProfiles.All,3);
+Check(poolLoops.Count==0,"no combination of up to three current cards loops within a turn: "+string.Join(" / ",poolLoops.Take(5)));
 Console.WriteLine($"{passed} checks passed.");
