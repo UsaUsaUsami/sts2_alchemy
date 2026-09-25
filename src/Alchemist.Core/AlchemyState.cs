@@ -16,9 +16,9 @@ public static class Recipes
     // into that element; two different materials give a card that enters both elements in turn.
     public static readonly Recipe[] All = [
         new("craft.earth_core.v1", [Material.Iron, Material.Iron], "大地の心核", "1コスト / パワー / 自身 / 地相\n地相への相転移の効果を3強化する。強化後0コスト。", "純相", "地へ移るたびの守りを厚くする。"),
-        new("craft.water_core.v1", [Material.Herb, Material.Herb], "流水の心核", "1コスト / パワー / 自身 / 水相\n水相への相転移の効果を1強化する。強化後0コスト。", "純相", "水へ移るたびの脱力を重くする。"),
+        new("craft.water_core.v1", [Material.Herb, Material.Herb], "流水の心核", "1コスト / パワー / 自身 / 水相\n水相へ転移するたび、脱力に加えて弱体1を与える。強化後0コスト。", "純相", "水へ移るたびに弱体も与える。"),
         new("craft.fire_core.v1", [Material.Powder, Material.Powder], "劫火の心核", "1コスト / パワー / 自身 / 火相\n火相への相転移の効果を3強化する。強化後0コスト。", "純相", "火へ移るたびの火力を上げる。"),
-        new("craft.air_core.v1", [Material.Ether, Material.Ether], "疾風の心核", "1コスト / パワー / 自身 / 風相\n風相への相転移の効果を1強化する。強化後0コスト。", "純相", "風へ移るたびのドローを増やす。"),
+        new("craft.air_core.v1", [Material.Ether, Material.Ether], "疾風の心核", "1コスト / パワー / 自身 / 風相\n風相へ転移したとき、次の相転移の効果を1強化する。強化後0コスト。", "純相", "風を経由した次の転移を強める。"),
         new("craft.mud_rampart.v1", [Material.Iron, Material.Herb], "泥の城壁", "1コスト / スキル / 敵1体 / 地相→水相\n7ブロック、脱力1。強化後10ブロック、脱力2。", "複相", "守りながら地と水へ続けて移る。"),
         new("craft.lava_shot.v1", [Material.Iron, Material.Powder], "溶岩弾", "1コスト / アタック / 敵1体 / 地相→火相\n9ダメージ、4ブロック。強化後12ダメージ、6ブロック。", "複相", "攻防を1枚で行い、地と火へ続けて移る。"),
         new("craft.sandstorm.v1", [Material.Iron, Material.Ether], "砂嵐", "1コスト / スキル / 自身 / 地相→風相\n6ブロック、1ドロー。強化後9ブロック、2ドロー。", "複相", "守りと手札補充を兼ね、地と風へ続けて移る。"),
@@ -327,6 +327,8 @@ public sealed class AlchemyState
 public sealed class HarvestCombat
 {
     public AlchemyPhaseState Phases { get; } = new();
+    /// Homunculus and drain totals. A new HarvestCombat per combat is what resets them.
+    public LifeState Life { get; } = new();
     public int FurnaceUsed { get; private set; }
     public bool FurnaceTokensGranted { get; set; }
     public string LastTransition { get; set; } = "";

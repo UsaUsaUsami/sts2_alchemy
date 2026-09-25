@@ -12,7 +12,8 @@ public sealed class WorkshopTuning : CustomEnchantmentModel, ILocalizationProvid
 {
     public const int Bonus = 1;
     public override bool HasExtraCardText=>true;
-    public override bool CanEnchant(CardModel card)=>base.CanEnchant(card) && card is AlchemyCard { Element: not Core.AlchemyPhase.None };
+    // Air cards are left out: their transition only draws, and 原則5 keeps that draw at the base amount.
+    public override bool CanEnchant(CardModel card)=>base.CanEnchant(card) && card is AlchemyCard { Element: not (Core.AlchemyPhase.None or Core.AlchemyPhase.Air) };
     public void ModifyPhaseTransition(PhaseTransitionContext transition)=>transition.Amount+=Bonus;
     public List<(string,string)> Localization=>[
         ("title","工房改造"),("description","このカードによる相転移の効果を1強化する。"),("extraCardText","[gold]工房改造[/gold]")];

@@ -52,6 +52,16 @@ public static class PhaseRules
         _ => 0
     };
 
+    /// design-axes.md 原則5: transitions must not raise the number of cards drawn, because transition and
+    /// draw feeding each other is loop fuel. So the air destination's draw ignores every modifier (powers,
+    /// cores, modifications, "trigger twice") and always resolves once at the base amount. Other
+    /// destinations keep whatever the modifiers made of them.
+    public static (int Amount, int Repeats) Finalize(AlchemyPhase to, int amount, int repeats)
+        => to == AlchemyPhase.Air ? (BaseAmount(AlchemyPhase.Air), 1) : (amount, repeats);
+
+    /// Cards drawn by one transition into `to`.
+    public static int TransitionDraw(AlchemyPhase to) => to == AlchemyPhase.Air ? BaseAmount(AlchemyPhase.Air) : 0;
+
     /// Used by effects that "advance" the phase rather than naming one.
     public static AlchemyPhase Next(AlchemyPhase phase) => phase switch
     {

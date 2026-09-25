@@ -63,3 +63,16 @@
 - ポーション画像は試作段階ではゲーム標準ポーションの`ImagePath`を参照し、ゲーム資産自体は配布物へ同梱しない。
 - 工房改造はBaseLibの`CustomEnchantmentModel`を使える。`CardCmd.Enchant<T>`でマスターデッキ上のカードへ適用し、ゲーム標準のカード直列化に乗せる。通常の`CardCmd.Upgrade`とは独立して保持できる。
 - 相転移は`AbstractModel.AfterCardPlayed`を初期レリックで受け、カードの`Element`を読み取る方式とした。個々のカードは相を宣言するだけで、転移判定や転移先効果を重複実装しない。
+
+## 2026-09-26: 生命軸（ドレイン・ホムンクルス・死亡）のための調査
+
+- 対象は実機v0.111.0 / BaseLib v3.4.5。ローカル対象版DLLの逆コンパイル参照`.research/game`による。実機での通し確認は`docs/test-results.md`参照。
+- **毒の発動タイミング**：`PoisonPower.AfterSideTurnStart(side, participants, combatState)`で、`participants`に自分（毒の持ち主）が含まれる時、つまり持ち主の側のターン開始時に`Trigger()`する。`Trigger()`は`CreatureCmd.Damage(…, Amount, ValueProp.Unblockable | ValueProp.Unpowered, null, null)`の後、生きていれば`PowerCmd.Decrement`で1減らす。回数は通常1回（`AccelerantPower`で増える）。ドレイン（`LifeDrainPower`）は同じフック・同じ参加者判定・同じダメージ属性に乗せた。
+- 《有毒ガス》（`NoxiousFumesPower`）も`AfterSideTurnStart`で持ち主（プレイヤー）のターン開始時に敵全体へ毒を付与する。手本B（`DrainMiasmaPower`）は同じ形。
+- **実際に失ったHP**：`DamageResult.UnblockedDamage`はブロック後に受けたダメージで、HP0を超えた分は`OverkillDamage`に入る。失ったHP＝`UnblockedDamage − OverkillDamage`。
+- **死亡と死亡回避**：`CreatureCmd.Kill(creature, force: false)`は瓶詰めの妖精（`FairyInABottle.ShouldDie`/`AfterPreventingDeath`）などの死亡回避を通る。`force: true`はラン放棄など特別な場合だけ。死亡デバフ（`DeathMarkPower`）は`force: false`で呼ぶ。Necrobinderの`DoomPower`も同じく`CreatureCmd.Kill`を使う。
+- **手札上のコスト表示**：`CardEnergyCost.GetWithModifiers`は`Hook.ModifyEnergyCostInCombat`を通し、戦闘中の全フック対象（パワー、レリック、ポーション、**全カード山のカード自身**）の`TryModifyEnergyCostInCombat`を呼ぶ。カード自身がこれを実装すれば、手札上の現在コストに反映される。
+- **HP喪失のカード**：`Offering`/`Bloodletting`は`CreatureCmd.Damage(ctx, Owner.Creature, HpLoss, Unblockable | Unpowered | Move, this, cardPlay)`。
+- **パワーの0での除去**：`PowerModel.ShouldRemoveDueToAmount`は`AllowNegative`でない限り`Amount <= 0`で除去する。表示だけを変えるには`DisplayAmount`（virtual）を上書きし、`InvokeDisplayAmountChanged()`で再描画する。ホムンクルスはこの方法で0でも表示し続ける。
+- **名前の衝突**：ゲーム本体に`MegaCrit.Sts2.Core.Models.Cards.DrainPower`（カード）がある。MOD側のパワーは`LifeDrainPower`とした。
+- 未検証：実際のターン進行（敵ターン開始時の自動発動、プレイヤーのターン開始時の死亡）を人手のプレイで確認すること。スモークテストはゲームが呼ぶのと同じ`AfterSideTurnStart`を直接呼んで確認している。
