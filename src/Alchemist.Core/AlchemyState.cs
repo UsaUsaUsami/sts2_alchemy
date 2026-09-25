@@ -5,21 +5,26 @@ namespace Alchemist.Core;
 public enum Material { Iron, Herb, Powder, Ether }
 public sealed record Harvest(string Id, MaterialChoice Material);
 // Materials is unordered and allows repeats (e.g. two Iron): recipes key on the material multiset, not on
-// slot position. Commons consume 2, uncommons 3, rares 4 (AGENTS.md 4.8 base grammar, extended past pairs).
+// slot position.
 public sealed record Recipe(string Id, IReadOnlyList<Material> Materials, string Name, string Preview,
-    string Role = "基礎強化", string Plan = "", string? FormulaId = null);
+    string Role = "", string Plan = "");
 
 public static class Recipes
 {
-    // Exactly one cheap recipe is exposed for each unordered two-material pair. Older v1 formulas stay
-    // in ForgeCatalog so cards already present in a save still load, but redundant cheap variants are hidden.
+    // v0.17: the workshop makes phase-manipulating cards the reward pool never offers. Exactly one recipe per
+    // unordered pair of normal materials (10). Same material twice gives a power that strengthens transitions
+    // into that element; two different materials give a card that enters both elements in turn.
     public static readonly Recipe[] All = [
-        new("iron_guard.v1", [Material.Iron, Material.Iron], "鍛鉄の護り", "1コスト / スキル / 自身\n10ブロック。強化後13ブロック。", "防御", "そのターンを守る、鉄の基本錬成。"),
-        new("herbal_edge.v1", [Material.Iron, Material.Herb], "薬刃", "1コスト / アタック / 敵1体\n8ダメージ、弱体1。強化後11ダメージ、弱体2。", "攻撃の準備", "弱体を付け、後続の攻撃を通す。"),
-        new("blast.v1", [Material.Powder, Material.Powder], "炸裂弾", "1コスト / アタック / 敵全体\n8ダメージ。強化後11。", "集団戦", "複数の敵へ均等に圧力をかける。"),
-        new("ether_lens.v1", [Material.Ether, Material.Ether], "エーテルレンズ", "1コスト / スキル / 自身\n4ブロック、2枚ドロー。強化後7ブロック。", "手札調整", "守りながら必要なカードを探す。"),
-        new("herbal_guard.v1", [Material.Herb, Material.Herb], "薬草の被膜", "1コスト / スキル / 自身\n8ブロック、敵全体に脱力1。強化後11ブロック。", "弱体防御", "敵の攻撃を弱め、毒が回る時間を作る。"),
-        ..ForgeCatalog.Craftable.Select(f=>new Recipe(f.Id,f.Materials,f.Name,f.Preview,f.Role,f.Plan,f.Id))];
+        new("craft.earth_core.v1", [Material.Iron, Material.Iron], "大地の心核", "1コスト / パワー / 自身 / 地相\n地相への相転移の効果を3強化する。強化後0コスト。", "純相", "地へ移るたびの守りを厚くする。"),
+        new("craft.water_core.v1", [Material.Herb, Material.Herb], "流水の心核", "1コスト / パワー / 自身 / 水相\n水相への相転移の効果を1強化する。強化後0コスト。", "純相", "水へ移るたびの脱力を重くする。"),
+        new("craft.fire_core.v1", [Material.Powder, Material.Powder], "劫火の心核", "1コスト / パワー / 自身 / 火相\n火相への相転移の効果を3強化する。強化後0コスト。", "純相", "火へ移るたびの火力を上げる。"),
+        new("craft.air_core.v1", [Material.Ether, Material.Ether], "疾風の心核", "1コスト / パワー / 自身 / 風相\n風相への相転移の効果を1強化する。強化後0コスト。", "純相", "風へ移るたびのドローを増やす。"),
+        new("craft.mud_rampart.v1", [Material.Iron, Material.Herb], "泥の城壁", "1コスト / スキル / 敵1体 / 地相→水相\n7ブロック、脱力1。強化後10ブロック、脱力2。", "複相", "守りながら地と水へ続けて移る。"),
+        new("craft.lava_shot.v1", [Material.Iron, Material.Powder], "溶岩弾", "1コスト / アタック / 敵1体 / 地相→火相\n9ダメージ、4ブロック。強化後12ダメージ、6ブロック。", "複相", "攻防を1枚で行い、地と火へ続けて移る。"),
+        new("craft.sandstorm.v1", [Material.Iron, Material.Ether], "砂嵐", "1コスト / スキル / 自身 / 地相→風相\n6ブロック、1ドロー。強化後9ブロック、2ドロー。", "複相", "守りと手札補充を兼ね、地と風へ続けて移る。"),
+        new("craft.steam_burst.v1", [Material.Herb, Material.Powder], "蒸気爆発", "1コスト / アタック / 敵全体 / 水相→火相\n敵全体に6ダメージと脱力1。強化後9ダメージ。", "複相", "集団戦で水と火へ続けて移る。"),
+        new("craft.drizzle.v1", [Material.Herb, Material.Ether], "毒霧雨", "1コスト / スキル / 敵1体 / 水相→風相\n毒4、1ドロー。強化後毒7。", "複相", "毒を撒き、水と風へ続けて移る。"),
+        new("craft.fire_whirl.v1", [Material.Powder, Material.Ether], "火炎旋風", "1コスト / アタック / 敵全体 / 火相→風相\n敵全体に4ダメージを2回。強化後6ダメージを2回。", "複相", "集団戦で火と風へ続けて移る。")];
     private static bool SameMultiset(IReadOnlyList<Material> a, IReadOnlyList<Material> b)
         => a.Count == b.Count && a.OrderBy(m => m).SequenceEqual(b.OrderBy(m => m));
     public static IEnumerable<Recipe> FindAll(IReadOnlyList<Material> materials) => All.Where(r => SameMultiset(r.Materials, materials));
@@ -31,12 +36,17 @@ public static class Recipes
 
 public sealed class AlchemyState
 {
-    public const int Capacity = 20;
-    // Standard combat card rewards are disabled for this character (see MaterialBox.TryModifyRewards);
-    // this is the compensating yield. Each harvest event grants this many units of the same material.
-    public const int YieldPerEvent = 2;
-    // 1: harvest-only. 2: normal reward slots. 3: rare inventory and mixed reward slots.
-    public const int CurrentSchema = 4;
+    // v0.16.0: back to the AGENTS.md trial values. The workshop now spends only a few materials per visit,
+    // so a large box and doubled yield left nothing to decide between the workshop and Instant Alchemy.
+    public const int Capacity = 10;
+    // Saves from v0.11-v0.15 could hold up to 20. They still load; the box simply accepts nothing new
+    // (it queues receipts instead) until it drops below Capacity.
+    public const int LegacyCapacity = 20;
+    // Each furnace activation or selected material reward grants this many units. Standard card rewards
+    // are available independently and do not pass through this inventory.
+    public const int YieldPerEvent = 1;
+    // 1: harvest-only. 2: reward slots. 3: rare inventory. 4: upgrade floor. 5: facility usage.
+    public const int CurrentSchema = 5;
     public int Schema { get; set; } = CurrentSchema;
     public int[] Counts { get; set; } = new int[4];
     public int[] RareCounts { get; set; } = new int[3];
@@ -47,6 +57,7 @@ public sealed class AlchemyState
     public HashSet<string> Committed { get; set; } = [];
     public int WorkshopClosedFloor { get; set; } = -1;
     public int WorkshopUpgradeFloor { get; set; } = -1;
+    public Dictionary<int, int> WorkshopFacilityUses { get; set; } = [];
     public Material NextCombatMaterial { get; set; } = Material.Iron;
     public Dictionary<int,List<string>> WorkshopNodes { get; set; } = [];
     public int Total => Counts.Sum() + RareCounts.Sum();
@@ -143,6 +154,12 @@ public sealed class AlchemyState
     private bool HasMaterials(IReadOnlyList<Material> materials)
         => materials.GroupBy(m => m).All(g => Counts[(int)g.Key] >= g.Count());
     public bool CanCraft(Recipe r) => Settled && HasMaterials(r.Materials);
+    public bool CanUseFacility(int floor, WorkshopFacility facility)
+        => facility != WorkshopFacility.None && (WorkshopFacilityUses.GetValueOrDefault(floor) & (int)facility) == 0;
+    public string FacilityStatus(int floor, WorkshopFacility facility, bool affordable)
+        => !CanUseFacility(floor, facility) ? "使用済み" : affordable ? "使用可能" : "素材不足";
+    private void MarkFacilityUsed(int floor, WorkshopFacility facility)
+        => WorkshopFacilityUses[floor] = WorkshopFacilityUses.GetValueOrDefault(floor) | (int)facility;
     public void Commit(Recipe r, string operation, Action addCard, Action rollbackCard)
     {
         if (Committed.Contains(operation)) return;
@@ -176,10 +193,25 @@ public sealed class AlchemyState
         }
         catch { Counts = before; rollbackCard(); throw; }
     }
+    public async Task CommitCraftAtAsync(int floor, Recipe r, string operation, Func<Task> addCard, Action rollbackCard)
+    {
+        if (Committed.Contains(operation)) return;
+        if (!CanUseFacility(floor, WorkshopFacility.Synthesis) || !Recipes.All.Contains(r) || !CanCraft(r))
+            throw new InvalidOperationException("この工房の錬成は使用済みか、素材が不足しています。");
+        int[] before = (int[])Counts.Clone();
+        try
+        {
+            await addCard();
+            foreach (var m in r.Materials) Counts[(int)m]--;
+            MarkFacilityUsed(floor, WorkshopFacility.Synthesis);
+            Committed.Add(operation); Revision++;
+        }
+        catch { Counts = before; rollbackCard(); throw; }
+    }
     public bool CanSpend(Material first, Material second) => Settled
         && Counts[(int)first] >= (first == second ? 2 : 1) && Counts[(int)second] >= 1;
     public bool CanUpgradeAt(int floor, Material first, Material second)
-        => WorkshopUpgradeFloor != floor && CanSpend(first, second);
+        => CanUseFacility(floor, WorkshopFacility.Modification) && CanSpend(first, second);
     public void CommitUpgrade(int floor, Material first, Material second, string operation, Action upgrade)
     {
         if (Committed.Contains(operation)) return;
@@ -188,10 +220,13 @@ public sealed class AlchemyState
         Counts[(int)first]--;
         Counts[(int)second]--;
         WorkshopUpgradeFloor = floor;
+        MarkFacilityUsed(floor, WorkshopFacility.Modification);
         Committed.Add(operation);
         Revision++;
     }
     public bool CanApplyRare(RareMaterial material) => Settled && RareCounts[(int)material] > 0;
+    public bool CanApplyRareAt(int floor, RareMaterial material)
+        => CanUseFacility(floor, WorkshopFacility.Enchantment) && CanApplyRare(material);
     public void CommitRare(RareMaterial material, string operation, Action apply, Action rollback)
     {
         if (Committed.Contains(operation)) return;
@@ -206,8 +241,33 @@ public sealed class AlchemyState
         }
         catch { rollback(); throw; }
     }
+    public void CommitRareAt(int floor, RareMaterial material, string operation, Action apply, Action rollback)
+    {
+        if (Committed.Contains(operation)) return;
+        if (!CanApplyRareAt(floor, material)) throw new InvalidOperationException("この工房の付与は使用済みか、希少素材が不足しています。");
+        try
+        {
+            apply(); RareCounts[(int)material]--; MarkFacilityUsed(floor, WorkshopFacility.Enchantment);
+            Committed.Add(operation); Revision++;
+        }
+        catch { rollback(); throw; }
+    }
+    public async Task CommitBrewAtAsync(int floor, Material material, string operation, Func<Task<bool>> addPotion)
+    {
+        if (Committed.Contains(operation)) return;
+        if (!CanUseFacility(floor, WorkshopFacility.Brewing) || !Settled || Counts[(int)material] < 1)
+            throw new InvalidOperationException("この工房の調薬は使用済みか、素材が不足しています。");
+        if (!await addPotion()) throw new InvalidOperationException("ポーション枠が満杯です。");
+        Counts[(int)material]--; MarkFacilityUsed(floor, WorkshopFacility.Brewing);
+        Committed.Add(operation); Revision++;
+    }
     public int Count(MaterialChoice material) => material.Class == MaterialClass.Normal
         ? Counts[(int)material.NormalMaterial] : RareCounts[(int)material.RareMaterial];
+    public bool TryConsume(Material material, int amount = 1)
+    {
+        if (!Settled || amount < 1 || Counts[(int)material] < amount) return false;
+        Counts[(int)material] -= amount; Revision++; return true;
+    }
     private void Add(MaterialChoice material, int amount)
     {
         if (material.Class == MaterialClass.Normal) Counts[(int)material.NormalMaterial] += amount;
@@ -230,10 +290,10 @@ public sealed class AlchemyState
             };
         }
         else s = JsonSerializer.Deserialize<AlchemyState>(json) ?? throw new InvalidDataException("錬金術のセーブが空です。");
-        if (schema is not (1 or 2 or 3 or 4) || s.Counts is not { Length: 4 } || s.RareCounts is not { Length: 3 }
-            || s.Counts.Any(n => n < 0 || n > Capacity) || s.RareCounts.Any(n => n < 0 || n > Capacity)
-            || s.Total > Capacity || s.Pending is null || s.Received is null || s.Committed is null || s.WorkshopNodes is null
-            || s.Offers is null
+        if (schema is not (1 or 2 or 3 or 4 or 5) || s.Counts is not { Length: 4 } || s.RareCounts is not { Length: 3 }
+            || s.Counts.Any(n => n < 0 || n > LegacyCapacity) || s.RareCounts.Any(n => n < 0 || n > LegacyCapacity)
+            || s.Total > LegacyCapacity || s.Pending is null || s.Received is null || s.Committed is null || s.WorkshopNodes is null
+            || s.Offers is null || s.WorkshopFacilityUses is null
             || !Enum.IsDefined(s.NextCombatMaterial)
             || s.Pending.Any(p => p is null || !p.Material.IsValid || !s.Received.Contains(p.Id))
             || s.Pending.Select(p => p.Id).Distinct().Count() != s.Pending.Count
@@ -264,20 +324,17 @@ public sealed class AlchemyState
     }
 }
 
-public sealed class HarvestCombat(Material startingMaterial = Material.Iron)
+public sealed class HarvestCombat
 {
-    public int Turn { get; private set; } = 1;
-    public int PhaseOffset { get; private set; }
+    public AlchemyPhaseState Phases { get; } = new();
     public int FurnaceUsed { get; private set; }
-    public bool FurnaceActive { get; set; }
-    public Material StartingMaterial { get; } = startingMaterial;
-    public Material Phase => (Material)(((int)StartingMaterial + Turn - 1 + PhaseOffset) % 4);
-    public Material NextPhase => (Material)(((int)Phase + 1) % 4);
-    public void BeginTurn(int turn) { if (turn > Turn) Turn = turn; }
-    public void AdvancePhase(int amount = 1) => PhaseOffset = (PhaseOffset + Math.Max(0, amount)) % 4;
+    public bool FurnaceTokensGranted { get; set; }
+    public string LastTransition { get; set; } = "";
+    public const int FurnaceLimit = 2;
+    public bool CanUseFurnace => FurnaceUsed < FurnaceLimit && Phases.Current != AlchemyPhase.None;
     public bool UseFurnace()
     {
-        if (!FurnaceActive || FurnaceUsed >= 2) return false;
+        if (!CanUseFurnace) return false;
         FurnaceUsed++;
         return true;
     }

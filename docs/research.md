@@ -56,3 +56,10 @@
 - 任意の日本語文字列は、BaseLibの`ILocalizationProvider`（`RelicLoc`の`ExtraLoc`）でrelicsテーブルへ追加し、`new LocString("relics", $"{ModelId.Entry}.{key}")`で参照できる。専用ロックテーブルのJSONを追加しなくてよい。
 - 報酬画面は`NOverlayStack.Instance.Push()`で表示され、`Push`は自身に`AddChildSafely`する。オーバーレイを前面に出すには同じ`NOverlayStack`の子として後に追加する。`NModalContainer.Add`は`IScreenContext`へのキャストを要求するため、単純なControlでは使えない。
 - `RunManager.EnterRoomDebug`はエンカウンターモデルを渡すとそのモデルの`RoomType`で引数を上書きする。テストでエリート・ボスの部屋を作るときはモデルを渡さない。
+
+## 2026-09-24: 独自ポーション・カード改造API
+
+- 対象は実機v0.111.0 / BaseLib v3.4.5のローカル参照。BaseLibの`CustomPotionModel`で独自ポーションを登録でき、`PotionCmd.TryToProcure(potion, player)`で標準のポーション枠へ追加できる。戻り値の`success`を使えば、満杯時に素材消費を確定しない処理にできる。
+- ポーション画像は試作段階ではゲーム標準ポーションの`ImagePath`を参照し、ゲーム資産自体は配布物へ同梱しない。
+- 工房改造はBaseLibの`CustomEnchantmentModel`を使える。`CardCmd.Enchant<T>`でマスターデッキ上のカードへ適用し、ゲーム標準のカード直列化に乗せる。通常の`CardCmd.Upgrade`とは独立して保持できる。
+- 相転移は`AbstractModel.AfterCardPlayed`を初期レリックで受け、カードの`Element`を読み取る方式とした。個々のカードは相を宣言するだけで、転移判定や転移先効果を重複実装しない。

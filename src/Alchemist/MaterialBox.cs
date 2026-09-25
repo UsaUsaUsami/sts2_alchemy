@@ -2,16 +2,20 @@ using Alchemist.Core;
 using BaseLib.Abstracts;
 using BaseLib.Utils;
 using MegaCrit.Sts2.Core.Combat;
+using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Creatures;
+using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.Entities.RestSite;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Relics;
+using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Saves.Runs;
+using MegaCrit.Sts2.Core.ValueProps;
 
 namespace Alchemist;
 
@@ -30,47 +34,54 @@ public sealed class MaterialBox : CustomRelicModel
     public const string RewardLocKey = "materialReward";
     public const string RewardIconPath = "res://images/relics/burning_blood.png";
     public override List<(string,string)> Localization => new RelicLoc("素材ボックス",
-        "鉄→薬草→火薬→エーテルの順に素材相が循環する。[gold]炉の起動[/gold]でカードを廃棄すると現在相の素材を2個得る。\n炉の起動は戦闘全体で2回まで。容量20。通常のカード報酬はない。\nエリート報酬は1枠、ボス報酬は2枠。ボスの片方は希少素材確定。希少素材は工房で錬成カードへ恒久加工できる。\n画面左の「素材・工房」から確認する。", "廃棄する時機が、次の一枚を決める。",
-        (RewardLocKey, "素材を選ぶ"));
+        "属性カードを使うと地・水・火・風の相が変化する。異なる相へ移ると相転移効果が発動する。\n戦闘開始時は無相。各戦闘の最初に炉の起動が手札へ加わり、現在相に対応する素材を採取する（戦闘全体で2回まで）。\nエリート報酬は1枠、ボス報酬は2枠。希少素材は工房で恒久加工できる。", "相を変え、素材を選ぶ。",
+        (RewardLocKey, "素材を選ぶ"),
+        ("phaseShift.Earth", "地相へ転移"), ("phaseShift.Water", "水相へ転移"),
+        ("phaseShift.Fire", "火相へ転移"), ("phaseShift.Air", "風相へ転移"));
     [SavedProperty]
     public string AlchemistState { get => Inventory.Save(); set => state = AlchemyState.Load(value); }
     protected override void AfterCloned() { base.AfterCloned(); state = null; Combat = null; }
     public override Task BeforeCombatStart()
     {
-        Combat = new(Inventory.NextCombatMaterial);
+        Combat = new();
         return Task.CompletedTask;
     }
-    public override Task BeforeSideTurnStart(PlayerChoiceContext context, CombatSide side, IReadOnlyList<Creature> participants, ICombatState cs)
+    public override async Task BeforeSideTurnStart(PlayerChoiceContext context, CombatSide side, IReadOnlyList<Creature> participants, ICombatState cs)
     {
-        if (side == CombatSide.Player) Combat?.BeginTurn(cs.RoundNumber);
-        return Task.CompletedTask;
+        if(side==CombatSide.Player) Combat?.Phases.StartTurn();
+        if(side==CombatSide.Player && Combat is { FurnaceTokensGranted:false } combat)
+        {
+            combat.FurnaceTokensGranted=true;
+            var cards=Enumerable.Range(0,2).Select(_=>cs.CreateCard<FurnaceActivation>(Owner)).ToArray();
+            await CardPileCmd.AddGeneratedCardsToCombat(cards,PileType.Hand,Owner);
+        }
     }
-    public bool GrantFromFurnace(Material material)
+    public bool GrantFromFurnace()
     {
-        if (Combat is null || Combat.FurnaceUsed is < 1 or > 2) return false;
+        if (Combat is null || Combat.FurnaceUsed is < 1 or > HarvestCombat.FurnaceLimit || AlchemyPhaseState.MaterialFor(Combat.Phases.Current) is not { } material) return false;
         bool granted = Inventory.GrantHarvest($"{Owner.RunState.TotalFloor}:{Owner.RunState.CurrentRoom?.Id}:furnace{Combat.FurnaceUsed}", material);
         if (granted) InvokeDisplayAmountChanged();
         return granted;
     }
     public override Task AfterCombatEnd(CombatRoom room)
     {
-        if (Combat is not null)
-        {
-            Inventory.NextCombatMaterial = Combat.NextPhase;
-            Inventory.Revision++;
-        }
         Combat = null;
         return Task.CompletedTask;
     }
-    // These slots are additional to furnace harvesting and never replace the normal gold, relic or
-    // potion rewards. Standard card rewards are the exception: deck growth for this character comes from
-    // the workshop instead, and the card reward is stripped from every combat room below so the doubled
-    // harvest (AlchemyState.YieldPerEvent) is the sole replacement for it.
+    // Cards only declare an element; PhaseTransitions decides whether that is a transition and what it does.
+    // Replays of the same play (IsFirstInSeries false) do not move the phase again.
+    public override async Task AfterCardPlayed(PlayerChoiceContext context, CardPlay cardPlay)
+    {
+        if(Combat is null || cardPlay.Player!=Owner || !cardPlay.IsFirstInSeries || cardPlay.Card is not AlchemyCard { Element:not AlchemyPhase.None } card) return;
+        await PhaseTransitions.Enter(context,Owner,card.Element,card,cardPlay.Target,cardPlay);
+    }
+    public static string PhaseName(AlchemyPhase phase)=>PhaseRules.Name(phase);
+    // Material slots are additional to normal card, gold, relic and potion rewards.
     private string OfferId(AbstractRoom room, int slot) => $"{Owner.RunState.TotalFloor}:{room.Id}:reward{slot}";
     public override bool TryModifyRewards(Player player, List<Reward> rewards, AbstractRoom? room)
     {
         if (player != Owner || room is not CombatRoom) return false;
-        bool modified = rewards.RemoveAll(r => r is CardReward) > 0;
+        bool modified = false;
         int slots = room.RoomType switch
         {
             RoomType.Elite => MaterialOffers.EliteSlots,
