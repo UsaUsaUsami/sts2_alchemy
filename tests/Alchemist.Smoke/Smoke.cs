@@ -169,20 +169,16 @@ public static class Smoke
                 Check(mapsOk,"workshop placement valid across 100 real maps");
                 Check(everyRouteOk,"claimed route coverage holds on 100 real maps");
                 Check(uncovered<=2,"maps without full coverage stay rare and are reported");
-                // v0.22 (design-axes 6.3 G-3): Darv offers the crucible to the alchemist only, deterministically.
-                IReadOnlyList<EventOption> DarvOptions(Player owner)
-                {
-                    var darv=(Darv)ModelDb.Event<Darv>().ToMutable();
-                    AccessTools.Property(typeof(EventModel),"Owner").SetValue(darv,owner);
-                    AccessTools.Property(typeof(EventModel),"Rng").SetValue(darv,new Rng(12345));
-                    return (IReadOnlyList<EventOption>)AccessTools.Method(typeof(Darv),"GenerateInitialOptions").Invoke(darv,null)!;
-                }
-                var darvOptions=DarvOptions(player);
-                Check(darvOptions.Count(o=>o.Relic is DarvCrucible)==1 && darvOptions.Count>=3,"Darv offers the crucible to the alchemist in place of one relic");
-                Check(DarvOptions(player).Select(o=>o.Relic?.Id).SequenceEqual(darvOptions.Select(o=>o.Relic?.Id)),"Darv's options stay the same when generated again");
+                // v0.22.3 (design-axes 6.3 G-3): Darv's Dusty Tome gives the alchemist the crucible ancient card.
+                var tome=(DustyTome)ModelDb.Relic<DustyTome>().ToMutable();
+                tome.SetupForPlayer(player);
+                Check(tome.AncientCard==ModelDb.Card<DarvCrucibleCard>().Id,"Darv's Dusty Tome picks the crucible for the alchemist");
                 var ironclad=Player.CreateForNewRun(ModelDb.Character<Ironclad>(),UnlockState.all,1);
                 RunState.CreateForNewRun([ironclad],ActModel.GetDefaultList().Select(a=>a.ToMutable()).ToList(),[],GameMode.Standard,0,"ALCHEMIST_SMOKE_02");
-                Check(!DarvOptions(ironclad).Any(o=>o.Relic is DarvCrucible),"other characters never see the crucible");
+                var ironTome=(DustyTome)ModelDb.Relic<DustyTome>().ToMutable();
+                ironTome.SetupForPlayer(ironclad);
+                Check(ironTome.AncientCard!=ModelDb.Card<DarvCrucibleCard>().Id,"other characters' Dusty Tome never gives the crucible");
+                Check(ModelDb.Card<DarvCrucibleCard>().Rarity==CardRarity.Ancient && !rewardPool.Contains(ModelDb.Card<DarvCrucibleCard>()),"the crucible is an ancient card, never a reward");
                 foreach(var path in new[]{ModelDb.Relic<DarvCrucible>().PackedIconPath,ModelDb.Relic<RefinedMaterialBox>().PackedIconPath,
                     "res://images/relics/black_blood.png","res://images/relics/philosophers_stone.png",
                     "res://images/atlases/relic_outline_atlas.sprites/black_blood.tres","res://images/atlases/relic_outline_atlas.sprites/philosophers_stone.tres",
@@ -857,8 +853,9 @@ public static class Smoke
             await Until(()=>box.Combat!=null && player.PlayerCombatState?.Hand.Cards.OfType<FurnaceActivation>().Count()==HarvestCombat.RefinedFurnaceLimit,"refined furnace battle ready");
             Check(box.Combat!.Limit==HarvestCombat.RefinedFurnaceLimit,"the refined box deals three furnace activations and allows three");
             Check(PhaseRules.IsElement(box.Combat.Phases.Current) && box.Combat.Phases.TransitionCount==0,"the refined box opens the battle in an element without a transition");
-            // v0.22 (G-3/6.4): Darv's crucible adds one material of the current phase per turn, never past a full box.
-            var crucible=(DarvCrucible)await RelicCmd.Obtain(ModelDb.Relic<DarvCrucible>().ToMutable(),player);
+            // v0.22 (G-3/6.4): the crucible power adds one material of the current phase per turn, never past a full box.
+            await PowerCmd.Apply<CruciblePower>(new ThrowingPlayerChoiceContext(),player.Creature,1,player.Creature,null);
+            var crucible=player.Creature.GetPower<CruciblePower>()!;
             var turnState=player.Creature.CombatState!;
             var phaseMaterial=AlchemyPhaseState.MaterialFor(box.Combat.Phases.Current)!.Value;
             int beforeTrickle=box.Inventory.Counts[(int)phaseMaterial];

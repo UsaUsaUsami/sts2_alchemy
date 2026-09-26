@@ -6,11 +6,10 @@ using HarmonyLib;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Creatures;
+using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Relics;
-using MegaCrit.Sts2.Core.Events;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
-using MegaCrit.Sts2.Core.Models.Events;
 using MegaCrit.Sts2.Core.Nodes.Vfx;
 
 namespace Alchemist;
@@ -42,8 +41,28 @@ public static class MaterialBoxReplacePatch
 }
 
 /// <summary>
-/// Darv's relic for the alchemist (design-axes 6.3 G-3, name tentative): at the start of each of your turns,
-/// one material of the current phase. A full box simply does not receive it (6.4).
+/// One material of the current phase at the start of a turn (design-axes 6.3 G-3), shared by the ancient card's
+/// power and the v0.22.0-v0.22.2 relic. A full box simply does not receive it (6.4).
+/// </summary>
+public static class CrucibleTrickle
+{
+    public static bool Grant(Player owner, string source, int round)
+    {
+        if (owner.GetRelic<MaterialBox>() is not { Combat: { } combat } box
+            || PhaseRules.MaterialFor(combat.Phases.Current) is not { } material) return false;
+        string id = $"{owner.RunState.TotalFloor}:{owner.RunState.CurrentRoom?.Id}:{source}{round}";
+        if (box.Inventory.Received.Contains(id)) return false;
+        if (box.Inventory.GrantIfRoom(id, material)) { box.RefreshCount(); return true; }
+        // Cosmetic only, like the phase bubble.
+        try { TalkCmd.Play(new LocString("relics", $"{box.Id.Entry}.boxFull"), owner.Creature, VfxColor.White, VfxDuration.VeryShort); }
+        catch (Exception ex) { GD.PushWarning($"Alchemist box-full bubble skipped: {ex.Message}"); }
+        return false;
+    }
+}
+
+/// <summary>
+/// v0.22.0-v0.22.2 put the crucible on a relic that Darv offered. The effect belongs to the ancient card Darv's
+/// Dusty Tome gives instead (DarvCrucibleCard); this definition stays only so saves holding the relic load.
 /// </summary>
 [Pool(typeof(AlchemyRelicPool))]
 public sealed class DarvCrucible : CustomRelicModel
@@ -52,47 +71,12 @@ public sealed class DarvCrucible : CustomRelicModel
     public override string PackedIconPath => "res://images/atlases/relic_atlas.sprites/philosophers_stone.tres";
     protected override string PackedIconOutlinePath => "res://images/atlases/relic_outline_atlas.sprites/philosophers_stone.tres";
     protected override string BigIconPath => "res://images/relics/philosophers_stone.png";
-    public override List<(string,string)> Localization => new RelicLoc("ダーヴの坩堝",
+    public override List<(string,string)> Localization => new RelicLoc("ダーヴの坩堝（旧）",
         "自分のターン開始時、現在相に対応する素材を1個得る。無相では得ない。素材ボックスが満杯なら得ない。",
         "古い坩堝は、今も火を覚えている。");
-    public override async Task AfterSideTurnStart(CombatSide side, IReadOnlyList<Creature> participants, ICombatState combatState)
+    public override Task AfterSideTurnStart(CombatSide side, IReadOnlyList<Creature> participants, ICombatState combatState)
     {
-        if (side != CombatSide.Player || !participants.Contains(Owner.Creature)) return;
-        if (Owner.GetRelic<MaterialBox>() is not { Combat: { } combat } box
-            || PhaseRules.MaterialFor(combat.Phases.Current) is not { } material) return;
-        string id = $"{Owner.RunState.TotalFloor}:{Owner.RunState.CurrentRoom?.Id}:darv{combatState.RoundNumber}";
-        if (box.Inventory.Received.Contains(id)) return;
-        if (box.Inventory.GrantIfRoom(id, material))
-        {
-            Flash();
-            box.RefreshCount();
-            return;
-        }
-        // Cosmetic only, like the phase bubble.
-        try { TalkCmd.Play(new LocString("relics", $"{box.Id.Entry}.boxFull"), Owner.Creature, VfxColor.White, VfxDuration.VeryShort); }
-        catch (Exception ex) { GD.PushWarning($"Alchemist box-full bubble skipped: {ex.Message}"); }
-        await Task.CompletedTask;
-    }
-}
-
-/// <summary>
-/// Darv offers from a fixed list with no hook for character relics, so for the alchemist one of the drawn
-/// base-game relics (never Dusty Tome, which is always last) gives way to the crucible. The event's own Rng is
-/// seeded from the run seed and the event, and nothing extra is drawn from it, so reopening or reloading shows
-/// the same options and other characters are untouched.
-/// </summary>
-[HarmonyPatch(typeof(Darv), "GenerateInitialOptions")]
-public static class DarvCruciblePatch
-{
-    private static readonly System.Reflection.MethodInfo RelicOption = AccessTools.Method(typeof(AncientEventModel), "RelicOption",
-        [typeof(RelicModel), typeof(string), typeof(string)]);
-
-    public static void Postfix(Darv __instance, ref IReadOnlyList<EventOption> __result)
-    {
-        if (__instance.Owner?.Character is not AlchemistCharacter || __result.Count == 0 || __result.Any(o => o.Relic is DarvCrucible)) return;
-        var option = (EventOption)RelicOption.Invoke(__instance, [ModelDb.Relic<DarvCrucible>().ToMutable(), "INITIAL", null])!;
-        var list = __result.ToList();
-        list[0] = option;
-        __result = list;
+        if (side == CombatSide.Player && participants.Contains(Owner.Creature) && CrucibleTrickle.Grant(Owner, "darv", combatState.RoundNumber)) Flash();
+        return Task.CompletedTask;
     }
 }
