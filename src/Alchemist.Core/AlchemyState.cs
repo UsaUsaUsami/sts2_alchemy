@@ -357,6 +357,8 @@ public sealed class HarvestCombat(int furnaceLimit = HarvestCombat.FurnaceLimit)
     public int FurnaceUsed { get; private set; }
     public bool FurnaceTokensGranted { get; set; }
     public string LastTransition { get; set; } = "";
+    /// TransitionCount when the current card play began, so "this play caused no transition" can be told.
+    public int TransitionsAtPlayStart { get; set; }
     public const int FurnaceLimit = 2;
     /// design-axes 6.3 G-2: the starter relic refined at an ancient deals one more furnace. Ancients are the
     /// only exception to the two-per-combat cap (6.1).

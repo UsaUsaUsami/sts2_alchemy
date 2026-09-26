@@ -100,7 +100,10 @@ public static class LifeAxis
         int lost = results.Sum(r => DrainRules.HpLost(r.UnblockedDamage, r.OverkillDamage));
         if (DrainOwner(drain) is { } alchemist && State(alchemist) is { } life)
         {
-            life.RecordDrain(lost);
+            // design-axes 3.1: a drain on the alchemist themself feeds their own homunculus; 自己培養 doubles it.
+            if (owner == alchemist.Creature)
+                life.RecordSelfDrain(lost, alchemist.Creature.GetPower<SelfCultivationPower>() is null ? 1 : SelfCultivationPower.SelfDrainMultiplier);
+            else life.RecordDrain(lost);
             if (lost > 0) await PushToPet(new ThrowingPlayerChoiceContext(), alchemist, life);
             foreach (var nourish in alchemist.Creature.Powers.OfType<NourishPower>().ToList())
                 if (lost > 0) await nourish.OnDrained();

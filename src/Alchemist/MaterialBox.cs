@@ -83,10 +83,24 @@ public class MaterialBox : CustomRelicModel
     }
     // Cards only declare an element; PhaseTransitions decides whether that is a transition and what it does.
     // Replays of the same play (IsFirstInSeries false) do not move the phase again.
+    public override Task BeforeCardPlayed(CardPlay cardPlay)
+    {
+        if(Combat is not null && cardPlay.Player==Owner && cardPlay.IsFirstInSeries) Combat.TransitionsAtPlayStart=Combat.Phases.TransitionCount;
+        return Task.CompletedTask;
+    }
     public override async Task AfterCardPlayed(PlayerChoiceContext context, CardPlay cardPlay)
     {
-        if(Combat is null || cardPlay.Player!=Owner || !cardPlay.IsFirstInSeries || cardPlay.Card is not AlchemyCard { Element:not AlchemyPhase.None } card) return;
-        await PhaseTransitions.Enter(context,Owner,card.Element,card,cardPlay.Target,cardPlay);
+        if(Combat is null || cardPlay.Player!=Owner || !cardPlay.IsFirstInSeries) return;
+        if(cardPlay.Card is AlchemyCard { Element:not AlchemyPhase.None } card)
+            await PhaseTransitions.Enter(context,Owner,card.Element,card,cardPlay.Target,cardPlay);
+        // design-axes 4.3 F-4: after the card's own element, the wheel steps if this play (its effects
+        // included) caused no transition.
+        if(Owner.Creature.GetPower<PhaseWheelPower>() is { } wheel && Combat.Phases.TransitionCount==Combat.TransitionsAtPlayStart
+            && PhaseRules.IsElement(Combat.Phases.Current))
+        {
+            wheel.Pulse();
+            await PhaseTransitions.Advance(context,Owner,1,cardPlay.Card,cardPlay.Target,cardPlay);
+        }
     }
     public static string PhaseName(AlchemyPhase phase)=>PhaseRules.Name(phase);
     // Material slots are additional to normal card, gold, relic and potion rewards.

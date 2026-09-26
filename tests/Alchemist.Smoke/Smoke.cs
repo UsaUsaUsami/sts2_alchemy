@@ -40,6 +40,7 @@ using MegaCrit.Sts2.Core.Entities.CardRewardAlternatives;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Models.Potions;
 using MegaCrit.Sts2.Core.ValueProps;
+using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.Models.Events;
 using MegaCrit.Sts2.Core.Models.Relics;
 using MegaCrit.Sts2.Core.Models.Characters;
@@ -110,14 +111,14 @@ public static class Smoke
                 Check(inscribedLoaded.GetDescriptionForPile(PileType.None).Contains("保留"),"an inscribed crafted card shows its inscription text");
                 var rewardPool=ModelDb.CardPool<AlchemyCardPool>().AllCards.Where(c=>c.Rarity is CardRarity.Common or CardRarity.Uncommon or CardRarity.Rare).ToArray();
                 GD.Print($"ALCHEMIST_STAT pool={rewardPool.Length} common={rewardPool.Count(c=>c.Rarity==CardRarity.Common)} uncommon={rewardPool.Count(c=>c.Rarity==CardRarity.Uncommon)} rare={rewardPool.Count(c=>c.Rarity==CardRarity.Rare)} attack={rewardPool.Count(c=>c.Type==CardType.Attack)} skill={rewardPool.Count(c=>c.Type==CardType.Skill)} power={rewardPool.Count(c=>c.Type==CardType.Power)}");
-                // v0.21 (design-axes 8): 60 reward cards, phase 17 / life 17 / general 26, beside 20 workshop cards.
-                Check(rewardPool.Length==60 && rewardPool.Count(c=>c.Rarity==CardRarity.Common)==15 && rewardPool.Count(c=>c.Rarity==CardRarity.Uncommon)==25
-                    && rewardPool.Count(c=>c.Rarity==CardRarity.Rare)==20,"reward pool is 60 cards: 15 common, 25 uncommon, 20 rare");
-                Check(rewardPool.Count(c=>c.Type==CardType.Power)==10 && !rewardPool.Any(c=>c.Type==CardType.Power && c.Rarity==CardRarity.Common),
-                    "ten powers, none of them common, as in the base pools");
+                // v0.22 (design-axes 4.3, 8): the 60 of v0.21 plus four follow-up cards.
+                Check(rewardPool.Length==64 && rewardPool.Count(c=>c.Rarity==CardRarity.Common)==15 && rewardPool.Count(c=>c.Rarity==CardRarity.Uncommon)==26
+                    && rewardPool.Count(c=>c.Rarity==CardRarity.Rare)==23,"reward pool is 64 cards: 15 common, 26 uncommon, 23 rare");
+                Check(rewardPool.Count(c=>c.Type==CardType.Power)==12 && !rewardPool.Any(c=>c.Type==CardType.Power && c.Rarity==CardRarity.Common),
+                    "twelve powers, none of them common, as in the base pools");
                 int ElementCount(AlchemyPhase e)=>rewardPool.Count(c=>c is AlchemyCard a && a.Element==e);
-                Check(ElementCount(AlchemyPhase.Earth)==12 && ElementCount(AlchemyPhase.Water)==12 && ElementCount(AlchemyPhase.Fire)==14
-                    && ElementCount(AlchemyPhase.Air)==11,"reward cards per element at 60: earth 12, water 12, fire 14, air 11");
+                Check(ElementCount(AlchemyPhase.Earth)==12 && ElementCount(AlchemyPhase.Water)==13 && ElementCount(AlchemyPhase.Fire)==15
+                    && ElementCount(AlchemyPhase.Air)==12,"reward cards per element at 64: earth 12, water 13, fire 15, air 12");
                 // 原則4: every card that could fuel an in-turn loop has a profile the rule test searches.
                 foreach(var loopCandidate in ModelDb.CardPool<AlchemyCardPool>().AllCards.OfType<AlchemyCard>().Where(c=>c is not MaterialCard))
                 {
@@ -519,7 +520,8 @@ public static class Smoke
             Check(999-foe.CurrentHp>=24*3 && player.Creature.GetPower<DeathMarkPower>() is not null && life.HomunculusHp==24,
                 $"human transmutation hits for three times the homunculus and marks you for death (dealt {999-foe.CurrentHp})");
             await PowerCmd.Apply<WeakPower>(new ThrowingPlayerChoiceContext(),player.Creature,2,foe,null);
-            await Play(cs.CreateCard<DebuffTransferCard>(player),foe);
+            using(CardSelectCmd.UseSelector(new PickSelector(_=>false))) // spend nothing: the copy
+                await Play(cs.CreateCard<DebuffTransferCard>(player),foe);
             Check(foe.GetPower<DeathMarkPower>() is not null && (foe.GetPower<WeakPower>()?.Amount ?? 0)>=2 && player.Creature.GetPower<DeathMarkPower>() is not null,
                 "debuff transfer copies death and weak onto the enemy and keeps yours");
             var foeDeath=foe.GetPower<DeathMarkPower>()!;
@@ -577,6 +579,48 @@ public static class Smoke
             await Play(cs.CreateCard<CraftThreePhaseTorrent>(player),foe);
             Check(box.Combat.Phases.Current==AlchemyPhase.Air && box.Combat.Phases.TransitionCount-transitionsBeforeTorrent==(phaseBeforeTorrent==AlchemyPhase.Earth?2:3),
                 $"the five-material card passes earth, fire and air, up to three transitions ({box.Combat.Phases.TransitionCount-transitionsBeforeTorrent} from {phaseBeforeTorrent})");
+            // v0.22 (design-axes 4.2): spending a material turns コペルニクスシフト into a swap of listed debuffs.
+            foreach(var own in player.Creature.Powers.Where(x=>x.TypeForCurrentAmount==PowerType.Debuff).ToArray()) await PowerCmd.Remove(own);
+            await ApplySelfPower<WeakPower>(2);
+            if(foe.GetPower<VulnerablePower>() is null) await PowerCmd.Apply<VulnerablePower>(new ThrowingPlayerChoiceContext(),foe,1,player.Creature,null);
+            int foeVulnerable=foe.GetPower<VulnerablePower>()!.Amount, foeWeakBefore=foe.GetPower<WeakPower>()?.Amount ?? 0;
+            box.Inventory.Pending.Clear(); box.Inventory.Counts=[1,0,0,0];
+            using(CardSelectCmd.UseSelector(new PickSelector(_=>true)))
+                await Play(cs.CreateCard<DebuffTransferCard>(player),foe);
+            Check((player.Creature.GetPower<WeakPower>()?.Amount ?? 0)==foeWeakBefore && player.Creature.GetPower<VulnerablePower>()?.Amount==foeVulnerable
+                && foe.GetPower<WeakPower>()?.Amount==2 && foe.GetPower<VulnerablePower>() is null && box.Inventory.Counts[0]==0,
+                $"spending a material swaps the listed debuffs (enemy weak was {foeWeakBefore})");
+            foreach(var own in player.Creature.Powers.Where(x=>x.TypeForCurrentAmount==PowerType.Debuff).ToArray()) await PowerCmd.Remove(own);
+            // F-1: self drain feeds your own homunculus, doubled.
+            await ApplySelfPower<SelfCultivationPower>(1);
+            await player.Creature.GetPower<SelfCultivationPower>()!.AfterSideTurnStart(CombatSide.Player,[player.Creature],cs);
+            var selfDrain=player.Creature.GetPower<LifeDrainPower>();
+            int selfHpBefore=player.Creature.CurrentHp, homunculusBeforeSelf=LifeAxis.State(player)!.HomunculusHp;
+            await selfDrain!.AfterSideTurnStart(CombatSide.Player,[player.Creature],cs);
+            Check(player.Creature.CurrentHp==selfHpBefore-1 && LifeAxis.State(player)!.HomunculusHp==homunculusBeforeSelf+2,
+                $"self cultivation drains you 1 and your homunculus gains 2 (homunculus {homunculusBeforeSelf}→{LifeAxis.State(player)!.HomunculusHp})");
+            await PowerCmd.Remove(player.Creature.GetPower<SelfCultivationPower>()!);
+            if(player.Creature.GetPower<LifeDrainPower>() is { } leftoverSelfDrain) await PowerCmd.Remove(leftoverSelfDrain);
+            // F-2: count × 3 × kinds.
+            box.Inventory.Counts=[2,1,0,0];
+            foe.SetCurrentHpInternal(999);
+            using(CardSelectCmd.UseSelector(new PickSelector(_=>true)))
+                await Play(cs.CreateCard<AlchAlkahest>(player),foe);
+            Check(999-foe.CurrentHp>=18 && box.Inventory.Counts.Sum()==0,$"alkahest pours three materials of two kinds into 3x3x2 (dealt {999-foe.CurrentHp})");
+            // F-3: cost falls by the kinds held.
+            box.Inventory.Counts=[1,1,1,0];
+            var blade=cs.CreateCard<AirElementBlade>(player);
+            await CardPileCmd.AddGeneratedCardsToCombat([blade],PileType.Hand,player);
+            Check(blade.EnergyCost.GetWithModifiers(CostModifiers.All)==1,$"the element blade costs 4 minus three kinds held ({blade.EnergyCost.GetWithModifiers(CostModifiers.All)})");
+            box.Inventory.Counts=[0,0,0,0];
+            // F-4: the wheel steps only after a play that caused no transition.
+            await Play(cs.CreateCard<EarthenGuard>(player),null);
+            await ApplySelfPower<PhaseWheelPower>(1);
+            await Play(cs.CreateCard<EarthenGuard>(player),null);
+            Check(box.Combat.Phases.Current==AlchemyPhase.Water,"a same-element card lets the wheel step earth to water");
+            await Play(cs.CreateCard<Alchemist.Ignition>(player),foe);
+            Check(box.Combat.Phases.Current==AlchemyPhase.Fire,"a card that transitions itself does not step the wheel");
+            await PowerCmd.Remove(player.Creature.GetPower<PhaseWheelPower>()!);
             async Task ApplySelfPower<T>(int amount) where T:PowerModel => await PowerCmd.Apply<T>(new ThrowingPlayerChoiceContext(),player.Creature,amount,player.Creature,null);
             // Every reward card once, in this already-running battle: debug room changes mid-combat leave
             // disposed card nodes in the headless node pool, so the sweep avoids a fresh room.
@@ -593,6 +637,8 @@ public static class Smoke
                 var target=played.TargetType==TargetType.AnyEnemy ? sweepState.Enemies.First(e=>!e.IsDead) : null;
                 try { await CardCmd.AutoPlay(new ThrowingPlayerChoiceContext(),played,target,skipCardPileVisuals:true); }
                 catch(Exception ex) { throw new Exception("reward card plays "+canonical.Id.Entry,ex); }
+                // The wheel would step every later same-element card away from its own element.
+                if(player.Creature.GetPower<PhaseWheelPower>() is { } sweptWheel) await PowerCmd.Remove(sweptWheel);
                 if(played is AlchemyCard { Element: not AlchemyPhase.None } sweptElemental)
                     Check(box.Combat!.Phases.Current==sweptElemental.Element,"reward card plays and enters its element "+canonical.Id.Entry);
                 else Check(true,"reward card plays "+canonical.Id.Entry);

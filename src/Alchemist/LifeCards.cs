@@ -8,6 +8,7 @@ using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.ValueProps;
 
 namespace Alchemist;
@@ -91,21 +92,44 @@ public sealed class LifeHarvest() : ElementCard(1,CardType.Skill,CardRarity.Rare
 }
 
 /// <summary>
-/// デバフ転写. An immediate skill on purpose (not a reservation or power), and its upgrade never lowers the cost,
-/// so 人体錬成 plus this still needs five energy in one turn.
+/// コペルニクスシフト (旧デバフ転写; the class keeps its old name so saved cards keep their id). An immediate skill
+/// on purpose (not a reservation or power), and its upgrade never lowers the cost, so 人体錬成 plus this still
+/// needs five energy in one turn. Spending a material turns the copy into a swap (design-axes 4.2); it is never
+/// spent automatically, because a swap can hurt.
 /// </summary>
 public sealed class DebuffTransferCard() : ElementCard(2,CardType.Skill,CardRarity.Rare,TargetType.AnyEnemy,AlchemyPhase.Air)
 {
-    public override List<(string,string)> Localization=>new CardLoc("デバフ転写","自分のデバフを敵1体にコピーする。\n[gold]風相[/gold]");
+    public override List<(string,string)> Localization=>new CardLoc("コペルニクスシフト",
+        "通常素材を1個消費してもよい。消費したなら、自分と敵1体の対象デバフを入れ替える。消費しなければ、自分の対象デバフを敵1体にコピーする。\n（対象：脱力・弱体・虚弱・筋力低下・敏捷性低下・毒・死亡・ドレイン）\n[gold]風相[/gold]",
+        ("selectionScreenPrompt","消費する素材を選択（選ばなければコピー）"));
+    /// Prototype list (design-axes 4.2): general debuffs and this mod's death and drain. Enemy gimmick debuffs
+    /// never move, in either direction.
+    private static readonly HashSet<Type> Movable = [typeof(WeakPower), typeof(VulnerablePower), typeof(FrailPower), typeof(StrengthPower),
+        typeof(DexterityPower), typeof(PoisonPower), typeof(DeathMarkPower), typeof(LifeDrainPower)];
+    private static bool IsMovable(string entry) => Movable.Any(t => ModelDb.GetEntry(t) == entry);
+    private static StatusCopy Status(PowerModel x) => new(x.Id.Entry, x.Amount, x.TypeForCurrentAmount == PowerType.Debuff);
     protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p)
     {
+        var target=p.Target!;
         var mine=Owner.Creature.Powers.ToArray();
-        var plan=DebuffTransfer.Plan(mine.Select(x=>new StatusCopy(x.Id.Entry,x.Amount,x.TypeForCurrentAmount==PowerType.Debuff)));
-        foreach(var copy in plan)
+        bool swap=await ChooseMaterial(c,ownedOnly:true,optional:true) is { } m && TrySpend(m);
+        if(!swap)
         {
-            var source=mine.First(x=>x.Id.Entry==copy.PowerId);
-            await PowerCmd.Apply(c,ModelDb.GetById<PowerModel>(source.Id).ToMutable(),p.Target!,copy.Amount,Owner.Creature,this);
+            foreach(var copy in DebuffTransfer.Plan(mine.Select(Status),IsMovable))
+                await PowerCmd.Apply(c,ModelDb.GetById<PowerModel>(mine.First(x=>x.Id.Entry==copy.PowerId).Id).ToMutable(),target,copy.Amount,Owner.Creature,this);
+            return;
         }
+        var theirs=target.Powers.ToArray();
+        var (toEnemy,toPlayer)=DebuffTransfer.Swap(mine.Select(Status),theirs.Select(Status),IsMovable);
+        var outgoing=toEnemy.Select(s=>(Model:mine.First(x=>x.Id.Entry==s.PowerId),s.Amount)).ToArray();
+        var incoming=toPlayer.Select(s=>(Model:theirs.First(x=>x.Id.Entry==s.PowerId),s.Amount)).ToArray();
+        foreach(var (model,_) in outgoing) await PowerCmd.Remove(model);
+        foreach(var (model,_) in incoming) await PowerCmd.Remove(model);
+        // The alchemist is the applier both ways, so a drain that lands on them feeds their own homunculus.
+        foreach(var (model,amount) in incoming)
+            await PowerCmd.Apply(c,ModelDb.GetById<PowerModel>(model.Id).ToMutable(),Owner.Creature,amount,Owner.Creature,this);
+        foreach(var (model,amount) in outgoing)
+            await PowerCmd.Apply(c,ModelDb.GetById<PowerModel>(model.Id).ToMutable(),target,amount,Owner.Creature,this);
     }
     protected override void OnUpgrade()=>AddKeyword(CardKeyword.Retain);
 }

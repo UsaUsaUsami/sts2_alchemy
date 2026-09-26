@@ -1,4 +1,4 @@
-﻿namespace Alchemist.Core;
+namespace Alchemist.Core;
 
 /// <summary>
 /// Combat-only state of the life axis (design-axes.md 3). The homunculus stands on the field as the
@@ -39,6 +39,15 @@ public sealed class LifeState
         int spent = HomunculusHp;
         HomunculusHp = 0;
         return spent;
+    }
+
+    /// A drain on the alchemist themself (design-axes 3.1, from コペルニクスシフト or 自己培養) took hpLost from
+    /// them. The homunculus gains that times `multiplier` (2 with 自己培養). It is not HP an enemy lost, so cards
+    /// that scale with drained enemy HP do not count it.
+    public void RecordSelfDrain(int hpLost, int multiplier = 1)
+    {
+        if (hpLost <= 0) return;
+        GainHomunculus(hpLost * Math.Max(1, multiplier));
     }
 
     /// One drain trigger took hpLost from an enemy; the homunculus gains the same amount.
@@ -91,8 +100,15 @@ public readonly record struct StatusCopy(string PowerId, int Amount, bool IsDebu
 
 public static class DebuffTransfer
 {
-    /// What デバフ転写 copies onto one enemy: every debuff the player currently has, at the same amount.
-    /// Buffs, and powers whose current amount is zero, are left alone. The player keeps their own debuffs.
-    public static IReadOnlyList<StatusCopy> Plan(IEnumerable<StatusCopy> playerPowers)
-        => [.. playerPowers.Where(p => p.IsDebuff && p.Amount != 0)];
+    /// What コペルニクスシフト (旧デバフ転写) copies onto one enemy without spending a material: every
+    /// transferable debuff the player currently has, at the same amount. Buffs, powers whose current amount
+    /// is zero, and debuffs outside the list (enemy gimmicks) are left alone. The player keeps their own.
+    public static IReadOnlyList<StatusCopy> Plan(IEnumerable<StatusCopy> playerPowers, Func<string, bool> transferable)
+        => [.. playerPowers.Where(p => p.IsDebuff && p.Amount != 0 && transferable(p.PowerId))];
+
+    /// With a material spent, the transferable debuffs change places: each side loses its own and receives
+    /// the other's. What comes back is limited to the same list (design-axes 4.2).
+    public static (IReadOnlyList<StatusCopy> ToEnemy, IReadOnlyList<StatusCopy> ToPlayer) Swap(
+        IEnumerable<StatusCopy> playerPowers, IEnumerable<StatusCopy> enemyPowers, Func<string, bool> transferable)
+        => (Plan(playerPowers, transferable), Plan(enemyPowers, transferable));
 }

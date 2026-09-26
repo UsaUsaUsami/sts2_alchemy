@@ -65,7 +65,8 @@ public abstract class AlchemyCard(int cost, CardType type, CardRarity rarity, Ta
 
     /// Lets the player pick a normal material through the material-box cards. With ownedOnly, only
     /// materials the box holds are offered. Needs a "selectionScreenPrompt" entry in the card's loc.
-    protected async Task<Material?> ChooseMaterial(PlayerChoiceContext c, bool ownedOnly)
+    /// With optional, the player may confirm without picking one; that returns null.
+    protected async Task<Material?> ChooseMaterial(PlayerChoiceContext c, bool ownedOnly, bool optional = false)
     {
         var box = Box;
         if (box is null) return null;
@@ -79,7 +80,7 @@ public abstract class AlchemyCard(int cost, CardType type, CardRarity rarity, Ta
         Offer<IronMaterialCard>(Material.Iron); Offer<HerbMaterialCard>(Material.Herb);
         Offer<PowderMaterialCard>(Material.Powder); Offer<EtherMaterialCard>(Material.Ether);
         if (options.Count == 0) return null;
-        var chosen = (await CardSelectCmd.FromSimpleGrid(c, options.Select(o => o.Card).ToList(), Owner, new CardSelectorPrefs(SelectionScreenPrompt, 1))).FirstOrDefault();
+        var chosen = (await CardSelectCmd.FromSimpleGrid(c, options.Select(o => o.Card).ToList(), Owner, optional ? new CardSelectorPrefs(SelectionScreenPrompt, 0, 1) : new CardSelectorPrefs(SelectionScreenPrompt, 1))).FirstOrDefault();
         foreach (var o in options) o.Card.Owner = null!;
         return options.FirstOrDefault(o => o.Card == chosen) is { Card: not null } picked ? picked.Material : null;
     }

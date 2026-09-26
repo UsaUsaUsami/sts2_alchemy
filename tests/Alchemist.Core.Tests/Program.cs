@@ -304,9 +304,17 @@ Check(DrainRules.ReducedCost(5,0,10)==5 && DrainRules.ReducedCost(5,29,10)==3 &&
 Check(DeathMarkRules.TriggersAt(DebuffSide.Player,DebuffSide.Player) && !DeathMarkRules.TriggersAt(DebuffSide.Player,DebuffSide.Enemy)
     && DeathMarkRules.TriggersAt(DebuffSide.Enemy,DebuffSide.Enemy),
     "death resolves at its owner's next turn start, so a copy on an enemy resolves on the enemy turn first");
-var transferred=DebuffTransfer.Plan([new("WEAK",2,true),new("STRENGTH",3,false),new("DEATH",1,true),new("FRAIL",0,true),new("STRENGTH_DOWN",-2,true)]);
+bool Movable(string id)=>id is not "HUNTER_MARK";
+var transferred=DebuffTransfer.Plan([new("WEAK",2,true),new("STRENGTH",3,false),new("DEATH",1,true),new("FRAIL",0,true),new("STRENGTH_DOWN",-2,true),new("HUNTER_MARK",1,true)],Movable);
 Check(transferred.Select(x=>(x.PowerId,x.Amount)).SequenceEqual([("WEAK",2),("DEATH",1),("STRENGTH_DOWN",-2)]),
-    "debuff transfer copies every current debuff at its amount, and no buffs");
+    "the copy takes every listed current debuff at its amount, no buffs and no enemy gimmicks");
+var swapped=DebuffTransfer.Swap([new("WEAK",2,true),new("DRAIN",3,true)],[new("VULNERABLE",1,true),new("HUNTER_MARK",2,true),new("STRENGTH",5,false)],Movable);
+Check(swapped.ToEnemy.Select(x=>x.PowerId).SequenceEqual(["WEAK","DRAIN"]) && swapped.ToPlayer.Select(x=>(x.PowerId,x.Amount)).SequenceEqual([("VULNERABLE",1)]),
+    "the swap sends your listed debuffs over and brings back only listed debuffs, never the enemy's gimmick or buffs");
+// design-axes 3.1: a drain on yourself feeds your homunculus, doubled by 自己培養, and is not enemy HP drained.
+var selfLife=new LifeState();
+selfLife.RecordSelfDrain(3); selfLife.RecordSelfDrain(2,2);
+Check(selfLife.HomunculusHp==7 && selfLife.HpDrainedThisCombat==0,"self drain feeds the homunculus (x2 with the power) without counting as enemy HP drained");
 // 原則5: transitions never raise the number of cards drawn.
 Check(PhaseRules.Finalize(AlchemyPhase.Air,5,3)==(PhaseRules.BaseAmount(AlchemyPhase.Air),1)
     && PhaseRules.Finalize(AlchemyPhase.Fire,6,2)==(6,2) && PhaseRules.Finalize(AlchemyPhase.Earth,5,1)==(5,1),
@@ -328,6 +336,15 @@ Check(LoopCheck.FindLoops([spark,LoopProfiles.All.Single(c=>c.Id=="AlchFlux+")],
 Check(LoopProfiles.All.Select(c=>c.Id).Distinct().Count()==LoopProfiles.All.Count,"loop profiles have unique ids");
 var poolLoops=LoopCheck.FindLoops(LoopProfiles.All,3);
 Check(poolLoops.Count==0,"no combination of up to three current cards loops within a turn: "+string.Join(" / ",poolLoops.Take(5)));
+// v0.22 (design-axes 4.3 F-4): a power that steps the phase after every card. Unconditionally it loops with
+// free cards (every play lands a transition and every fourth lands on air); stepping only after a card that
+// caused no transition keeps each play at one transition, which the pool search above already covers.
+var wheelAlways=new LoopCard("wheel-always",3,IsPower:true,PowerAdvance:LoopAdvance.Always);
+var alwaysLoops=LoopProfiles.All.Where(c=>!c.IsPower && c.Cost==0 && !c.Exhaust && !c.SpendsMaterial)
+    .Where(c=>LoopCheck.FindLoops([wheelAlways,c],2).Any(l=>l.Contains("wheel-always") && l.Contains(c.Id))).Select(c=>c.Id).ToArray();
+Console.WriteLine("INFO unconditional phase wheel loops with: "+string.Join(", ",alwaysLoops));
+Check(alwaysLoops.Length>0,"the loop search catches the unconditional phase wheel with a free card (canary)");
+Check(LoopProfiles.All.Single(c=>c.Id=="AlchPhaseWheel").PowerAdvance==LoopAdvance.IfNoTransition,"the real phase wheel steps only after a card that caused no transition");
 // v0.22 (design-axes 6.3 G-1): combats open in a seeded random element, which is not a transition.
 var opened=new AlchemyPhaseState();
 opened.Open(PhaseRules.Opening(42,"3:room:opening"));

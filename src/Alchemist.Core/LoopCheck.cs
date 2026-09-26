@@ -3,6 +3,9 @@ namespace Alchemist.Core;
 /// <summary>How a card moves the phase when played.</summary>
 public enum LoopPhaseMove { None, Element, Dual, Previous, Any }
 
+/// <summary>How a power moves the phase after every card play (design-axes 4.3 F-4).</summary>
+public enum LoopAdvance { None, Always, IfNoTransition }
+
 /// <summary>
 /// The loop-relevant part of one card (design-axes.md 2 原則4・5): what it costs, what it gives back in the
 /// same turn and how it moves the phase. Anything that only matters on a later turn (next-turn energy or
@@ -13,7 +16,7 @@ public sealed record LoopCard(string Id, int Cost, LoopPhaseMove Move = LoopPhas
     AlchemyPhase Element = AlchemyPhase.None, AlchemyPhase First = AlchemyPhase.None,
     int Draw = 0, int Energy = 0, bool Exhaust = false, bool SpendsMaterial = false,
     int DrawIfTransition = 0, int EnergyIfTransition = 0, bool IsPower = false,
-    int PowerDrawPerTransition = 0, int PowerEnergyPerTransition = 0);
+    int PowerDrawPerTransition = 0, int PowerEnergyPerTransition = 0, LoopAdvance PowerAdvance = LoopAdvance.None);
 
 public sealed record LoopResult(bool Looped, int Plays);
 
@@ -41,8 +44,9 @@ public static class LoopCheck
         var powers = deck.Where(c => c.IsPower).ToList(); // Powers count as already in play: the worst case.
         var hand = new List<LoopCard>();
         var discard = new List<LoopCard>();
-        int energy = TurnEnergy, materials = MaterialBudget, plays = 0;
-        var phase = AlchemyPhase.None; var previous = AlchemyPhase.None;
+        int energy = TurnEnergy, materials = MaterialBudget, plays = 0, transitions = 0;
+        // design-axes 6.3 G-1: every combat opens in a random element, so the first card can already transition.
+        var phase = PhaseRules.Elements[rng.Next(PhaseRules.Elements.Count)]; var previous = AlchemyPhase.None;
 
         void Draw(int n)
         {
@@ -64,6 +68,7 @@ public static class LoopCheck
             bool triggered = phase != AlchemyPhase.None;
             previous = phase; phase = next;
             if (!triggered) return false;
+            transitions++;
             // The air destination's draw is fixed (PhaseRules.TransitionDraw); powers add their own.
             Draw(PhaseRules.TransitionDraw(next) + powers.Sum(p => p.PowerDrawPerTransition));
             energy += powers.Sum(p => p.PowerEnergyPerTransition);
@@ -109,8 +114,12 @@ public static class LoopCheck
             energy += card.Energy;
             Draw(card.Draw);
             if (shift) { energy += card.EnergyIfTransition; Draw(card.DrawIfTransition); }
+            int before = transitions;
             if (card.Move == LoopPhaseMove.Dual) { Enter(card.First); Enter(card.Element); }
             else Enter(Destination(card));
+            // F-4: the card's own element first, then the power's step.
+            foreach (var power in powers.Where(p => p.PowerAdvance != LoopAdvance.None))
+                if (power.PowerAdvance == LoopAdvance.Always || transitions == before) Enter(PhaseRules.Next(phase));
             if (!card.Exhaust) discard.Add(card);
         }
         return new(plays >= PlayCap, plays);
@@ -180,6 +189,11 @@ public static class LoopProfiles
         new("AlchSynergy", 1, Draw: 1), new("AlchSynergy+", 1, Draw: 2),
         new("AlchFlux", 1, LoopPhaseMove.Any), new("AlchFlux+", 0, LoopPhaseMove.Any),
         new("AlchReversal", 1, LoopPhaseMove.Previous),
+        // v0.22 (design-axes 4.3)
+        new("AlchPhaseWheel", 3, IsPower: true, PowerAdvance: LoopAdvance.IfNoTransition),
+        new("AlchPhaseWheel+", 2, IsPower: true, PowerAdvance: LoopAdvance.IfNoTransition),
+        El("AirElementBlade", 4, A), El("AirElementBlade@0", 0, A), // F-3 with all four materials held
+        new("LifeSelfCultivation", 1, IsPower: true), new("LifeSelfCultivation+", 0, IsPower: true),
         // Workshop
         Dual("Sandstorm", 1, E, A, draw: 1), Dual("Sandstorm+", 1, E, A, draw: 2),
         Dual("Drizzle", 1, W, A, draw: 1), Dual("FireWhirl", 1, F, A),
