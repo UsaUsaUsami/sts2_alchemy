@@ -1,4 +1,4 @@
-﻿param([string]$Name = 'smoke', [int]$Frames = 4500)
+﻿param([string]$Name = 'smoke', [int]$Frames = 15000)
 $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot/env.ps1"
 $root = Split-Path $PSScriptRoot

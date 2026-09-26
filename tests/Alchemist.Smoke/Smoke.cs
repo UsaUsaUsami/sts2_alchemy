@@ -183,8 +183,11 @@ public static class Smoke
                 var ironclad=Player.CreateForNewRun(ModelDb.Character<Ironclad>(),UnlockState.all,1);
                 RunState.CreateForNewRun([ironclad],ActModel.GetDefaultList().Select(a=>a.ToMutable()).ToList(),[],GameMode.Standard,0,"ALCHEMIST_SMOKE_02");
                 Check(!DarvOptions(ironclad).Any(o=>o.Relic is DarvCrucible),"other characters never see the crucible");
-                Check(ResourceLoader.Exists(ModelDb.Relic<DarvCrucible>().PackedIconPath) && ResourceLoader.Exists(ModelDb.Relic<RefinedMaterialBox>().PackedIconPath),
-                    "the new relics have icons");
+                foreach(var path in new[]{ModelDb.Relic<DarvCrucible>().PackedIconPath,ModelDb.Relic<RefinedMaterialBox>().PackedIconPath,
+                    "res://images/relics/black_blood.png","res://images/relics/philosophers_stone.png",
+                    "res://images/atlases/relic_outline_atlas.sprites/black_blood.tres","res://images/atlases/relic_outline_atlas.sprites/philosophers_stone.tres",
+                    "res://images/enchantments/sharp.png",ModelDb.Enchantment<WorkshopInfusion>().IconPath})
+                    Check(ResourceLoader.Exists(path),"borrowed art exists "+path);
                 var touch=(TouchOfOrobas)ModelDb.Relic<TouchOfOrobas>().ToMutable();
                 Check(touch.SetupForPlayer(player) && touch.UpgradedRelic==ModelDb.Relic<RefinedMaterialBox>().Id,"Orobas refines the material box instead of turning it into a Circlet");
                 GD.Print("ALCHEMIST_SMOKE_COMPLETE");
@@ -590,6 +593,14 @@ public static class Smoke
             Check((player.Creature.GetPower<WeakPower>()?.Amount ?? 0)==foeWeakBefore && player.Creature.GetPower<VulnerablePower>()?.Amount==foeVulnerable
                 && foe.GetPower<WeakPower>()?.Amount==2 && foe.GetPower<VulnerablePower>() is null && box.Inventory.Counts[0]==0,
                 $"spending a material swaps the listed debuffs (enemy weak was {foeWeakBefore})");
+            // With a receipt still pending nothing can be spent, so the material screen is not offered at all.
+            box.Inventory.Counts=[1,0,0,0];
+            box.Inventory.Pending.Add(new Harvest("smoke-pending",MaterialChoice.Normal(Alchemist.Core.Material.Herb)));
+            var unsettledPicker=new PickSelector(_=>true);
+            using(CardSelectCmd.UseSelector(unsettledPicker))
+                await Play(cs.CreateCard<DebuffTransferCard>(player),foe);
+            Check(unsettledPicker.Offered.Count==0 && box.Inventory.Counts[0]==1,"with a pending receipt the shift copies without asking for a material");
+            box.Inventory.Pending.Clear(); box.Inventory.Counts=[0,0,0,0];
             foreach(var own in player.Creature.Powers.Where(x=>x.TypeForCurrentAmount==PowerType.Debuff).ToArray()) await PowerCmd.Remove(own);
             // F-1: self drain feeds your own homunculus, doubled.
             await ApplySelfPower<SelfCultivationPower>(1);

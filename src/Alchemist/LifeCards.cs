@@ -112,7 +112,9 @@ public sealed class DebuffTransferCard() : ElementCard(2,CardType.Skill,CardRari
     {
         var target=p.Target!;
         var mine=Owner.Creature.Powers.ToArray();
-        bool swap=await ChooseMaterial(c,ownedOnly:true,optional:true) is { } m && TrySpend(m);
+        // Only offer the swap when a material can really be spent: an unresolved receipt blocks spending, and
+        // picking one only to get the copy would be misleading.
+        bool swap=HasNormalMaterial && await ChooseMaterial(c,ownedOnly:true,optional:true) is { } m && TrySpend(m);
         if(!swap)
         {
             foreach(var copy in DebuffTransfer.Plan(mine.Select(Status),IsMovable))

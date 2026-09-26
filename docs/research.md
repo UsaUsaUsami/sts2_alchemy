@@ -88,13 +88,13 @@
 - プロパティの識別はプロパティ名（`ModelIdSerializationCache`がプロパティ名→ネットIDの表を作る。名前は全型で共有）。BaseLibの`PostModInitPatch.LatePostInit`がMODの型の`[SavedProperty]`もこの表へ登録する（`BetaMainCompatibility.CacheSavedProperties`）。既存の`CraftedCard.AlchemistRareModifier`・`MaterialBox.AlchemistState`と同じ仕組み。他MODと衝突しないよう`Alchemist…`などの接頭辞付きの名前にする。
 - `SerializableEnchantment`の通信用`Amount`は8ビット（`WriteInt(Amount, 8)`）。単独プレイの保存には影響しないが、大きな値を`Amount`に詰めない。
 - バニラの鋭利は`MegaCrit.Sts2.Core.Models.Enchantments.Sharp`（`ShowAmount => true`）。改造は独自エンチャント1枠なので、鋭利そのものは付けず、同じ効果（ダメージ+N）を自前のエンチャントで出す。
-- 未検証：エンチャントの`[SavedProperty]`が実機のセーブ・ロードで往復すること（スモークで確認する）。
+- v0.22.0で確認：`WorkshopInfusion`の4つの値がカードの`ToSerializable`/`FromSerializable`で往復する（隔離実機スモーク）。実際のセーブファイルを介した再開は未確認。
 
 ### エンシェントでの初期レリック強化（G-2）
 
 - 初期レリックの強化はオロバスの《オロバスの手触り》（`TouchOfOrobas`）。`GetUpgradedStarterRelic`がバニラの対応表に無い初期レリックを**サークレットに置き換える**。
 - BaseLibの`StarterUpgradePatches`がこれに前置きし、初期レリックが`CustomRelicModel`なら`GetUpgradeReplacement()`の戻り値を使う（既定は`null`＝バニラどおりサークレット）。**強化版は`MaterialBox.GetUpgradeReplacement()`を上書きすれば作れる**。
-- **現状の不具合**：`MaterialBox`は`GetUpgradeReplacement`を上書きしていないため、今オロバスで強化を選ぶと素材ボックスがサークレットに置き換わる。素材の在庫（`MaterialBox.AlchemistState`）と相・炉の仕組みが失われる（`RelicCmd.Replace`は旧レリックを外して新レリックを得るだけで、状態を引き継がない）。コードは`GetRelic<MaterialBox>()`で素材ボックスを探しているので、強化版は同じ型として見つかるようにし（共通の基底クラスなど）、置き換え時に在庫を引き継ぐ必要がある。
+- **v0.21までの不具合（v0.22.0で修正）**：`MaterialBox`は`GetUpgradeReplacement`を上書きしていないため、今オロバスで強化を選ぶと素材ボックスがサークレットに置き換わる。素材の在庫（`MaterialBox.AlchemistState`）と相・炉の仕組みが失われる（`RelicCmd.Replace`は旧レリックを外して新レリックを得るだけで、状態を引き継がない）。コードは`GetRelic<MaterialBox>()`で素材ボックスを探しているので、強化版は同じ型として見つかるようにし（共通の基底クラスなど）、置き換え時に在庫を引き継ぐ必要がある。
 
 ### ダーヴの提示候補へのキャラ専用遺物の追加（G-3）
 
