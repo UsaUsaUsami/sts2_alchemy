@@ -45,7 +45,8 @@ public static class LoopCheck
         var hand = new List<LoopCard>();
         var discard = new List<LoopCard>();
         int energy = TurnEnergy, materials = MaterialBudget, plays = 0, transitions = 0;
-        // design-axes 6.3 G-1: every combat opens in a random element, so the first card can already transition.
+        // design-axes 6.3 G-1: with the refined starter relic a combat opens in a random element, so the first card
+        // can already transition. That is the worse case, so the search always assumes it.
         var phase = PhaseRules.Elements[rng.Next(PhaseRules.Elements.Count)]; var previous = AlchemyPhase.None;
 
         void Draw(int n)

@@ -35,9 +35,11 @@ public class MaterialBox : CustomRelicModel
     public const string RewardIconPath = "res://images/relics/burning_blood.png";
     /// Furnace activations dealt at the start of each combat, which is also that combat's cap.
     public virtual int FurnaceTokens => HarvestCombat.FurnaceLimit;
+    /// design-axes 6.3 G-1: only the box Orobas refined opens combats in a random element.
+    public virtual bool OpensInRandomPhase => false;
     public override List<(string,string)> Localization => BoxLoc("素材ボックス", "相を変え、素材を選ぶ。");
     protected List<(string,string)> BoxLoc(string title, string flavor) => new RelicLoc(title,
-        $"属性カードを使うと地・水・火・風の相が変化する。異なる相へ移ると相転移効果が発動する。\n戦闘開始時はランダムな相に入る（相転移ではない）。各戦闘の最初に炉の起動が{FurnaceTokens}枚手札へ加わり、現在相に対応する素材を採取する（戦闘全体で{FurnaceTokens}回まで）。\nエリート報酬は1枠、ボス報酬は2枠。希少素材は工房で恒久加工できる。", flavor,
+        $"属性カードを使うと地・水・火・風の相が変化する。異なる相へ移ると相転移効果が発動する。\n{(OpensInRandomPhase ? "戦闘開始時はランダムな相に入る（相転移ではない）。" : "戦闘開始時は無相。")}各戦闘の最初に炉の起動が{FurnaceTokens}枚手札へ加わり、現在相に対応する素材を採取する（戦闘全体で{FurnaceTokens}回まで）。\nエリート報酬は1枠、ボス報酬は2枠。希少素材は工房で恒久加工できる。", flavor,
         (RewardLocKey, "素材を選ぶ"),
         ("phaseShift.Earth", "地相へ転移"), ("phaseShift.Water", "水相へ転移"),
         ("phaseShift.Fire", "火相へ転移"), ("phaseShift.Air", "風相へ転移"),
@@ -51,8 +53,8 @@ public class MaterialBox : CustomRelicModel
     public override Task BeforeCombatStart()
     {
         Combat = new(FurnaceTokens);
-        // design-axes 6.3 G-1: open in a random element, without a transition effect or a count.
-        Combat.Phases.Open(PhaseRules.Opening(Owner.RunState.Rng.Seed, $"{Owner.RunState.TotalFloor}:{Owner.RunState.CurrentRoom?.Id}:opening"));
+        // design-axes 6.3 G-1: the refined box opens in a random element, without a transition effect or a count.
+        if (OpensInRandomPhase) Combat.Phases.Open(PhaseRules.Opening(Owner.RunState.Rng.Seed, $"{Owner.RunState.TotalFloor}:{Owner.RunState.CurrentRoom?.Id}:opening"));
         return Task.CompletedTask;
     }
     /// RelicCmd.Replace hands over no state, so MaterialBoxReplacePatch copies the inventory across when

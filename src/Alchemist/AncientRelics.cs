@@ -16,13 +16,15 @@ using MegaCrit.Sts2.Core.Nodes.Vfx;
 namespace Alchemist;
 
 /// <summary>
-/// The starter relic after Orobas refines it (design-axes 6.3 G-2): one more furnace activation per combat.
+/// The starter relic after Orobas refines it (design-axes 6.3 G-1, G-2): combats open in a random element, and
+/// one more furnace activation per combat.
 /// It is still a MaterialBox, so every GetRelic&lt;MaterialBox&gt;() keeps finding it.
 /// </summary>
 [Pool(typeof(AlchemyRelicPool))]
 public sealed class RefinedMaterialBox : MaterialBox
 {
     public override int FurnaceTokens => HarvestCombat.RefinedFurnaceLimit;
+    public override bool OpensInRandomPhase => true;
     public override string PackedIconPath => "res://images/atlases/relic_atlas.sprites/black_blood.tres";
     protected override string PackedIconOutlinePath => "res://images/atlases/relic_outline_atlas.sprites/black_blood.tres";
     protected override string BigIconPath => "res://images/relics/black_blood.png";

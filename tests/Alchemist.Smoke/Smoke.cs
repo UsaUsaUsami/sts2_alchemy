@@ -265,7 +265,7 @@ public static class Smoke
             await RunManager.Instance.EnterRoomDebug(RoomType.Monster,model:ModelDb.Encounter<BowlbugsWeak>().ToMutable(),showTransition:false);
             var box=player.GetRelic<MaterialBox>()!;
             await Until(()=>box.Combat != null && player.PlayerCombatState?.Hand.Cards.Count>0,"first battle ready");
-            Check(PhaseRules.IsElement(box.Combat!.Phases.Current) && box.Combat.Phases.TransitionCount==0,"real battle opens in an element without a transition");
+            Check(box.Combat!.Phases.Current==AlchemyPhase.None,"the ordinary box starts a real battle without an element");
             await Clear("first battle");
             Check(box.Inventory.Total==0,"enemy deaths grant no materials");
             var normalSet=new RewardsSet(player).WithRewardsFromRoom((CombatRoom)run.CurrentRoom!);
@@ -379,9 +379,7 @@ public static class Smoke
             await (Task)AccessTools.Method(typeof(WorkshopUi),"LeaveMapWorkshop").Invoke(null,null)!;
             await RunManager.Instance.EnterRoomDebug(RoomType.Monster,model:ModelDb.Encounter<BowlbugsWeak>().ToMutable(),showTransition:false);
             await Until(()=>box.Combat != null && player.PlayerCombatState?.Hand.Cards.Count>0,"second battle ready");
-            Check(PhaseRules.IsElement(box.Combat!.Phases.Current) && box.Combat.Phases.TransitionCount==0,"next battle opens afresh in an element");
-            // Fixture: the checks below were written for a neutral opening (no starter relic), so reset to it.
-            box.Combat.Phases.Open(AlchemyPhase.None);
+            Check(box.Combat!.Phases.Current==AlchemyPhase.None,"next battle resets the elemental phase");
             // Wait for the opening draw and the relic's tokens to finish; playing earlier races the turn-start draw.
             await Until(()=>player.PlayerCombatState!.Hand.Cards.OfType<FurnaceActivation>().Count()==HarvestCombat.FurnaceLimit
                 && player.PlayerCombatState.Hand.Cards.Count>=5+HarvestCombat.FurnaceLimit,"opening hand and furnace tokens dealt");
@@ -858,6 +856,7 @@ public static class Smoke
             await RunManager.Instance.EnterRoomDebug(RoomType.Monster,model:ModelDb.Encounter<BowlbugsWeak>().ToMutable(),showTransition:false);
             await Until(()=>box.Combat!=null && player.PlayerCombatState?.Hand.Cards.OfType<FurnaceActivation>().Count()==HarvestCombat.RefinedFurnaceLimit,"refined furnace battle ready");
             Check(box.Combat!.Limit==HarvestCombat.RefinedFurnaceLimit,"the refined box deals three furnace activations and allows three");
+            Check(PhaseRules.IsElement(box.Combat.Phases.Current) && box.Combat.Phases.TransitionCount==0,"the refined box opens the battle in an element without a transition");
             // v0.22 (G-3/6.4): Darv's crucible adds one material of the current phase per turn, never past a full box.
             var crucible=(DarvCrucible)await RelicCmd.Obtain(ModelDb.Relic<DarvCrucible>().ToMutable(),player);
             var turnState=player.Creature.CombatState!;
