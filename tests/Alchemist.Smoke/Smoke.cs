@@ -612,6 +612,12 @@ public static class Smoke
                 $"self cultivation drains you 1 and your homunculus gains 2 (homunculus {homunculusBeforeSelf}→{LifeAxis.State(player)!.HomunculusHp})");
             await PowerCmd.Remove(player.Creature.GetPower<SelfCultivationPower>()!);
             if(player.Creature.GetPower<LifeDrainPower>() is { } leftoverSelfDrain) await PowerCmd.Remove(leftoverSelfDrain);
+            // v0.22.1: 清流 gives drain 2 plus 1 per transition this combat.
+            int streamTransitions=box.Combat.Phases.TransitionCount, streamDrainBefore=foe.GetPower<LifeDrainPower>()?.Amount ?? 0;
+            await Play(cs.CreateCard<WaterClearStream>(player),foe);
+            Check((foe.GetPower<LifeDrainPower>()?.Amount ?? 0)-streamDrainBefore==2+streamTransitions,
+                $"clear stream drains 2 plus 1 per transition ({streamTransitions} transitions)");
+            await PowerCmd.Remove(foe.GetPower<LifeDrainPower>()!);
             // F-2: count × 3 × kinds.
             box.Inventory.Counts=[2,1,0,0];
             foe.SetCurrentHpInternal(999);

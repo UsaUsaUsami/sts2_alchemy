@@ -119,13 +119,15 @@ public sealed class WaterRequiem() : ElementCard(1,CardType.Skill,CardRarity.Rar
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>ApplyTo<StrengthPower>(c,p.Target!,-DynamicVars["Bonus"].BaseValue);
     protected override void OnUpgrade()=>DynamicVars["Bonus"].UpgradeValueBy(1);
 }
+// v0.22.1 (ユーザー判断): a bridge card between the phase and life axes. Poison became drain, a little lower than
+// the old poison (3 + 2 per transition) because drain also feeds the homunculus (design-axes 3.1).
 public sealed class WaterClearStream() : ElementCard(1,CardType.Skill,CardRarity.Rare,TargetType.AnyEnemy,AlchemyPhase.Water)
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars=>[new PowerVar<PoisonPower>(3),new DynamicVar("Bonus",2)];
-    protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<PoisonPower>()];
-    public override List<(string,string)> Localization=>new CardLoc("清流","[gold]毒[/gold]{PoisonPower:diff()}を与える。さらに、この戦闘で起きた相転移1回につき[gold]毒[/gold]{Bonus:diff()}を与える。\n[gold]水相[/gold]");
+    protected override IEnumerable<DynamicVar> CanonicalVars=>[new PowerVar<LifeDrainPower>(2),new DynamicVar("Bonus",1)];
+    protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<LifeDrainPower>()];
+    public override List<(string,string)> Localization=>new CardLoc("清流","[gold]ドレイン[/gold]{LifeDrainPower:diff()}を与える。さらに、この戦闘で起きた相転移1回につき[gold]ドレイン[/gold]{Bonus:diff()}を与える。\n[gold]水相[/gold]");
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)
-        =>ApplyTo<PoisonPower>(c,p.Target!,DynamicVars.Poison.BaseValue+TransitionCount*DynamicVars["Bonus"].BaseValue);
+        =>ApplyTo<LifeDrainPower>(c,p.Target!,DynamicVars["LifeDrainPower"].BaseValue+TransitionCount*DynamicVars["Bonus"].BaseValue);
     protected override void OnUpgrade()=>DynamicVars["Bonus"].UpgradeValueBy(1);
 }
 // v0.20: 生命軸の追加で報酬プールから外した（旧セーブ読込用に定義だけ残す）。
