@@ -5,7 +5,7 @@
 - ゲーム本体：Slay the Spire 2 v0.111.0（commit `41cef1ea`、`release_info.json`のdateは2026-08-13、branch `v0.111.0`）
   - インストール先：`C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2`
 - ローダー／Modding API：BaseLib-StS2（作者 Alchyr）。ソース: https://github.com/Alchyr/BaseLib-StS2
-  - `.research/BaseLib-StS2` に参照用リポジトリをshallow clone済み（当時のHEADはタグ`v3.2.0`相当。バージョン把握用の参照であり、実装はビルド時点の`.tools/BaseLib-3.4.5`バイナリに追従する）
+  - `.research/BaseLib-StS2` に参照用リポジトリをshallow clone済み（当時のHEADはタグ`v3.2.0`相当。2026-09-26にタグ`v3.4.5`へ切り替えた。バージョン把握用の参照であり、実装はビルド時点の`.tools/BaseLib-3.4.5`バイナリに追従する）
   - `.tools/BaseLib-3.4.5/` にビルド用バイナリ（BaseLib.dll/.json/.pck）を配置し、`Directory.Build.props`の`BaseLibPath`から参照
   - GitHub Releases（2026-09-21確認、REST API直接参照。WebFetch経由の要約は日付を誤って報告したため、APIレスポンスで裏取りした）：
     - 最新: v3.4.7（2026-09-11）
@@ -76,3 +76,43 @@
 - **パワーの0での除去**：`PowerModel.ShouldRemoveDueToAmount`は`AllowNegative`でない限り`Amount <= 0`で除去する。表示だけを変えるには`DisplayAmount`（virtual）を上書きし、`InvokeDisplayAmountChanged()`で再描画する。ホムンクルスはこの方法で0でも表示し続ける。
 - **名前の衝突**：ゲーム本体に`MegaCrit.Sts2.Core.Models.Cards.DrainPower`（カード）がある。MOD側のパワーは`LifeDrainPower`とした。
 - 未検証：実際のターン進行（敵ターン開始時の自動発動、プレイヤーのターン開始時の死亡）を人手のプレイで確認すること。スモークテストはゲームが呼ぶのと同じ`AfterSideTurnStart`を直接呼んで確認している。
+
+## 2026-09-26: 改造の保存・エンシェントの遺物・MOD名変更のための調査
+
+- 対象は実機v0.111.0 / BaseLib v3.4.5。ゲームはローカル対象版DLLの逆コンパイル参照`.research/game`、BaseLibは`.research/BaseLib-StS2`をタグ`v3.4.5`へ切り替えて（今回`git fetch --depth 1 origin tag v3.4.5`）ソースを読んだ。以下はソース読みの結果で、実機での動作確認はまだ。
+
+### 改造の複数値の保存（design-axes.md 7.3）
+
+- `EnchantmentModel.ToSerializable()`は`Id`・`Amount`に加えて`Props = SavedProperties.From(this)`を保存し、`FromSerializable`は`save.Props?.Fill(model)`で復元してから`Amount`を入れる。**エンチャントも`[SavedProperty]`付きプロパティを保存できる**。
+- `SavedProperties`が扱える型は`int`・`bool`・`string`・`int[]`・`ModelId`・`SerializableCard`・`SerializableCard[]`。素材ごとの個数は`[SavedProperty] int`を4つ、または`int[]`1つで持てる。**1つの整数に詰める必要はない**。
+- プロパティの識別はプロパティ名（`ModelIdSerializationCache`がプロパティ名→ネットIDの表を作る。名前は全型で共有）。BaseLibの`PostModInitPatch.LatePostInit`がMODの型の`[SavedProperty]`もこの表へ登録する（`BetaMainCompatibility.CacheSavedProperties`）。既存の`CraftedCard.AlchemistRareModifier`・`MaterialBox.AlchemistState`と同じ仕組み。他MODと衝突しないよう`Alchemist…`などの接頭辞付きの名前にする。
+- `SerializableEnchantment`の通信用`Amount`は8ビット（`WriteInt(Amount, 8)`）。単独プレイの保存には影響しないが、大きな値を`Amount`に詰めない。
+- バニラの鋭利は`MegaCrit.Sts2.Core.Models.Enchantments.Sharp`（`ShowAmount => true`）。改造は独自エンチャント1枠なので、鋭利そのものは付けず、同じ効果（ダメージ+N）を自前のエンチャントで出す。
+- 未検証：エンチャントの`[SavedProperty]`が実機のセーブ・ロードで往復すること（スモークで確認する）。
+
+### エンシェントでの初期レリック強化（G-2）
+
+- 初期レリックの強化はオロバスの《オロバスの手触り》（`TouchOfOrobas`）。`GetUpgradedStarterRelic`がバニラの対応表に無い初期レリックを**サークレットに置き換える**。
+- BaseLibの`StarterUpgradePatches`がこれに前置きし、初期レリックが`CustomRelicModel`なら`GetUpgradeReplacement()`の戻り値を使う（既定は`null`＝バニラどおりサークレット）。**強化版は`MaterialBox.GetUpgradeReplacement()`を上書きすれば作れる**。
+- **現状の不具合**：`MaterialBox`は`GetUpgradeReplacement`を上書きしていないため、今オロバスで強化を選ぶと素材ボックスがサークレットに置き換わる。素材の在庫（`MaterialBox.AlchemistState`）と相・炉の仕組みが失われる（`RelicCmd.Replace`は旧レリックを外して新レリックを得るだけで、状態を引き継がない）。コードは`GetRelic<MaterialBox>()`で素材ボックスを探しているので、強化版は同じ型として見つかるようにし（共通の基底クラスなど）、置き換え時に在庫を引き継ぐ必要がある。
+
+### ダーヴの提示候補へのキャラ専用遺物の追加（G-3）
+
+- ダーヴ（`MegaCrit.Sts2.Core.Models.Events.Darv`）の候補は、privateな静的リスト`_validRelicSets`（アストロラーベ、ブラックスター等11組。条件付きの組あり）から`GenerateInitialOptions()`で3つ（半分の確率で2つ＋《埃っぽい書物》）を選ぶ。キャラ専用の候補は無い。
+- **BaseLibにダーヴの候補へ足すAPIは無い**（`RelicModelExtensions.AddCustomAncientSpawnCondition`はMODのエンシェント（`CustomAncientModel`）向け）。追加するにはHarmonyで`Darv.GenerateInitialOptions`に後置きし、錬金術師のときだけ候補を差し込む。
+- 候補の抽選に使う`EventModel.Rng`は、ランのシード＋プレイヤー枠＋イベントIDから作られる。後置きで同じ`Rng`を使えば、再表示・ロードでも同じ候補になる。錬金術師以外では何もしないので、他キャラクターの乱数は変わらない。
+- 未決（実装時にユーザーへ確認）：既存の候補1つを置き換えるか、4つ目として足すか、毎回出すか確率で出すか。
+- 代替案：MODのエンシェント（`CustomAncientModel`）を新しく作る方法もあるが、提示内容・会話・絵まで作ることになるので、ダーヴへの差し込みより重い。
+
+### MOD名変更とカード・パワーの内部ID（design-axes.md 11章）
+
+- ゲームのIDは`ModelDb.GetEntry(type) = StringHelper.Slugify(type.Name)`（クラス名だけ）。
+- BaseLibの`PrefixIdPatch`がこれに後置きし、`ICustomModel`を実装する型（`CustomCardModel`・`CustomRelicModel`・`CustomEnchantmentModel`・キャラクター・プール等）には**名前空間の先頭部分を大文字にした接頭辞＋`-`**を付ける（`TypePrefix.GetPrefix`）。今の名前空間`Alchemist`なら`ALCHEMIST-<クラス名>`、`Alchemy`へ変えると`ALCHEMY-<クラス名>`になる。
+- `[CustomID("…")]`属性を付けた型は、その文字列がそのままIDになる（接頭辞も付かない）。
+- 影響：
+  - セーブのカード・レリック・パワー・エンチャント・キャラクターはIDで保存される。名前空間を変えるとIDが変わり、旧セーブの該当物は`SaveUtil.*OrDeprecated`で「非推奨」の代替物になる（キャラクターは別途確認が要る）。進行中のランは再開できない想定。
+  - ローカライズのキー、BaseLibの画像パス既定値（`res://<名前空間の先頭>/images/…`）も名前空間の先頭から作られる。
+  - `[SavedProperty]`はプロパティ名で保存されるので、名前空間の変更では変わらない。
+  - 旧IDを保ちたい場合は、全モデルに`[CustomID("ALCHEMIST-…")]`を付ける方法があるが、別MODとの衝突を避けるという変更の目的に反するので採らない想定。
+- 衝突の可能性：別MOD「The Alchemist」の名前空間の先頭も`Alchemist`なら、ID（`ALCHEMIST-…`）自体が衝突する。先方のソースは未確認。
+- マニフェストの`id`がランのセーブに記録されるかは、`SerializableRun`に該当項目が見当たらない（MODの有効化は`settings.save`の`mod_settings`）。実機での確認はまだ。
