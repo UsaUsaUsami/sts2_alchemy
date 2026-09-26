@@ -1,4 +1,4 @@
-using Alchemist.Core;
+﻿using Alchemist.Core;
 
 int passed = 0;
 void Check(bool ok, string name) { if (!ok) throw new Exception(name); passed++; Console.WriteLine($"PASS {name}"); }
@@ -43,10 +43,10 @@ Check(triggered.Enter(AlchemyPhase.Fire).Triggered,"the first transition from th
 var inventory = new AlchemyState();
 Check(inventory.Total == 0,"empty initial inventory");
 var legacyFull=new AlchemyState();
-legacyFull.Counts[0]=15;
+legacyFull.Counts[0]=AlchemyState.LegacyCapacity;
 var legacyLoaded=AlchemyState.Load(legacyFull.Save());
-Check(legacyLoaded.Total==15 && legacyLoaded.Grant("after-shrink",Material.Herb) && legacyLoaded.Pending.Count==1 && legacyLoaded.Total==15,
-    "a pre-v0.16 box over the new capacity loads and only queues new receipts");
+Check(legacyLoaded.Total==AlchemyState.LegacyCapacity && legacyLoaded.Grant("after-load",Material.Herb) && legacyLoaded.Pending.Count==1
+    && legacyLoaded.Total==AlchemyState.LegacyCapacity,"a full box from any version loads and only queues new receipts");
 for (int i=0;i<AlchemyState.Capacity;i++) inventory.Grant($"kill{i}",Material.Iron);
 Check(inventory.Total == AlchemyState.Capacity,"capacity cap, same type counts individually");
 Check(!inventory.Grant("kill0",Material.Iron),"grant is idempotent");
@@ -147,20 +147,20 @@ Reject(()=>offers.Offer("bad",[Material.Iron,Material.Herb]),"wrong candidate co
 Check(!offers.Settled && !offers.CanCraft(Recipes.All[0]),"an open slot blocks crafting");
 Reject(()=>offers.TakeOffer("boss0",MaterialChoice.Rare(RareMaterial.Stardust)),"material outside the candidates rejected");
 offers.TakeOffer("boss0",eliteRoll[1]);
-Check(offers.Count(eliteRoll[1])==AlchemyState.YieldPerEvent && offers.Total==AlchemyState.YieldPerEvent && offers.Settled,
+Check(offers.Count(eliteRoll[1])==1 && offers.Total==1 && offers.Settled,
     "taking a slot grants the doubled harvest yield");
 Reject(()=>offers.TakeOffer("boss0",eliteRoll[0]),"a slot cannot be taken twice");
 Check(!offers.Offer("boss0",eliteRoll),"a resolved slot is never re-offered");
 offers.Offer("boss1",eliteRoll); offers.DeclineOffer("boss1");
-Check(offers.Total==AlchemyState.YieldPerEvent && offers.Settled && !offers.Offer("boss1",eliteRoll),"declining closes the slot for good");
+Check(offers.Total==1 && offers.Settled && !offers.Offer("boss1",eliteRoll),"declining closes the slot for good");
 Reject(()=>offers.DeclineOffer("boss1"),"a declined slot cannot be declined twice");
 var fullBox=new AlchemyState();
 for(int i=0;i<AlchemyState.Capacity;i++) fullBox.Grant($"f{i}",Material.Iron);
 fullBox.Offer("eliteFull",eliteRoll); fullBox.TakeOffer("eliteFull",eliteRoll[0]);
-Check(fullBox.Total==AlchemyState.Capacity && fullBox.Pending.Count==AlchemyState.YieldPerEvent && fullBox.Offers.Count==0,
+Check(fullBox.Total==AlchemyState.Capacity && fullBox.Pending.Count==1 && fullBox.Offers.Count==0,
     "a full box defers every unit of the doubled yield to the shared receipt path");
 while (fullBox.Pending.Count>0) fullBox.Resolve(true,MaterialChoice.Normal(Material.Iron));
-Check(fullBox.Count(eliteRoll[0])==(eliteRoll[0]==MaterialChoice.Normal(Material.Iron)?AlchemyState.Capacity:AlchemyState.YieldPerEvent) && fullBox.Settled,
+Check(fullBox.Count(eliteRoll[0])==(eliteRoll[0]==MaterialChoice.Normal(Material.Iron)?AlchemyState.Capacity:1) && fullBox.Settled,
     "deferred choice resolves by exchange, once per unit");
 var savedOffers=new AlchemyState();
 savedOffers.Offer("keep0",eliteRoll); savedOffers.Offer("keep1",MaterialOffers.Roll(7,"keep1"));
@@ -182,10 +182,14 @@ string applied="";
 rareStock.CommitRare(RareMaterial.Stardust,"apply",()=>applied="rare.stardust",()=>applied="");
 Check(applied=="rare.stardust" && rareStock.RareCounts[(int)RareMaterial.Stardust]==0,"rare processing consumes exactly one material");
 Reject(()=>rareStock.CommitRare(RareMaterial.Stardust,"again",()=>applied="bad",()=>applied="rare.stardust"),"missing rare material is rejected");
-Check(Recipes.All.Length==10 && Recipes.All.Select(r=>r.Id).Distinct().Count()==10 && Recipes.All.All(r=>r.Materials.Count==2),
-    "the workshop crafts ten two-material cards with stable ids");
-Check(Recipes.All.Count(r=>r.Materials[0]==r.Materials[1])==4 && Recipes.All.Count(r=>r.Materials[0]!=r.Materials[1])==6,
+var pairRecipes=Recipes.All.Where(r=>r.Materials.Count==2).ToArray();
+Check(Recipes.All.Length==20 && Recipes.All.Select(r=>r.Id).Distinct().Count()==20 && pairRecipes.Length==10,
+    "the workshop crafts twenty cards with stable ids, ten of them from two materials");
+Check(pairRecipes.Count(r=>r.Materials[0]==r.Materials[1])==4 && pairRecipes.Count(r=>r.Materials[0]!=r.Materials[1])==6,
     "four pure-phase recipes and six dual-phase recipes");
+Check(Recipes.All.All(r=>r.Materials.Count is >=2 and <=5) && Recipes.All.Count(r=>r.Materials.Count==5)==2,
+    "recipes take two to five materials, with two five-material finishers (design-axes 7.1)");
+Check(Recipes.All.All(r=>Recipes.FindAll(r.Materials).Count()==1),"no two recipes share a material multiset");
 foreach(var a in Enum.GetValues<Material>()) foreach(var b in Enum.GetValues<Material>())
 {
     var choices=Recipes.FindAll(a,b).ToArray();
@@ -204,7 +208,7 @@ foreach(var r in Recipes.All)
     for(int i=0;i<r.Materials.Count;i++) stock.Grant($"m{i}",r.Materials[i]);
     int created=0;
     await stock.CommitAsync(r,r.Id,()=>{created++;return Task.CompletedTask;},()=>created--);
-    Check(created==1 && stock.Total==0,"recipe consumes exactly its two materials "+r.Id);
+    Check(created==1 && stock.Total==0,"recipe consumes exactly its materials "+r.Id);
 }
 var shopA=MerchantMaterialOffers.Roll(1234,"act1:shop3");
 Check(shopA.Length==MerchantMaterialOffers.Slots && shopA.Select(x=>x.Material).Distinct().Count()==MerchantMaterialOffers.Slots,
@@ -281,6 +285,11 @@ Check(!life.TrySpendHomunculus(15) && life.HomunculusHp==14,"a fixed-cost exit f
 Check(life.TrySpendHomunculus(4) && life.HomunculusHp==10,"a fixed-cost exit spends exactly its cost");
 Check(life.SpendAllHomunculus()==10 && life.HomunculusHp==0 && life.HomunculusAppeared && life.HpDrainedThisCombat==4,
     "spending everything keeps the vessel shown and does not undo drain progress");
+life.GainHomunculus(12); life.SyncHomunculus(7);
+Check(life.HomunculusHp==7 && life.HpDrainedThisCombat==4 && life.TrySpendHomunculus(7) && !life.TrySpendHomunculus(1),
+    "hits the pet soaked lower the homunculus HP, and spending works from what is left");
+life.SyncHomunculus(-3);
+Check(life.HomunculusHp==0,"a fallen pet reads as 0 homunculus HP, never negative");
 Check(new HarvestCombat().Life.HomunculusHp==0 && !new HarvestCombat().Life.HomunculusAppeared && new HarvestCombat().Life.HpDrainedThisCombat==0,
     "the homunculus and drain totals reset with each combat");
 Check(DrainRules.ReducedCost(5,0,10)==5 && DrainRules.ReducedCost(5,29,10)==3 && DrainRules.ReducedCost(5,999,10)==0,

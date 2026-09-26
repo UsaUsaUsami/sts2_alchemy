@@ -375,9 +375,9 @@ public static class WorkshopUi
         content!.AddChild(grid);
         foreach (var recipe in recipes) grid.AddChild(CardDisplay(recipe,0.62f,true));
     }
-    // Every workshop recipe takes exactly two materials (v0.17); the slot row matches that.
+    // Recipes take two to five materials (v0.21); the slot row allows up to five.
     private const int MinCraftSlots = 2;
-    private const int MaxCraftSlots = 2;
+    private const int MaxCraftSlots = 5;
     private static void MaterialCrafting()
     {
         Text("素材から錬成",32,content,new Color("f2d18b"));

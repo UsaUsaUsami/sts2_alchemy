@@ -1,56 +1,85 @@
-using Alchemist.Core;
+﻿using Alchemist.Core;
 using BaseLib.Abstracts;
 using BaseLib.Utils;
+using Godot;
+using MegaCrit.Sts2.Core.Animation;
+using MegaCrit.Sts2.Core.Assets;
+using MegaCrit.Sts2.Core.Bindings.MegaSpine;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
+using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.HoverTips;
-using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Powers;
+using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.ValueProps;
 
 namespace Alchemist;
 
 /// <summary>
-/// Game-side entry points of the life axis. LifeState (in HarvestCombat) is the source of truth; the
-/// homunculus power only displays it.
+/// Game-side entry points of the life axis. The homunculus is a pet creature (v0.20): its HP bar is the
+/// homunculus HP. LifeState holds the number for the rules; the only change made outside this class is the pet
+/// taking hits for the alchemist, which State() folds back in before anything reads or changes it.
 /// </summary>
 public static class LifeAxis
 {
-    public static LifeState? State(Player? player) => player?.GetRelic<MaterialBox>()?.Combat?.Life;
+    public static LifeState? State(Player? player)
+    {
+        if (player?.GetRelic<MaterialBox>()?.Combat?.Life is not { } life) return null;
+        if (Pet(player) is { } pet) life.SyncHomunculus(pet.IsAlive ? pet.CurrentHp : 0);
+        return life;
+    }
+
+    public static Creature? Pet(Player player) => player.PlayerCombatState?.GetPet<HomunculusPet>();
 
     /// The only way homunculus HP goes up: drain, and cards that say so.
     public static async Task GainHomunculus(PlayerChoiceContext c, Player player, int amount)
     {
         if (State(player) is not { } life || amount <= 0) return;
         life.GainHomunculus(amount);
-        await ShowHomunculus(c, player);
+        await PushToPet(c, player, life);
     }
 
-    public static bool TrySpendHomunculus(Player player, int amount)
+    /// Fixed-cost exits: all or nothing. Spending thins the shield; spending the last of it fells the pet.
+    public static async Task<bool> TrySpendHomunculus(PlayerChoiceContext c, Player player, int amount)
     {
         if (State(player) is not { } life || !life.TrySpendHomunculus(amount)) return false;
-        Refresh(player);
+        await PushToPet(c, player, life);
         return true;
     }
 
-    public static int SpendAllHomunculus(Player player)
+    public static async Task<int> SpendAllHomunculus(PlayerChoiceContext c, Player player)
     {
-        int spent = State(player)?.SpendAllHomunculus() ?? 0;
-        Refresh(player);
+        if (State(player) is not { } life) return 0;
+        int spent = life.SpendAllHomunculus();
+        await PushToPet(c, player, life);
         return spent;
     }
 
-    /// The vessel appears on the first gain and stays for the rest of the combat, at 0 too.
-    private static async Task ShowHomunculus(PlayerChoiceContext c, Player player)
+    /// Makes the pet match LifeState: summoned on the first gain, revived when HP returns after it fell,
+    /// and felled at 0. Max HP only follows the number upward, so it is never a cap.
+    private static async Task PushToPet(PlayerChoiceContext c, Player player, LifeState life)
     {
-        if (player.Creature.GetPower<HomunculusPower>() is { } shown) { shown.Refresh(); return; }
-        await PowerCmd.Apply<HomunculusPower>(c, player.Creature, 1, player.Creature, null);
+        int hp = life.HomunculusHp;
+        var pet = Pet(player);
+        if (pet is null)
+        {
+            if (hp <= 0) return;
+            pet = await PlayerCmd.AddPet<HomunculusPet>(player);
+            await PowerCmd.Apply<HomunculusPower>(c, pet, 1, null, null);
+        }
+        if (hp <= 0)
+        {
+            if (pet.IsAlive) await CreatureCmd.SetCurrentHp(pet, 0);
+            return;
+        }
+        if (pet.IsDead || hp > pet.MaxHp) await CreatureCmd.SetMaxHp(pet, Math.Max(hp, pet.IsDead ? hp : pet.MaxHp));
+        await CreatureCmd.SetCurrentHp(pet, hp);
     }
-    private static void Refresh(Player player) => player.Creature.GetPower<HomunculusPower>()?.Refresh();
 
     /// Who receives the HP a drain takes: whoever applied it, else the first alchemist in the fight.
     public static Player? DrainOwner(PowerModel drain)
@@ -69,10 +98,29 @@ public static class LifeAxis
         if (DrainOwner(drain) is { } alchemist && State(alchemist) is { } life)
         {
             life.RecordDrain(lost);
-            if (lost > 0) await ShowHomunculus(new ThrowingPlayerChoiceContext(), alchemist);
+            if (lost > 0) await PushToPet(new ThrowingPlayerChoiceContext(), alchemist, life);
+            foreach (var nourish in alchemist.Creature.Powers.OfType<NourishPower>().ToList())
+                if (lost > 0) await nourish.OnDrained();
         }
         if (owner.IsAlive) await PowerCmd.Decrement(drain);
     }
+}
+
+/// <summary>
+/// The homunculus on the field. It borrows Osty's visuals until the mod has its own art, and never acts.
+/// </summary>
+public sealed class HomunculusPet() : CustomPetModel(visibleHp: true), ILocalizationProvider
+{
+    private static string BorrowedVisuals => SceneHelper.GetScenePath("creature_visuals/osty");
+    public override int MinInitialHp => 1;
+    public override int MaxInitialHp => 1;
+    public override IEnumerable<string> AssetPaths => [BorrowedVisuals];
+    public override NCreatureVisuals? CreateCustomVisuals()
+        => PreloadManager.Cache.GetScene(BorrowedVisuals).Instantiate<NCreatureVisuals>(PackedScene.GenEditState.Disabled);
+    // Osty's skeleton names its animations differently from the defaults.
+    public override CreatureAnimator? SetupCustomAnimationStates(MegaSprite controller)
+        => SetupAnimationState(controller, "idle_loop", deadName: "die", hitName: "hurt", attackName: "attack", castName: "cast");
+    public List<(string, string)> Localization => [("name", "ホムンクルス")];
 }
 
 /// <summary>ドレイン（仮称）: like poison, but what it takes goes to the homunculus.</summary>
@@ -91,17 +139,22 @@ public sealed class LifeDrainPower : AlchemyPower
 }
 
 /// <summary>
-/// The homunculus vessel. Its amount is pinned at 1 so the game never removes it at zero; the label shows the
-/// homunculus HP held in LifeState instead.
+/// Sits on the homunculus pet: attacks on the alchemist that get past block hit the homunculus instead, as
+/// DieForYouPower does for Osty. It survives the pet's death so the pet can be revived in place.
 /// </summary>
 public sealed class HomunculusPower : AlchemyPower
 {
+    public override PowerStackType StackType => PowerStackType.Single;
     protected override PowerModel IconSource => ModelDb.Power<RegenPower>();
-    public override int DisplayAmount => LifeAxis.State(Owner.Player)?.HomunculusHp ?? 0;
     public override List<(string,string)> Localization => new PowerLoc("ホムンクルス",
-        "生命を溜める器。ドレインと、ホムンクルスHPを得るカードでだけ増える。攻撃を受けず、戦闘終了で消える。",
-        "生命を溜める器。[gold]ホムンクルスHP[/gold]は{Amount}。[gold]ドレイン[/gold]と、ホムンクルスHPを得ると書かれたカードでだけ増える。攻撃を受けず、戦闘終了で消える。");
-    public void Refresh() => InvokeDisplayAmountChanged();
+        "錬金術師への攻撃のうち、ブロックを超えた分を代わりに受ける。HPはドレインと、ホムンクルスHPを得ると書かれたカードでだけ増える。0になると倒れ、HPを得ると復活する。戦闘終了で消える。",
+        "錬金術師への攻撃のうち、[gold]ブロック[/gold]を超えた分を代わりに受ける。[gold]ホムンクルスHP[/gold]は[gold]ドレイン[/gold]と、ホムンクルスHPを得ると書かれたカードでだけ増える。0になると倒れ、HPを得ると復活する。戦闘終了で消える。");
+    // Same rule as DieForYouPower: only powered attacks, only while alive, overflow goes back to the alchemist.
+    public override Creature ModifyUnblockedDamageTarget(Creature target, decimal _, ValueProp props, Creature? __)
+        => target == Owner.PetOwner?.Creature && Owner.IsAlive && props.IsPoweredAttack() ? Owner : target;
+    public override bool ShouldAllowHitting(Creature creature) => creature != Owner || creature.IsAlive;
+    public override bool ShouldCreatureBeRemovedFromCombatAfterDeath(Creature creature) => creature != Owner;
+    public override bool ShouldPowerBeRemovedAfterOwnerDeath() => false;
 }
 
 /// <summary>死亡 (人体錬成): a visible debuff, so potions, relics and cards can interact with it.</summary>

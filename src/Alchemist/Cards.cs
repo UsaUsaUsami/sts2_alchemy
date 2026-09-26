@@ -39,6 +39,9 @@ public abstract class AlchemyCard(int cost, CardType type, CardRarity rarity, Ta
     protected bool WillTransition => PhaseRules.IsElement(Element) && PhaseRules.IsElement(CurrentPhase) && CurrentPhase != Element;
     protected bool InOwnPhase => PhaseRules.IsElement(Element) && CurrentPhase == Element;
     protected bool HasNormalMaterial => Box?.Inventory is { Settled: true } inventory && inventory.Counts.Any(n => n > 0);
+    protected bool HasMaterial(Material m) => Box?.Inventory is { Settled: true } inventory && inventory.Counts[(int)m] > 0;
+    /// Spends one of the material the card names (design-axes 6.2). No selection screen: the kind is fixed.
+    protected bool TrySpend(Material m) => Box?.Inventory.TryConsume(m) == true;
 
     protected async Task Hit(PlayerChoiceContext c, CardPlay p, decimal damage, int hits = 1)
     {

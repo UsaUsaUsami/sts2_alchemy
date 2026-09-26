@@ -1,4 +1,4 @@
-using Alchemist.Core;
+﻿using Alchemist.Core;
 using BaseLib.Abstracts;
 using BaseLib.Utils;
 using MegaCrit.Sts2.Core.CardSelection;
@@ -14,7 +14,8 @@ namespace Alchemist;
 
 // Air reward cards: draw, energy and hand shaping. Tailwind and Slipstream live in ElementalCards.cs.
 
-public sealed class AirGust() : ElementCard(1,CardType.Attack,CardRarity.Common,TargetType.AnyEnemy,AlchemyPhase.Air)
+// v0.21: 報酬60枚への縮小で報酬プールから外した（旧セーブ読込用に定義だけ残す）。
+public sealed class AirGust() : ElementCard(1,CardType.Attack,CardRarity.Event,TargetType.AnyEnemy,AlchemyPhase.Air)
 {
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new DamageVar(6,ValueProp.Move),new CardsVar(1)];
     public override List<(string,string)> Localization=>new CardLoc("疾風","{Damage:diff()}ダメージ。カードを{Cards:diff()}枚引く。\n[gold]風相[/gold]");
@@ -71,7 +72,8 @@ public sealed class AirRefine() : ElementCard(1,CardType.Skill,CardRarity.Uncomm
     }
     protected override void OnUpgrade()=>DynamicVars.Cards.UpgradeValueBy(1);
 }
-public sealed class AirWindReading() : ElementCard(1,CardType.Power,CardRarity.Uncommon,TargetType.Self,AlchemyPhase.Air)
+// v0.21: 報酬60枚への縮小で報酬プールから外した（旧セーブ読込用に定義だけ残す）。
+public sealed class AirWindReading() : ElementCard(1,CardType.Power,CardRarity.Event,TargetType.Self,AlchemyPhase.Air)
 {
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new PowerVar<WindReadingPower>(1)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<WindReadingPower>()];
@@ -94,7 +96,8 @@ public sealed class AirStormBlade() : ElementCard(1,CardType.Attack,CardRarity.R
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>Hit(c,p,DynamicVars.Damage.BaseValue,Math.Max(1,TransitionCount));
     protected override void OnUpgrade()=>DynamicVars.Damage.UpgradeValueBy(2);
 }
-public sealed class AirGift() : ElementCard(0,CardType.Skill,CardRarity.Rare,TargetType.Self,AlchemyPhase.Air)
+// v0.21: 報酬60枚への縮小で報酬プールから外した（旧セーブ読込用に定義だけ残す）。
+public sealed class AirGift() : ElementCard(0,CardType.Skill,CardRarity.Event,TargetType.Self,AlchemyPhase.Air)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords=>[CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new DynamicVar("Energy",2)];
@@ -102,7 +105,8 @@ public sealed class AirGift() : ElementCard(0,CardType.Skill,CardRarity.Rare,Tar
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>Energy(DynamicVars["Energy"].BaseValue);
     protected override void OnUpgrade()=>DynamicVars["Energy"].UpgradeValueBy(1);
 }
-public sealed class AirRevelation() : ElementCard(1,CardType.Skill,CardRarity.Rare,TargetType.Self,AlchemyPhase.Air)
+// v0.21: 報酬60枚への縮小で報酬プールから外した（旧セーブ読込用に定義だけ残す）。
+public sealed class AirRevelation() : ElementCard(1,CardType.Skill,CardRarity.Event,TargetType.Self,AlchemyPhase.Air)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords=>[CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new CardsVar(3),new DynamicVar("Energy",1)];
@@ -110,7 +114,8 @@ public sealed class AirRevelation() : ElementCard(1,CardType.Skill,CardRarity.Ra
     protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p){await Draw(c,DynamicVars.Cards.BaseValue);await Energy(DynamicVars["Energy"].BaseValue);}
     protected override void OnUpgrade()=>DynamicVars.Cards.UpgradeValueBy(1);
 }
-public sealed class AirFavor() : ElementCard(1,CardType.Skill,CardRarity.Rare,TargetType.Self,AlchemyPhase.Air)
+// v0.20: 生命軸の追加で報酬プールから外した（旧セーブ読込用に定義だけ残す）。
+public sealed class AirFavor() : ElementCard(1,CardType.Skill,CardRarity.Event,TargetType.Self,AlchemyPhase.Air)
 {
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new PowerVar<EnergyNextTurnPower>(2)];
     public override List<(string,string)> Localization=>new CardLoc("順風","次のターン、エナジーを{EnergyNextTurnPower:diff()}得る。\n[gold]風相[/gold]");

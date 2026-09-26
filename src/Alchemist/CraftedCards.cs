@@ -155,6 +155,141 @@ public sealed class FireWhirl() : DualElementCard(1, CardType.Attack, TargetType
     protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(2);
 }
 
+// v0.21: fixed recipes of three to five materials (design-axes 7.1). Numbers are prototypes.
+
+/// <summary>Three iron. A general card that helps even at the first workshop of Act 1.</summary>
+public sealed class CraftIronBastion() : CraftedCard(1, CardType.Skill, TargetType.Self)
+{
+    public override AlchemyPhase Element => AlchemyPhase.Earth;
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(12, ValueProp.Move), new PowerVar<BlockNextTurnPower>(6)];
+    protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<BlockNextTurnPower>()];
+    protected override string CardTitle => "鋼の砦";
+    protected override string CardText => "{Block:diff()}[gold]ブロック[/gold]を得る。次のターン開始時、{BlockNextTurnPower:diff()}[gold]ブロック[/gold]を得る。\n[gold]地相[/gold]";
+    protected override async Task OnPlay(PlayerChoiceContext c, CardPlay p) { await CardBlock(p); await ApplySelf<BlockNextTurnPower>(c, DynamicVars["BlockNextTurnPower"].BaseValue); }
+    protected override void OnUpgrade() { DynamicVars.Block.UpgradeValueBy(4); DynamicVars["BlockNextTurnPower"].UpgradeValueBy(2); }
+}
+/// <summary>Three powder. A general area attack.</summary>
+public sealed class CraftPowderFlask() : CraftedCard(1, CardType.Attack, TargetType.AllEnemies)
+{
+    public override AlchemyPhase Element => AlchemyPhase.Fire;
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new DamageVar(12, ValueProp.Move)];
+    protected override string CardTitle => "爆裂フラスコ";
+    protected override string CardText => "敵全体に{Damage:diff()}ダメージを与える。\n[gold]火相[/gold]";
+    protected override Task OnPlay(PlayerChoiceContext c, CardPlay p) => HitAll(c, p, DynamicVars.Damage.BaseValue);
+    protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(4);
+}
+/// <summary>Three ether. Free draw and energy, exhausted so it cannot feed a loop.</summary>
+public sealed class CraftEtherCatalyst() : CraftedCard(0, CardType.Skill, TargetType.Self)
+{
+    public override AlchemyPhase Element => AlchemyPhase.Air;
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(2), new DynamicVar("Energy", 1)];
+    protected override string CardTitle => "精霊の触媒";
+    protected override string CardText => "カードを{Cards:diff()}枚引き、エナジーを{Energy:diff()}得る。\n[gold]風相[/gold]";
+    protected override async Task OnPlay(PlayerChoiceContext c, CardPlay p) { await Draw(c, DynamicVars.Cards.BaseValue); await Energy(DynamicVars["Energy"].BaseValue); }
+    protected override void OnUpgrade() => DynamicVars.Cards.UpgradeValueBy(1);
+}
+/// <summary>Two herb and an iron. The homunculus answers each attack it soaks with drain.</summary>
+public sealed class CraftPhilosophersBlood() : CraftedCard(1, CardType.Power, TargetType.Self)
+{
+    public override AlchemyPhase Element => AlchemyPhase.Water;
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<PhilosophersBloodPower>(2)];
+    protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<HomunculusPower>(), HoverTipFactory.FromPower<LifeDrainPower>()];
+    protected override string CardTitle => "賢者の血";
+    protected override string CardText => "ホムンクルスが攻撃を肩代わりするたび、攻撃した敵に[gold]ドレイン[/gold]{PhilosophersBloodPower:diff()}を与える。\n[gold]水相[/gold]";
+    protected override Task OnPlay(PlayerChoiceContext c, CardPlay p) => ApplySelf<PhilosophersBloodPower>(c, DynamicVars["PhilosophersBloodPower"].BaseValue);
+    protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
+}
+/// <summary>Two herb and an ether. Fills the homunculus every turn.</summary>
+public sealed class CraftCultureVat() : CraftedCard(2, CardType.Power, TargetType.Self)
+{
+    public override AlchemyPhase Element => AlchemyPhase.Water;
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<CultureVatPower>(3)];
+    protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<HomunculusPower>()];
+    protected override string CardTitle => "培養槽";
+    protected override string CardText => "自分のターン開始時、[gold]ホムンクルスHP[/gold]を{CultureVatPower:diff()}得る。\n[gold]水相[/gold]";
+    protected override Task OnPlay(PlayerChoiceContext c, CardPlay p) => ApplySelf<CultureVatPower>(c, DynamicVars["CultureVatPower"].BaseValue);
+    protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
+}
+/// <summary>Two iron and a herb. Reads the homunculus without spending it.</summary>
+public sealed class CraftFleshArmor() : CraftedCard(1, CardType.Skill, TargetType.Self)
+{
+    public override AlchemyPhase Element => AlchemyPhase.Earth;
+    public override bool GainsBlock => true;
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Percent", 50)];
+    protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<HomunculusPower>()];
+    protected override string CardTitle => "血肉の鎧";
+    protected override string CardText => "[gold]ホムンクルスHP[/gold]の{Percent:diff()}%の[gold]ブロック[/gold]を得る。\n[gold]地相[/gold]";
+    protected override Task OnPlay(PlayerChoiceContext c, CardPlay p)
+    {
+        int amount = (LifeAxis.State(Owner)?.HomunculusHp ?? 0) * DynamicVars["Percent"].IntValue / 100;
+        return amount > 0 ? Block(p, amount) : Task.CompletedTask;
+    }
+    protected override void OnUpgrade() => DynamicVars["Percent"].UpgradeValueBy(50);
+}
+/// <summary>Two powder and a herb. A fixed-cost exit: does nothing without the homunculus HP to spend.</summary>
+public sealed class CraftFusion() : CraftedCard(2, CardType.Attack, TargetType.AnyEnemy)
+{
+    public override AlchemyPhase Element => AlchemyPhase.Fire;
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new DamageVar(30, ValueProp.Move), new DynamicVar("Spend", 10)];
+    protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<HomunculusPower>()];
+    protected override string CardTitle => "融合";
+    protected override string CardText => "[gold]ホムンクルスHP[/gold]を{Spend}消費できれば、{Damage:diff()}ダメージを与える。\n[gold]火相[/gold]";
+    protected override async Task OnPlay(PlayerChoiceContext c, CardPlay p)
+    {
+        if (await LifeAxis.TrySpendHomunculus(c, Owner, DynamicVars["Spend"].IntValue)) await Hit(c, p, DynamicVars.Damage.BaseValue);
+    }
+    protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(10);
+}
+/// <summary>One of each material. Doubles the homunculus once, then exhausts.</summary>
+public sealed class CraftMitosis() : CraftedCard(1, CardType.Skill, TargetType.Self)
+{
+    public override AlchemyPhase Element => AlchemyPhase.Air;
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
+    protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<HomunculusPower>()];
+    protected override string CardTitle => "分裂";
+    protected override string CardText => "[gold]ホムンクルスHP[/gold]を2倍にする。\n[gold]風相[/gold]";
+    protected override Task OnPlay(PlayerChoiceContext c, CardPlay p)
+        => LifeAxis.GainHomunculus(c, Owner, LifeAxis.State(Owner)?.HomunculusHp ?? 0);
+    protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
+}
+/// <summary>Five materials. The life axis's top finisher: all of the homunculus, twice over, with no death.</summary>
+public sealed class CraftGateOfTruth() : CraftedCard(3, CardType.Attack, TargetType.AnyEnemy)
+{
+    public override AlchemyPhase Element => AlchemyPhase.Fire;
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Multiplier", 2)];
+    protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<HomunculusPower>()];
+    protected override string CardTitle => "真理の扉";
+    protected override string CardText => "[gold]ホムンクルスHP[/gold]をすべて消費し、その{Multiplier}倍のダメージを与える。\n[gold]火相[/gold]";
+    protected override async Task OnPlay(PlayerChoiceContext c, CardPlay p)
+    {
+        int spent = await LifeAxis.SpendAllHomunculus(c, Owner);
+        if (spent > 0) await Hit(c, p, spent * DynamicVars["Multiplier"].IntValue);
+    }
+    protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
+}
+/// <summary>
+/// Five materials. Enters earth, then fire, then MaterialBox enters air: up to three transitions from one
+/// play, in a fixed order with no element repeated back to back (design-axes 7.1).
+/// </summary>
+public sealed class CraftThreePhaseTorrent() : CraftedCard(1, CardType.Attack, TargetType.AnyEnemy)
+{
+    public override AlchemyPhase Element => AlchemyPhase.Air;
+    public override bool GainsBlock => true;
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new DamageVar(8, ValueProp.Move), new BlockVar(5, ValueProp.Move)];
+    protected override string CardTitle => "三相の奔流";
+    protected override string CardText => "{Damage:diff()}ダメージ。{Block:diff()}[gold]ブロック[/gold]を得る。相転移を最大3回起こす。\n[gold]地相→火相→風相[/gold]";
+    protected override async Task OnPlay(PlayerChoiceContext c, CardPlay p)
+    {
+        await Hit(c, p, DynamicVars.Damage.BaseValue);
+        await CardBlock(p);
+        if (!p.IsFirstInSeries) return;
+        await PhaseTransitions.Enter(c, Owner, AlchemyPhase.Earth, this, p.Target, p);
+        await PhaseTransitions.Enter(c, Owner, AlchemyPhase.Fire, this, p.Target, p);
+    }
+    protected override void OnUpgrade() { DynamicVars.Damage.UpgradeValueBy(3); DynamicVars.Block.UpgradeValueBy(2); }
+}
+
 /// <summary>Recipe ids to workshop cards. Ids are saved in receipts, so they never change meaning.</summary>
 public static class CraftedCards
 {
@@ -170,6 +305,16 @@ public static class CraftedCards
         "craft.steam_burst.v1" => ModelDb.Card<SteamBurst>(),
         "craft.drizzle.v1" => ModelDb.Card<Drizzle>(),
         "craft.fire_whirl.v1" => ModelDb.Card<FireWhirl>(),
+        "craft.iron_bastion.v1" => ModelDb.Card<CraftIronBastion>(),
+        "craft.powder_flask.v1" => ModelDb.Card<CraftPowderFlask>(),
+        "craft.ether_catalyst.v1" => ModelDb.Card<CraftEtherCatalyst>(),
+        "craft.philosophers_blood.v1" => ModelDb.Card<CraftPhilosophersBlood>(),
+        "craft.culture_vat.v1" => ModelDb.Card<CraftCultureVat>(),
+        "craft.flesh_armor.v1" => ModelDb.Card<CraftFleshArmor>(),
+        "craft.fusion.v1" => ModelDb.Card<CraftFusion>(),
+        "craft.mitosis.v1" => ModelDb.Card<CraftMitosis>(),
+        "craft.gate_of_truth.v1" => ModelDb.Card<CraftGateOfTruth>(),
+        "craft.three_phase_torrent.v1" => ModelDb.Card<CraftThreePhaseTorrent>(),
         _ => throw new InvalidOperationException($"未対応レシピ: {id}")
     };
 }

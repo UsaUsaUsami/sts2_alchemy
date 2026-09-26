@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using Alchemist;
 using Alchemist.Core;
 using Godot;
@@ -39,6 +39,7 @@ using MegaCrit.Sts2.addons.mega_text;
 using MegaCrit.Sts2.Core.Entities.CardRewardAlternatives;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Models.Potions;
+using MegaCrit.Sts2.Core.ValueProps;
 
 [ModInitializer(nameof(Initialize))]
 public static class Smoke
@@ -94,9 +95,9 @@ public static class Smoke
                     .Any(c=>c.Type==t && c.Rarity is CardRarity.Common or CardRarity.Uncommon or CardRarity.Rare)),
                     "the pool has an attack, a skill and a power for the merchant");
                 var craftedModels=Recipes.All.Select(r=>CraftedCards.ForRecipe(r.Id)).ToArray();
-                Check(craftedModels.Length==10 && craftedModels.All(c=>c.Rarity==CardRarity.Event && ResourceLoader.Exists(c.PortraitPath)),
-                    "ten workshop cards resolve, use the Event rarity and have portraits");
-                Check(craftedModels.Count(c=>c.Type==CardType.Power)==4 && craftedModels.OfType<DualElementCard>().Count()==6,"four core powers and six dual-phase cards");
+                Check(craftedModels.Length==20 && craftedModels.All(c=>c.Rarity==CardRarity.Event && ResourceLoader.Exists(c.PortraitPath)),
+                    "twenty workshop cards resolve, use the Event rarity and have portraits");
+                Check(craftedModels.Count(c=>c.Type==CardType.Power)==6 && craftedModels.OfType<DualElementCard>().Count()==6,"four core powers, two life powers and six dual-phase cards");
                 var inscribed=run.CreateCard(ModelDb.Card<LavaShot>(),player);
                 ((LavaShot)inscribed).AlchemistRareModifier="rare.mercury";
                 var inscribedLoaded=(LavaShot)CardModel.FromSerializable(inscribed.ToSerializable());
@@ -105,14 +106,14 @@ public static class Smoke
                 Check(inscribedLoaded.GetDescriptionForPile(PileType.None).Contains("保留"),"an inscribed crafted card shows its inscription text");
                 var rewardPool=ModelDb.CardPool<AlchemyCardPool>().AllCards.Where(c=>c.Rarity is CardRarity.Common or CardRarity.Uncommon or CardRarity.Rare).ToArray();
                 GD.Print($"ALCHEMIST_STAT pool={rewardPool.Length} common={rewardPool.Count(c=>c.Rarity==CardRarity.Common)} uncommon={rewardPool.Count(c=>c.Rarity==CardRarity.Uncommon)} rare={rewardPool.Count(c=>c.Rarity==CardRarity.Rare)} attack={rewardPool.Count(c=>c.Type==CardType.Attack)} skill={rewardPool.Count(c=>c.Type==CardType.Skill)} power={rewardPool.Count(c=>c.Type==CardType.Power)}");
-                // v0.19 adds the seven life-axis exemplar cards on top of v0.17's 76; replacing slots is the next stage.
-                Check(rewardPool.Length==83 && rewardPool.Count(c=>c.Rarity==CardRarity.Common)==21 && rewardPool.Count(c=>c.Rarity==CardRarity.Uncommon)==35
-                    && rewardPool.Count(c=>c.Rarity==CardRarity.Rare)==27,"reward pool is 83 cards: 21 common, 35 uncommon, 27 rare");
-                Check(rewardPool.Count(c=>c.Type==CardType.Power)==15 && !rewardPool.Any(c=>c.Type==CardType.Power && c.Rarity==CardRarity.Common),
-                    "fifteen powers, none of them common, as in the base pools");
+                // v0.21 (design-axes 8): 60 reward cards, phase 17 / life 17 / general 26, beside 20 workshop cards.
+                Check(rewardPool.Length==60 && rewardPool.Count(c=>c.Rarity==CardRarity.Common)==15 && rewardPool.Count(c=>c.Rarity==CardRarity.Uncommon)==25
+                    && rewardPool.Count(c=>c.Rarity==CardRarity.Rare)==20,"reward pool is 60 cards: 15 common, 25 uncommon, 20 rare");
+                Check(rewardPool.Count(c=>c.Type==CardType.Power)==10 && !rewardPool.Any(c=>c.Type==CardType.Power && c.Rarity==CardRarity.Common),
+                    "ten powers, none of them common, as in the base pools");
                 int ElementCount(AlchemyPhase e)=>rewardPool.Count(c=>c is AlchemyCard a && a.Element==e);
-                Check(ElementCount(AlchemyPhase.Earth)==17 && ElementCount(AlchemyPhase.Water)==19 && ElementCount(AlchemyPhase.Fire)==18
-                    && ElementCount(AlchemyPhase.Air)==17,"reward cards per element after the life cards: earth 17, water 19, fire 18, air 17");
+                Check(ElementCount(AlchemyPhase.Earth)==12 && ElementCount(AlchemyPhase.Water)==12 && ElementCount(AlchemyPhase.Fire)==14
+                    && ElementCount(AlchemyPhase.Air)==11,"reward cards per element at 60: earth 12, water 12, fire 14, air 11");
                 // 原則4: every card that could fuel an in-turn loop has a profile the rule test searches.
                 foreach(var loopCandidate in ModelDb.CardPool<AlchemyCardPool>().AllCards.OfType<AlchemyCard>().Where(c=>c is not MaterialCard))
                 {
@@ -282,8 +283,8 @@ public static class Smoke
             AccessTools.Field(typeof(WorkshopUi),"materialCraftMode").SetValue(null,true);
             AccessTools.Method(typeof(WorkshopUi),"Refresh").Invoke(null,null);
             buttons=Descendants<Button>(uiOverlay!).ToArray();
-            Check(Descendants<Label>(uiOverlay!).Any(x=>x.Text.Contains("素材から錬成")) && buttons.Count(x=>x.Text.Contains("空きスロット"))==2,
-                "material-first crafting grid opens with two empty slots");
+            Check(Descendants<Label>(uiOverlay!).Any(x=>x.Text.Contains("素材から錬成")) && buttons.Count(x=>x.Text.Contains("空きスロット"))==5,
+                "material-first crafting grid opens with five empty slots (recipes take two to five materials)");
             AccessTools.Method(typeof(WorkshopUi),"AddCraftMaterial").Invoke(null,[Alchemist.Core.Material.Iron]);
             AccessTools.Method(typeof(WorkshopUi),"AddCraftMaterial").Invoke(null,[Alchemist.Core.Material.Iron]);
             labels=Descendants<Label>(uiOverlay!).Select(x=>x.Text).ToArray();
@@ -433,7 +434,7 @@ public static class Smoke
             Check((foe.GetPower<VulnerablePower>()?.Amount ?? 0)==vulnerableBefore+1,"the water core adds vulnerable to the water transition");
             // Life axis (design-axes.md 3): drain, the homunculus and death.
             var life=box.Combat.Life;
-            Check(!life.HomunculusAppeared && player.Creature.GetPower<HomunculusPower>() is null,"no homunculus before any life card");
+            Check(!life.HomunculusAppeared && LifeAxis.Pet(player) is null,"no homunculus before any life card");
             foe.SetCurrentHpInternal(999);
             await PowerCmd.Apply<LifeDrainPower>(new ThrowingPlayerChoiceContext(),foe,5,player.Creature,null);
             var drain=foe.GetPower<LifeDrainPower>()!;
@@ -442,7 +443,9 @@ public static class Smoke
             await drain.AfterSideTurnStart(CombatSide.Enemy,[foe],cs);
             Check(foe.CurrentHp==994 && drain.Amount==4 && life.HomunculusHp==5 && life.HpDrainedThisCombat==5,
                 $"drain takes its stacks as HP on the enemy turn start, feeds the homunculus and decays (hp {foe.CurrentHp}, stacks {drain.Amount}, homunculus {life.HomunculusHp})");
-            Check(player.Creature.GetPower<HomunculusPower>()?.DisplayAmount==5,"the homunculus appears with its HP on screen");
+            var pet=LifeAxis.Pet(player);
+            Check(pet is { IsAlive: true, CurrentHp: 5 } && pet.GetPower<HomunculusPower>() is not null && cs.Allies.Contains(pet),
+                $"the homunculus steps onto the field as a pet with the drained HP (hp {pet?.CurrentHp})");
             await Play(cs.CreateCard<LifeHarvest>(player),null);
             Check(foe.CurrentHp==994-9 && life.HomunculusHp==14 && foe.GetPower<LifeDrainPower>()?.Amount==1,
                 $"life harvest triggers drain three times, decaying each time (hp {foe.CurrentHp}, homunculus {life.HomunculusHp})");
@@ -469,8 +472,52 @@ public static class Smoke
             await player.Creature.GetPower<DeathMarkPower>()!.AfterSideTurnStart(CombatSide.Player,[player.Creature],cs);
             Check(player.Creature.IsAlive && player.Creature.GetPower<DeathMarkPower>() is null && !player.Potions.Contains(fairy.potion),
                 "death resolves at your turn start through the normal kill, so a fairy in a bottle saves you and clears it");
+            // v0.20: the homunculus soaks attacks that get past block, like Osty.
+            player.Creature.LoseBlockInternal(player.Creature.Block);
+            await CreatureCmd.GainBlock(player.Creature,4,ValueProp.Unpowered,null);
+            int ownHpBeforeHit=player.Creature.CurrentHp;
+            await CreatureCmd.Damage(new ThrowingPlayerChoiceContext(),player.Creature,10,ValueProp.Move,null,null);
+            Check(player.Creature.CurrentHp==ownHpBeforeHit && pet!.CurrentHp==24-6 && LifeAxis.State(player)!.HomunculusHp==18,
+                $"an attack past block hits the homunculus, not the alchemist (pet {pet!.CurrentHp}, alchemist lost {ownHpBeforeHit-player.Creature.CurrentHp})");
+            await CreatureCmd.Damage(new ThrowingPlayerChoiceContext(),player.Creature,3,ValueProp.Unblockable|ValueProp.Unpowered,null,null);
+            Check(player.Creature.CurrentHp==ownHpBeforeHit-3 && pet.CurrentHp==18,"HP loss that is not an attack stays with the alchemist");
+            foe.SetCurrentHpInternal(999);
+            await Play(cs.CreateCard<LifeBullet>(player),foe);
+            Check(pet.CurrentHp==13 && 999-foe.CurrentHp>=15,$"the life bullet spends 5 of the homunculus for its big hit (pet {pet.CurrentHp}, dealt {999-foe.CurrentHp})");
             await Play(cs.CreateCard<LifeReclaim>(player),null);
-            Check(life.HomunculusHp==0 && player.Creature.GetPower<HomunculusPower>()?.DisplayAmount==0,"reclaim spends the homunculus, which stays shown at 0");
+            Check(LifeAxis.State(player)!.HomunculusHp==0 && pet.IsDead && LifeAxis.Pet(player)==pet,"reclaim spends the homunculus to 0 and it falls, staying on the field");
+            ownHpBeforeHit=player.Creature.CurrentHp;
+            player.Creature.LoseBlockInternal(player.Creature.Block);
+            await CreatureCmd.Damage(new ThrowingPlayerChoiceContext(),player.Creature,4,ValueProp.Move,null,null);
+            Check(player.Creature.CurrentHp==ownHpBeforeHit-4,"a fallen homunculus no longer soaks attacks");
+            await Play(cs.CreateCard<LifeFleshWall>(player),null);
+            Check(pet.IsAlive && pet.CurrentHp==6 && LifeAxis.Pet(player)==pet,$"gaining homunculus HP revives the same pet (hp {pet.CurrentHp})");
+            player.Creature.LoseBlockInternal(player.Creature.Block); // 肉の壁 is earth: its transition gave block
+            await CreatureCmd.Damage(new ThrowingPlayerChoiceContext(),player.Creature,10,ValueProp.Move,null,null);
+            Check(pet.IsDead && player.Creature.CurrentHp==ownHpBeforeHit-4-4,"damage past the homunculus's HP goes through to the alchemist");
+            // v0.21 workshop life cards.
+            await Play(cs.CreateCard<LifeFleshWall>(player),null);
+            await Play(cs.CreateCard<CraftMitosis>(player),null);
+            Check(pet.IsAlive && pet.CurrentHp==12,$"mitosis doubles the homunculus (hp {pet.CurrentHp})");
+            await Play(cs.CreateCard<EarthenGuard>(player),null); // enter earth first, so the armor itself causes no transition
+            int armorBlockBefore=player.Creature.Block;
+            await Play(cs.CreateCard<CraftFleshArmor>(player),null);
+            Check(player.Creature.Block-armorBlockBefore==6,$"flesh armor gives half the homunculus as block (got {player.Creature.Block-armorBlockBefore})");
+            await ApplySelfPower<PhilosophersBloodPower>(2);
+            player.Creature.LoseBlockInternal(player.Creature.Block);
+            int bloodDrainBefore=foe.GetPower<LifeDrainPower>()?.Amount ?? 0;
+            await CreatureCmd.Damage(new ThrowingPlayerChoiceContext(),player.Creature,3,ValueProp.Move,foe,null,null);
+            Check(pet.CurrentHp<12 && (foe.GetPower<LifeDrainPower>()?.Amount ?? 0)==bloodDrainBefore+2,"philosopher's blood drains the attacker whose hit the homunculus soaked");
+            await PowerCmd.Remove(player.Creature.GetPower<PhilosophersBloodPower>()!);
+            await LifeAxis.GainHomunculus(new ThrowingPlayerChoiceContext(),player,10-pet.CurrentHp);
+            foe.SetCurrentHpInternal(999);
+            await Play(cs.CreateCard<CraftFusion>(player),foe);
+            Check(pet.IsDead && 999-foe.CurrentHp>=30,$"fusion spends 10 of the homunculus for a 30 hit (dealt {999-foe.CurrentHp})");
+            int transitionsBeforeTorrent=box.Combat.Phases.TransitionCount;
+            var phaseBeforeTorrent=box.Combat.Phases.Current;
+            await Play(cs.CreateCard<CraftThreePhaseTorrent>(player),foe);
+            Check(box.Combat.Phases.Current==AlchemyPhase.Air && box.Combat.Phases.TransitionCount-transitionsBeforeTorrent==(phaseBeforeTorrent==AlchemyPhase.Earth?2:3),
+                $"the five-material card passes earth, fire and air, up to three transitions ({box.Combat.Phases.TransitionCount-transitionsBeforeTorrent} from {phaseBeforeTorrent})");
             async Task ApplySelfPower<T>(int amount) where T:PowerModel => await PowerCmd.Apply<T>(new ThrowingPlayerChoiceContext(),player.Creature,amount,player.Creature,null);
             // Every reward card once, in this already-running battle: debug room changes mid-combat leave
             // disposed card nodes in the headless node pool, so the sweep avoids a fresh room.
@@ -495,6 +542,39 @@ public static class Smoke
             // The sweep played 人体錬成 and デバフ転写; no turn passes here, but clear the marks before later rooms.
             foreach(var marked in sweepState.Creatures.Where(x=>x.GetPower<DeathMarkPower>() is not null).ToArray())
                 await PowerCmd.Remove(marked.GetPower<DeathMarkPower>());
+            // design-axes 6.2: each material card names its material and is much stronger when it can spend one.
+            {
+                // The sweep leaves the hand full, so these play straight from creation like the sweep does.
+                Task PlayLoose(CardModel card,Creature? target)=>CardCmd.AutoPlay(new ThrowingPlayerChoiceContext(),card,target,skipCardPileVisuals:true);
+                var foe0=sweepState.Enemies.First(e=>!e.IsDead);
+                foreach(var enemy in sweepState.Enemies.Where(e=>!e.IsDead)) { enemy.SetMaxHpInternal(999); enemy.SetCurrentHpInternal(999); }
+                box.Inventory.Counts=[0,1,1,0];
+                // Relative to the no-powder hit: strength and multipliers left over from the sweep scale both.
+                int Health()=>foe0.CurrentHp+foe0.Block;
+                int h0=Health();
+                await PlayLoose(sweepState.CreateCard<AlchMaterialBomb>(player),null);
+                int h1=Health();
+                Check(box.Inventory.Counts[(int)Alchemist.Core.Material.Powder]==0,"material bomb spends the powder");
+                await PlayLoose(sweepState.CreateCard<AlchMaterialBomb>(player),null);
+                int h2=Health();
+                Check((h0-h1)-(h1-h2)>=11,$"with powder the bomb hits at least 11 harder than without (dealt {h0-h1} then {h1-h2})");
+                int ironBlockBefore=player.Creature.Block;
+                box.Inventory.Counts[(int)Alchemist.Core.Material.Iron]=1;
+                await PlayLoose(sweepState.CreateCard<EarthIronBulwark>(player),null);
+                Check(player.Creature.Block-ironBlockBefore>=13 && box.Inventory.Counts[(int)Alchemist.Core.Material.Iron]==0,$"iron bulwark spends an iron for 13 block (block {player.Creature.Block})");
+                int drainBefore=foe0.GetPower<LifeDrainPower>()?.Amount ?? 0;
+                await PlayLoose(sweepState.CreateCard<WaterHerbDrip>(player),foe0);
+                Check((foe0.GetPower<LifeDrainPower>()?.Amount ?? 0)==drainBefore+4 && box.Inventory.Counts[(int)Alchemist.Core.Material.Herb]==0,"herb drip spends a herb for drain 4");
+                await PlayLoose(sweepState.CreateCard<WaterHerbDrip>(player),foe0);
+                Check((foe0.GetPower<LifeDrainPower>()?.Amount ?? 0)==drainBefore+5,"without herb the drip gives drain 1");
+                var catalysis=sweepState.CreateCard<AlchCatalysis>(player);
+                box.Inventory.Counts=[1,1,1,0];
+                Check(!catalysis.CanPlay(),"catalysis is unplayable without ether, even with other materials");
+                box.Inventory.Counts=[1,0,0,1];
+                Check(catalysis.CanPlay(),"catalysis is playable with an ether");
+                await PlayLoose(catalysis,null);
+                Check(box.Inventory.Counts[(int)Alchemist.Core.Material.Ether]==0 && box.Inventory.Counts[(int)Alchemist.Core.Material.Iron]==1,"catalysis spends the ether, not the iron");
+            }
             box.Inventory.Counts=[0,0,0,0]; // Leave room in the box for the reward and merchant checks below.
             var replayCard=player.PlayerCombatState.AllCards.OfType<LavaShot>().Single(c=>c.AlchemistRareModifier=="rare.stardust");
             var replayTarget=player.Creature.CombatState!.Enemies[0];
@@ -535,7 +615,7 @@ public static class Smoke
             int chosenBefore=box.Inventory.Count(candidates[0]);
             AccessTools.Method(typeof(WorkshopUi),"TakeOffer").Invoke(null,[eliteSlots[0].OfferId,candidates[0]]);
             Check(await choosing,"the rewards screen is released once the slot is resolved");
-            Check(box.Inventory.Count(candidates[0])==chosenBefore+AlchemyState.YieldPerEvent && box.Inventory.Offers.Count==0,"choosing grants the doubled harvest yield");
+            Check(box.Inventory.Count(candidates[0])==chosenBefore+1 && box.Inventory.Offers.Count==0,"choosing grants the one chosen material");
             var eliteAfterTake=new RewardsSet(player).WithRewardsFromRoom(eliteRoom);
             await eliteAfterTake.GenerateWithoutOffering();
             Check(!eliteAfterTake.Rewards.OfType<MaterialReward>().Any(),"a taken slot is never offered again");

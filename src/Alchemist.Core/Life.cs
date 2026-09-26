@@ -1,9 +1,10 @@
-namespace Alchemist.Core;
+﻿namespace Alchemist.Core;
 
 /// <summary>
-/// Combat-only state of the life axis (design-axes.md 3). The homunculus is a vessel, not a creature: it only
-/// holds a number, appears the first time that number is gained, and is thrown away with the combat.
-/// Only drain and cards that say so add to it; there is deliberately no shared "gain on damage" rule.
+/// Combat-only state of the life axis (design-axes.md 3). The homunculus stands on the field as the
+/// alchemist's pet (v0.20, like the Necrobinder's Osty) and its HP is this number: it appears the first time
+/// the number is gained, soaks attacks, and is thrown away with the combat. Only drain and cards that say so
+/// add to it; there is deliberately no shared "gain on damage" rule.
 /// </summary>
 public sealed class LifeState
 {
@@ -20,6 +21,9 @@ public sealed class LifeState
         HomunculusHp += amount;
         HomunculusAppeared = true;
     }
+
+    /// The pet took damage for the alchemist: the game creature's HP is authoritative for that loss.
+    public void SyncHomunculus(int hp) => HomunculusHp = Math.Max(0, hp);
 
     /// Fixed-cost exits: all or nothing, so a card never half-resolves on too little HP.
     public bool TrySpendHomunculus(int amount)

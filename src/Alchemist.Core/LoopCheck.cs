@@ -161,6 +161,7 @@ public static class LoopProfiles
         El("TidalGuard", 1, W, draw: 1),
         El("EarthBulwarkBash", 1, E), El("EarthBulwarkBash+", 0, E),
         El("WaterCatalyst", 1, W), El("WaterCatalyst+", 0, W),
+        El("LifeCorrosiveEmbrace", 1, W), El("LifeCorrosiveEmbrace+", 0, W),
         El("FireSpark", 0, F), El("FireSpark+", 0, F),
         // Air
         El("Tailwind", 0, A, draw: 1, exhaust: true), El("Tailwind+", 0, A, draw: 2, exhaust: true),
@@ -187,5 +188,8 @@ public static class LoopProfiles
         // Powers (0 cost once upgraded). None of them draws or gains energy within the turn any more.
         new("AirSky", 2, IsPower: true), new("AirWindReading", 1, IsPower: true), new("AirAfterimage", 1, IsPower: true),
         new("WaterStill", 1, IsPower: true),
+        new("CraftPhilosophersBlood", 1, IsPower: true),
+        El("CraftEtherCatalyst", 0, A, draw: 2, energy: 1, exhaust: true), El("CraftEtherCatalyst+", 0, A, draw: 3, energy: 1, exhaust: true),
+        El("CraftMitosis", 1, A, exhaust: true), El("CraftMitosis+", 0, A, exhaust: true),
         new("EarthCore", 1, IsPower: true), new("WaterCore", 1, IsPower: true), new("FireCore", 1, IsPower: true), new("AirCore", 1, IsPower: true)];
 }

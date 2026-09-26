@@ -117,7 +117,7 @@ public sealed class LifeReclaim() : ElementCard(2,CardType.Skill,CardRarity.Rare
     public override List<(string,string)> Localization=>new CardLoc("還元","[gold]ホムンクルスHP[/gold]をすべて消費し、その半分だけHPを回復する。\n[gold]地相[/gold]");
     protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p)
     {
-        int heal=LifeAxis.SpendAllHomunculus(Owner)/2;
+        int heal=(await LifeAxis.SpendAllHomunculus(c,Owner))/2;
         if(heal>0) await CreatureCmd.Heal(Owner.Creature,heal);
     }
     protected override void OnUpgrade()=>EnergyCost.UpgradeBy(-1);
