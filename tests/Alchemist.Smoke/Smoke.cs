@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using Alchemist;
 using Alchemist.Core;
 using Godot;
@@ -40,6 +40,10 @@ using MegaCrit.Sts2.Core.Entities.CardRewardAlternatives;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Models.Potions;
 using MegaCrit.Sts2.Core.ValueProps;
+using MegaCrit.Sts2.Core.Models.Events;
+using MegaCrit.Sts2.Core.Models.Relics;
+using MegaCrit.Sts2.Core.Models.Characters;
+using MegaCrit.Sts2.Core.Events;
 
 [ModInitializer(nameof(Initialize))]
 public static class Smoke
@@ -164,6 +168,24 @@ public static class Smoke
                 Check(mapsOk,"workshop placement valid across 100 real maps");
                 Check(everyRouteOk,"claimed route coverage holds on 100 real maps");
                 Check(uncovered<=2,"maps without full coverage stay rare and are reported");
+                // v0.22 (design-axes 6.3 G-3): Darv offers the crucible to the alchemist only, deterministically.
+                IReadOnlyList<EventOption> DarvOptions(Player owner)
+                {
+                    var darv=(Darv)ModelDb.Event<Darv>().ToMutable();
+                    AccessTools.Property(typeof(EventModel),"Owner").SetValue(darv,owner);
+                    AccessTools.Property(typeof(EventModel),"Rng").SetValue(darv,new Rng(12345));
+                    return (IReadOnlyList<EventOption>)AccessTools.Method(typeof(Darv),"GenerateInitialOptions").Invoke(darv,null)!;
+                }
+                var darvOptions=DarvOptions(player);
+                Check(darvOptions.Count(o=>o.Relic is DarvCrucible)==1 && darvOptions.Count>=3,"Darv offers the crucible to the alchemist in place of one relic");
+                Check(DarvOptions(player).Select(o=>o.Relic?.Id).SequenceEqual(darvOptions.Select(o=>o.Relic?.Id)),"Darv's options stay the same when generated again");
+                var ironclad=Player.CreateForNewRun(ModelDb.Character<Ironclad>(),UnlockState.all,1);
+                RunState.CreateForNewRun([ironclad],ActModel.GetDefaultList().Select(a=>a.ToMutable()).ToList(),[],GameMode.Standard,0,"ALCHEMIST_SMOKE_02");
+                Check(!DarvOptions(ironclad).Any(o=>o.Relic is DarvCrucible),"other characters never see the crucible");
+                Check(ResourceLoader.Exists(ModelDb.Relic<DarvCrucible>().PackedIconPath) && ResourceLoader.Exists(ModelDb.Relic<RefinedMaterialBox>().PackedIconPath),
+                    "the new relics have icons");
+                var touch=(TouchOfOrobas)ModelDb.Relic<TouchOfOrobas>().ToMutable();
+                Check(touch.SetupForPlayer(player) && touch.UpgradedRelic==ModelDb.Relic<RefinedMaterialBox>().Id,"Orobas refines the material box instead of turning it into a Circlet");
                 GD.Print("ALCHEMIST_SMOKE_COMPLETE");
                 _ = CombatLoop();
             }
@@ -239,7 +261,7 @@ public static class Smoke
             await RunManager.Instance.EnterRoomDebug(RoomType.Monster,model:ModelDb.Encounter<BowlbugsWeak>().ToMutable(),showTransition:false);
             var box=player.GetRelic<MaterialBox>()!;
             await Until(()=>box.Combat != null && player.PlayerCombatState?.Hand.Cards.Count>0,"first battle ready");
-            Check(box.Combat!.Phases.Current==AlchemyPhase.None,"real battle starts without an element");
+            Check(PhaseRules.IsElement(box.Combat!.Phases.Current) && box.Combat.Phases.TransitionCount==0,"real battle opens in an element without a transition");
             await Clear("first battle");
             Check(box.Inventory.Total==0,"enemy deaths grant no materials");
             var normalSet=new RewardsSet(player).WithRewardsFromRoom((CombatRoom)run.CurrentRoom!);
@@ -340,7 +362,9 @@ public static class Smoke
             await (Task)AccessTools.Method(typeof(WorkshopUi),"LeaveMapWorkshop").Invoke(null,null)!;
             await RunManager.Instance.EnterRoomDebug(RoomType.Monster,model:ModelDb.Encounter<BowlbugsWeak>().ToMutable(),showTransition:false);
             await Until(()=>box.Combat != null && player.PlayerCombatState?.Hand.Cards.Count>0,"second battle ready");
-            Check(box.Combat!.Phases.Current==AlchemyPhase.None,"next battle resets the elemental phase");
+            Check(PhaseRules.IsElement(box.Combat!.Phases.Current) && box.Combat.Phases.TransitionCount==0,"next battle opens afresh in an element");
+            // Fixture: the checks below were written for a neutral opening (no starter relic), so reset to it.
+            box.Combat.Phases.Open(AlchemyPhase.None);
             // Wait for the opening draw and the relic's tokens to finish; playing earlier races the turn-start draw.
             await Until(()=>player.PlayerCombatState!.Hand.Cards.OfType<FurnaceActivation>().Count()==HarvestCombat.FurnaceLimit
                 && player.PlayerCombatState.Hand.Cards.Count>=5+HarvestCombat.FurnaceLimit,"opening hand and furnace tokens dealt");
@@ -725,6 +749,33 @@ public static class Smoke
                 }
             }
             Check(box.Combat!.FurnaceUsed==2,"furnace harvesting is capped at two per combat");
+            await Clear("furnace battle");
+            // v0.22 (G-2): Orobas swaps the box for its refined form; the inventory must come along.
+            box.Inventory.Counts=[1,2,3,0];
+            var orobas=(TouchOfOrobas)ModelDb.Relic<TouchOfOrobas>().ToMutable();
+            orobas.SetupForPlayer(player);
+            await RelicCmd.Obtain(orobas,player);
+            var refinedBox=player.GetRelic<MaterialBox>();
+            Check(refinedBox is RefinedMaterialBox && player.Relics.OfType<MaterialBox>().Count()==1 && refinedBox.Inventory.Counts.SequenceEqual([1,2,3,0]),
+                "Orobas refines the box and the materials come with it");
+            box=refinedBox!;
+            await RunManager.Instance.EnterRoomDebug(RoomType.Monster,model:ModelDb.Encounter<BowlbugsWeak>().ToMutable(),showTransition:false);
+            await Until(()=>box.Combat!=null && player.PlayerCombatState?.Hand.Cards.OfType<FurnaceActivation>().Count()==HarvestCombat.RefinedFurnaceLimit,"refined furnace battle ready");
+            Check(box.Combat!.Limit==HarvestCombat.RefinedFurnaceLimit,"the refined box deals three furnace activations and allows three");
+            // v0.22 (G-3/6.4): Darv's crucible adds one material of the current phase per turn, never past a full box.
+            var crucible=(DarvCrucible)await RelicCmd.Obtain(ModelDb.Relic<DarvCrucible>().ToMutable(),player);
+            var turnState=player.Creature.CombatState!;
+            var phaseMaterial=AlchemyPhaseState.MaterialFor(box.Combat.Phases.Current)!.Value;
+            int beforeTrickle=box.Inventory.Counts[(int)phaseMaterial];
+            turnState.RoundNumber+=10;
+            await crucible.AfterSideTurnStart(CombatSide.Player,[player.Creature],turnState);
+            await crucible.AfterSideTurnStart(CombatSide.Player,[player.Creature],turnState);
+            Check(box.Inventory.Counts[(int)phaseMaterial]==beforeTrickle+1,"the crucible grants one material of the current phase once per turn");
+            box.Inventory.Counts=[AlchemyState.Capacity,0,0,0];
+            turnState.RoundNumber++;
+            await crucible.AfterSideTurnStart(CombatSide.Player,[player.Creature],turnState);
+            Check(box.Inventory.Total==AlchemyState.Capacity && box.Inventory.Pending.Count==0,"a full box receives nothing from the crucible and queues nothing");
+            box.Inventory.Counts=[0,0,0,0];
             GD.Print("ALCHEMIST_LOOP_COMPLETE");
         }
         catch(Exception ex) { GD.PushError("ALCHEMIST_LOOP_FAIL "+ex); }

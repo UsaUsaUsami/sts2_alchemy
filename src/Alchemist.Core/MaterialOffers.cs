@@ -69,14 +69,14 @@ public static class MaterialOffers
         return result;
     }
 
-    private static ulong Hash(string key)
+    internal static ulong Hash(string key)
     {
         ulong hash = 14695981039346656037;
         foreach (char c in key) unchecked { hash = (hash ^ c) * 1099511628211; }
         return hash;
     }
 
-    private static ulong Mix(ulong x) // splitmix64
+    internal static ulong Mix(ulong x) // splitmix64
     {
         unchecked
         {

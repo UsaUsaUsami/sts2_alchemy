@@ -321,4 +321,30 @@ Check(LoopCheck.FindLoops([spark,LoopProfiles.All.Single(c=>c.Id=="AlchFlux+")],
 Check(LoopProfiles.All.Select(c=>c.Id).Distinct().Count()==LoopProfiles.All.Count,"loop profiles have unique ids");
 var poolLoops=LoopCheck.FindLoops(LoopProfiles.All,3);
 Check(poolLoops.Count==0,"no combination of up to three current cards loops within a turn: "+string.Join(" / ",poolLoops.Take(5)));
+// v0.22 (design-axes 6.3 G-1): combats open in a seeded random element, which is not a transition.
+var opened=new AlchemyPhaseState();
+opened.Open(PhaseRules.Opening(42,"3:room:opening"));
+Check(PhaseRules.IsElement(opened.Current) && opened.TransitionCount==0 && opened.TransitionsThisTurn==0 && opened.Previous==AlchemyPhase.None,
+    "the opening element counts no transition and leaves no previous phase");
+Check(PhaseRules.Opening(42,"3:room:opening")==PhaseRules.Opening(42,"3:room:opening"),"the opening element is stable for the same seed and combat");
+var openings=Enumerable.Range(0,200).Select(i=>PhaseRules.Opening(7,$"{i}:opening")).ToArray();
+Check(PhaseRules.Elements.All(e=>openings.Count(x=>x==e)>=30),"every element opens combats about equally often");
+var openedDifferent=PhaseRules.Elements.First(e=>e!=opened.Current);
+var firstFromOpening=opened.Enter(openedDifferent);
+Check(firstFromOpening.Triggered && opened.TransitionCount==1,"the first elemental card after a different opening element transitions");
+Check(!new AlchemyPhaseState().Enter(AlchemyPhase.Earth).Triggered,"without an opening element the neutral start still does not trigger");
+Reject(()=>opened.Open(AlchemyPhase.Earth),"the opening element cannot be changed after a transition");
+// v0.22 (G-2): the refined starter relic raises the per-combat furnace cap to three; ancients are the only exception.
+var refined=new HarvestCombat(HarvestCombat.RefinedFurnaceLimit);
+refined.Phases.Open(AlchemyPhase.Fire);
+Check(refined.UseFurnace() && refined.UseFurnace() && refined.UseFurnace() && !refined.UseFurnace() && refined.FurnaceUsed==3,
+    "the refined box allows three furnace uses and no more");
+Check(new HarvestCombat().Limit==HarvestCombat.FurnaceLimit,"the ordinary box keeps two");
+Reject(()=>new HarvestCombat(4),"no furnace cap above the refined three");
+// v0.22 (6.4): every-turn gains are skipped, not queued, when the box is full.
+var trickle=new AlchemyState();
+Check(trickle.GrantIfRoom("t1",Material.Iron) && trickle.Counts[0]==1 && !trickle.GrantIfRoom("t1",Material.Iron),"a trickle gain is received once per id");
+for(int i=0;trickle.Total<AlchemyState.Capacity;i++) trickle.Grant($"fill{i}",Material.Herb);
+Check(!trickle.GrantIfRoom("t2",Material.Iron) && trickle.Pending.Count==0 && !trickle.Received.Contains("t2") && trickle.Total==AlchemyState.Capacity,
+    "a full box does not receive a trickle gain and queues nothing");
 Console.WriteLine($"{passed} checks passed.");

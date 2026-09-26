@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 
 namespace Alchemist.Core;
 
@@ -99,6 +99,18 @@ public sealed class AlchemyState
         return granted;
     }
     public bool GrantHarvest(string id, Material material) => GrantHarvest(id, MaterialChoice.Normal(material));
+
+    /// design-axes 6.4: small every-turn gains (Darv's relic) are simply not received when the box is full or
+    /// a receipt is still waiting. No exchange screen and no pending entry, so a full box cannot turn them
+    /// into a backlog. Returns false when nothing was added.
+    public bool GrantIfRoom(string id, Material material)
+    {
+        if (Received.Contains(id) || Total >= Capacity || Pending.Count > 0) return false;
+        Received.Add(id);
+        Counts[(int)material]++;
+        Revision++;
+        return true;
+    }
 
     public bool HasOffer(string id) => Offers.Any(o => o.Id == id);
 
@@ -335,7 +347,7 @@ public sealed class AlchemyState
     }
 }
 
-public sealed class HarvestCombat
+public sealed class HarvestCombat(int furnaceLimit = HarvestCombat.FurnaceLimit)
 {
     public AlchemyPhaseState Phases { get; } = new();
     /// Homunculus and drain totals. A new HarvestCombat per combat is what resets them.
@@ -344,7 +356,13 @@ public sealed class HarvestCombat
     public bool FurnaceTokensGranted { get; set; }
     public string LastTransition { get; set; } = "";
     public const int FurnaceLimit = 2;
-    public bool CanUseFurnace => FurnaceUsed < FurnaceLimit && Phases.Current != AlchemyPhase.None;
+    /// design-axes 6.3 G-2: the starter relic refined at an ancient deals one more furnace. Ancients are the
+    /// only exception to the two-per-combat cap (6.1).
+    public const int RefinedFurnaceLimit = 3;
+    /// This combat's cap, fixed when the combat starts.
+    public int Limit { get; } = furnaceLimit is >= 1 and <= RefinedFurnaceLimit ? furnaceLimit
+        : throw new ArgumentOutOfRangeException(nameof(furnaceLimit));
+    public bool CanUseFurnace => FurnaceUsed < Limit && Phases.Current != AlchemyPhase.None;
     public bool UseFurnace()
     {
         if (!CanUseFurnace) return false;

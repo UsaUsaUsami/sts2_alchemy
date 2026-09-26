@@ -16,6 +16,16 @@ public sealed class AlchemyPhaseState(bool triggerFromNone = false)
     public int TransitionsThisTurn { get; private set; }
     public void StartTurn() => TransitionsThisTurn = 0;
 
+    /// Sets the phase a combat opens in (design-axes 6.3 G-1). Not a transition: nothing resolves, nothing
+    /// counts and there is no previous phase. Only valid before the first transition of the combat.
+    public void Open(AlchemyPhase start)
+    {
+        if (start != AlchemyPhase.None && !PhaseRules.IsElement(start)) throw new ArgumentOutOfRangeException(nameof(start));
+        if (TransitionCount > 0) throw new InvalidOperationException("相転移の後には開始相を変えられません。");
+        Current = start;
+        Previous = AlchemyPhase.None;
+    }
+
     public PhaseTransition Enter(AlchemyPhase next)
     {
         if (!PhaseRules.IsElement(next)) throw new ArgumentOutOfRangeException(nameof(next));
@@ -71,6 +81,11 @@ public static class PhaseRules
         AlchemyPhase.Air => AlchemyPhase.Earth,
         _ => AlchemyPhase.None
     };
+
+    /// The element a combat opens in, from the run seed and a per-combat key. Like the reward slots, it
+    /// draws from none of the game's own random streams.
+    public static AlchemyPhase Opening(ulong seed, string key)
+        => Elements[(int)(MaterialOffers.Mix(seed ^ MaterialOffers.Hash(key)) % (ulong)Elements.Count)];
 
     public static Material? MaterialFor(AlchemyPhase phase) => phase switch
     {
