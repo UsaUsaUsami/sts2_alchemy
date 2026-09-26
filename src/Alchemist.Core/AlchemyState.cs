@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 
 namespace Alchemist.Core;
 
@@ -24,7 +24,19 @@ public static class Recipes
         new("craft.sandstorm.v1", [Material.Iron, Material.Ether], "砂嵐", "1コスト / スキル / 自身 / 地相→風相\n6ブロック、1ドロー。強化後9ブロック、2ドロー。", "複相", "守りと手札補充を兼ね、地と風へ続けて移る。"),
         new("craft.steam_burst.v1", [Material.Herb, Material.Powder], "蒸気爆発", "1コスト / アタック / 敵全体 / 水相→火相\n敵全体に6ダメージと脱力1。強化後9ダメージ。", "複相", "集団戦で水と火へ続けて移る。"),
         new("craft.drizzle.v1", [Material.Herb, Material.Ether], "毒霧雨", "1コスト / スキル / 敵1体 / 水相→風相\n毒4、1ドロー。強化後毒7。", "複相", "毒を撒き、水と風へ続けて移る。"),
-        new("craft.fire_whirl.v1", [Material.Powder, Material.Ether], "火炎旋風", "1コスト / アタック / 敵全体 / 火相→風相\n敵全体に4ダメージを2回。強化後6ダメージを2回。", "複相", "集団戦で火と風へ続けて移る。")];
+        new("craft.fire_whirl.v1", [Material.Powder, Material.Ether], "火炎旋風", "1コスト / アタック / 敵全体 / 火相→風相\n敵全体に4ダメージを2回。強化後6ダメージを2回。", "複相", "集団戦で火と風へ続けて移る。"),
+        // v0.21 (design-axes 7.1): fixed recipes of three to five materials. Every two-material recipe is a
+        // phase card, so these fill the life and general slots, plus one five-material triple-phase finisher.
+        new("craft.iron_bastion.v1", [Material.Iron, Material.Iron, Material.Iron], "鋼の砦", "1コスト / スキル / 自身 / 地相\n12ブロック。次のターン開始時、6ブロック。強化後16と8。", "汎用", "最初の工房でも役に立つ守り。"),
+        new("craft.powder_flask.v1", [Material.Powder, Material.Powder, Material.Powder], "爆裂フラスコ", "1コスト / アタック / 敵全体 / 火相\n敵全体に12ダメージ。強化後16。", "汎用", "最初の工房でも役に立つ全体攻撃。"),
+        new("craft.ether_catalyst.v1", [Material.Ether, Material.Ether, Material.Ether], "精霊の触媒", "0コスト / スキル / 自身 / 風相\nカードを2枚引き、エナジーを1得る。廃棄。強化後3枚。", "汎用", "1ターンの手数を増やす。"),
+        new("craft.philosophers_blood.v1", [Material.Herb, Material.Herb, Material.Iron], "賢者の血", "1コスト / パワー / 自身 / 水相\nホムンクルスが攻撃を肩代わりするたび、攻撃した敵にドレイン2。強化後0コスト。", "生命", "盾になったホムンクルスが反撃で生命を奪う。"),
+        new("craft.culture_vat.v1", [Material.Herb, Material.Herb, Material.Ether], "培養槽", "2コスト / パワー / 自身 / 水相\n自分のターン開始時、ホムンクルスHPを3得る。強化後1コスト。", "生命", "毎ターン器を満たす。"),
+        new("craft.flesh_armor.v1", [Material.Iron, Material.Iron, Material.Herb], "血肉の鎧", "1コスト / スキル / 自身 / 地相\nホムンクルスHPの半分のブロックを得る。強化後、同じ量のブロック。", "生命", "溜めた器を守りに変える。"),
+        new("craft.fusion.v1", [Material.Powder, Material.Powder, Material.Herb], "融合", "2コスト / アタック / 敵1体 / 火相\nホムンクルスHPを10消費できれば、30ダメージ。強化後40。", "生命", "器を削って大きく殴る。"),
+        new("craft.mitosis.v1", [Material.Iron, Material.Herb, Material.Powder, Material.Ether], "分裂", "1コスト / スキル / 自身 / 風相\nホムンクルスHPを2倍にする。廃棄。強化後0コスト。", "生命", "四素材を揃えて器を倍にする。"),
+        new("craft.gate_of_truth.v1", [Material.Herb, Material.Herb, Material.Herb, Material.Iron, Material.Powder], "真理の扉", "3コスト / アタック / 敵1体 / 火相\nホムンクルスHPをすべて消費し、その2倍のダメージを与える。強化後2コスト。", "生命", "生命軸の最上位の切り札。"),
+        new("craft.three_phase_torrent.v1", [Material.Iron, Material.Iron, Material.Powder, Material.Powder, Material.Ether], "三相の奔流", "1コスト / アタック / 敵1体 / 地相→火相→風相\n8ダメージ、5ブロック。相転移を最大3回起こす。強化後11ダメージ、7ブロック。", "三相", "1枚で最大3回相転移する最上位の切り札。")];
     private static bool SameMultiset(IReadOnlyList<Material> a, IReadOnlyList<Material> b)
         => a.Count == b.Count && a.OrderBy(m => m).SequenceEqual(b.OrderBy(m => m));
     public static IEnumerable<Recipe> FindAll(IReadOnlyList<Material> materials) => All.Where(r => SameMultiset(r.Materials, materials));
@@ -36,15 +48,14 @@ public static class Recipes
 
 public sealed class AlchemyState
 {
-    // v0.16.0: back to the AGENTS.md trial values. The workshop now spends only a few materials per visit,
-    // so a large box and doubled yield left nothing to decide between the workshop and Instant Alchemy.
-    public const int Capacity = 10;
-    // Saves from v0.11-v0.15 could hold up to 20. They still load; the box simply accepts nothing new
-    // (it queues receipts instead) until it drops below Capacity.
+    // v0.21: restored to two per furnace and a box of 20 (design-axes 0.1). v0.16 had cut them to 1 and 10 by
+    // following an outdated brief; they return together with material-spending cards and costlier recipes.
+    public const int Capacity = 20;
+    // The largest box any version allowed; save validation accepts up to this.
     public const int LegacyCapacity = 20;
-    // Each furnace activation or selected material reward grants this many units. Standard card rewards
-    // are available independently and do not pass through this inventory.
-    public const int YieldPerEvent = 1;
+    // Each furnace activation grants this many units. Elite and boss slots grant one chosen material
+    // (AGENTS.md 4.4). Standard card rewards do not pass through this inventory.
+    public const int YieldPerEvent = 2;
     // 1: harvest-only. 2: reward slots. 3: rare inventory. 4: upgrade floor. 5: facility usage.
     public const int CurrentSchema = 5;
     public int Schema { get; set; } = CurrentSchema;
@@ -117,7 +128,7 @@ public sealed class AlchemyState
             ?? throw new InvalidOperationException("その報酬枠はすでに解決済みです。");
         if (!offer.Candidates.Contains(choice)) throw new InvalidOperationException("候補にない素材です。");
         Offers.Remove(offer);
-        GrantHarvest(id, choice);
+        Grant(id, choice);
     }
 
     public void DeclineOffer(string id)

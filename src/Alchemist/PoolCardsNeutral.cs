@@ -12,7 +12,8 @@ namespace Alchemist;
 // Phase-less reward cards: they spend run materials or manipulate the phase itself instead of entering one.
 // InstantAlchemy and PhaseResonance live in ElementalCards.cs.
 
-/// <summary>Cards that spend a run material are unplayable without one, so they never fizzle.</summary>
+/// <summary>Cards that spend a material of the player's choice are unplayable without one, so they never fizzle.
+/// Only 素材投入 is left here: the chosen material is its whole point (an approved exception to design-axes 6.2).</summary>
 public abstract class MaterialSpendingCard(int cost, CardType type, CardRarity rarity, TargetType target)
     : AlchemyCard(cost, type, rarity, target)
 {
@@ -55,20 +56,25 @@ public sealed class AlchSynergy() : AlchemyCard(1,CardType.Skill,CardRarity.Unco
     // v0.19: the upgrade used to make it cost 0, a card that replaced itself for free (原則4).
     protected override void OnUpgrade()=>DynamicVars.Cards.UpgradeValueBy(1);
 }
-public sealed class AlchMaterialBomb() : MaterialSpendingCard(1,CardType.Attack,CardRarity.Uncommon,TargetType.AllEnemies)
+// v0.20: 素材を指定する消費カード（design-axes 6.2）. Without the material it is weak (or unplayable when it
+// would otherwise be free energy); with it, clearly better than a plain card of the same cost.
+public sealed class AlchMaterialBomb() : AlchemyCard(1,CardType.Attack,CardRarity.Uncommon,TargetType.AllEnemies)
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars=>[new DamageVar(14,ValueProp.Move)];
-    public override List<(string,string)> Localization=>new CardLoc("素材爆弾","通常素材を1個選んで消費し、敵全体に{Damage:diff()}ダメージ。",("selectionScreenPrompt","消費する素材を選択"));
-    protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p){if(await SpendMaterial(c) is not null) await HitAll(c,p,DynamicVars.Damage.BaseValue);}
-    protected override void OnUpgrade()=>DynamicVars.Damage.UpgradeValueBy(5);
+    protected override IEnumerable<DynamicVar> CanonicalVars=>[new DamageVar(5,ValueProp.Move),new DynamicVar("Charged",16)];
+    public override List<(string,string)> Localization=>new CardLoc("素材爆弾","敵全体に{Damage:diff()}ダメージ。[gold]火薬[/gold]を1個消費できれば、代わりに敵全体に{Charged:diff()}ダメージ。");
+    protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)
+        =>HitAll(c,p,TrySpend(Material.Powder)?DynamicVars["Charged"].BaseValue:DynamicVars.Damage.BaseValue);
+    protected override void OnUpgrade(){DynamicVars.Damage.UpgradeValueBy(2);DynamicVars["Charged"].UpgradeValueBy(5);}
 }
-public sealed class AlchCatalysis() : MaterialSpendingCard(0,CardType.Skill,CardRarity.Uncommon,TargetType.Self)
+public sealed class AlchCatalysis() : AlchemyCard(0,CardType.Skill,CardRarity.Uncommon,TargetType.Self)
 {
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new CardsVar(2),new DynamicVar("Energy",1)];
-    public override List<(string,string)> Localization=>new CardLoc("触媒反応","通常素材を1個選んで消費し、カードを{Cards:diff()}枚引いてエナジーを{Energy:diff()}得る。",("selectionScreenPrompt","消費する素材を選択"));
+    public override List<(string,string)> Localization=>new CardLoc("触媒反応","[gold]エーテル[/gold]を1個消費し、カードを{Cards:diff()}枚引いてエナジーを{Energy:diff()}得る。エーテルがなければ使えない。");
+    // Unplayable without ether: a free draw-and-energy card would be loop fuel (原則4).
+    protected override bool IsPlayable=>HasMaterial(Material.Ether);
     protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p)
     {
-        if(await SpendMaterial(c) is null) return;
+        if(!TrySpend(Material.Ether)) return;
         await Draw(c,DynamicVars.Cards.BaseValue);
         await Energy(DynamicVars["Energy"].BaseValue);
     }
