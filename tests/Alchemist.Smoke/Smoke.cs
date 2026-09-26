@@ -327,8 +327,21 @@ public static class Smoke
             AccessTools.Method(typeof(WorkshopUi),"Refresh").Invoke(null,null);
             Check(Descendants<Label>(uiOverlay!).Any(x=>x.Text.Contains("改造するカード")),"modification gallery visible");
             var elemental=player.Deck.Cards.OfType<EarthenGuard>().Single();
+            AccessTools.Field(typeof(WorkshopUi),"selectedUpgrade").SetValue(null,elemental);
+            AccessTools.Method(typeof(WorkshopUi),"Refresh").Invoke(null,null);
+            Check(Descendants<Button>(uiOverlay!).Any(b=>b.Text.StartsWith("火薬を入れる（アタックのみ）") && b.Disabled),"powder cannot go into a skill");
+            AccessTools.Method(typeof(WorkshopUi),"AddInfuseMaterial").Invoke(null,[elemental,Alchemist.Core.Material.Herb]);
+            AccessTools.Method(typeof(WorkshopUi),"AddInfuseMaterial").Invoke(null,[elemental,Alchemist.Core.Material.Ether]);
+            Check(box.Inventory.Total==2,"choosing materials for a modification is a preview, not consumption");
             AccessTools.Method(typeof(WorkshopUi),"UpgradeCard").Invoke(null,[elemental]);
-            Check(elemental.Enchantment is WorkshopTuning && box.Inventory.Total==0,"workshop modification consumes materials and persists on the card");
+            Check(elemental.Enchantment is WorkshopInfusion { AlchemistInfuseHerb: 1, AlchemistInfuseEther: 1, AlchemistInfuseIron: 0, AlchemistInfusePowder: 0, Amount: 2 }
+                && box.Inventory.Total==0,"workshop modification puts one effect per material into the card and consumes them");
+            var infusedLoaded=CardModel.FromSerializable(elemental.ToSerializable());
+            Check(infusedLoaded.Enchantment is WorkshopInfusion { AlchemistInfuseHerb: 1, AlchemistInfuseEther: 1, Amount: 2 },"each material count survives the game's card serialization");
+            string infusedText=elemental.Enchantment!.DynamicExtraCardText!.GetFormattedText();
+            GD.Print("ALCHEMIST_STAT infusionText="+infusedText);
+            Check(infusedText.Contains("ドレイン+1") && infusedText.Contains("調合準備+1") && !infusedText.Contains("鋭利") && !infusedText.Contains("ブロック"),
+                $"the card text lists only the materials put in ({infusedText})");
             var rareCard=(LavaShot)run.CreateCard(ModelDb.Card<LavaShot>(),player);
             var rareAdded=await CardPileCmd.Add(rareCard,PileType.Deck,skipVisuals:true);
             rareCard=(LavaShot)rareAdded.cardAdded;
@@ -410,6 +423,26 @@ public static class Smoke
             await Play(tuned,null);
             Check(player.Creature.Block-blockBefore==8+PhaseRules.BaseAmount(AlchemyPhase.Earth)+WorkshopTuning.Bonus+3,
                 $"tuning and the earth core both strengthen the transition into earth (block {player.Creature.Block-blockBefore})");
+            // v0.22 (design-axes 7.3): powder is damage, iron block, herb drain and ether Preparation, one per material.
+            var infusedStrike=cs.CreateCard<StrikeIronclad>(player);
+            var strikeInfusion=(WorkshopInfusion)ModelDb.Enchantment<WorkshopInfusion>().ToMutable();
+            strikeInfusion.Add([1,1,1,1]);
+            CardCmd.Enchant(strikeInfusion,infusedStrike,strikeInfusion.Amount);
+            int infusedBlockBefore=player.Creature.Block, infusedDrainBefore=foe.GetPower<LifeDrainPower>()?.Amount ?? 0;
+            if(player.Creature.GetPower<PreparationPower>() is { } leftoverPreparation) await PowerCmd.Remove(leftoverPreparation);
+            foe.SetCurrentHpInternal(999);
+            await Play(infusedStrike,foe);
+            int infusedDealt=999-foe.CurrentHp;
+            Check(player.Creature.Block-infusedBlockBefore==1 && (foe.GetPower<LifeDrainPower>()?.Amount ?? 0)==infusedDrainBefore+1
+                && player.Creature.GetPower<PreparationPower>()?.Amount==1,
+                $"an infused attack adds 1 block, 1 drain and 1 Preparation (block +{player.Creature.Block-infusedBlockBefore})");
+            await PowerCmd.Remove(player.Creature.GetPower<PreparationPower>()!);
+            foe.SetCurrentHpInternal(999);
+            await Play(cs.CreateCard<StrikeIronclad>(player),foe);
+            int plainDealt=999-foe.CurrentHp;
+            Check(infusedDealt==plainDealt+1,$"powder adds 1 damage to the attack (plain {plainDealt}, infused {infusedDealt})");
+            foe.SetCurrentHpInternal(999);
+            await PowerCmd.Remove(foe.GetPower<LifeDrainPower>()!); // The life-axis checks below start from a foe without drain.
             box.Inventory.Grant("instant-herb",Alchemist.Core.Material.Herb);
             int herbBefore=box.Inventory.Counts[(int)Alchemist.Core.Material.Herb];
             var picker=new PickSelector(c=>c is HerbImprovisation);

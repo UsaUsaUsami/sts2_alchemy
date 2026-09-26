@@ -75,27 +75,34 @@ var empty = new AlchemyState();
 Reject(()=>empty.Commit(recipe,"empty",()=>deck++,()=>deck--),"insufficient ingredients do not deliver");
 Check(deck==2 && empty.Total==0,"no negative inventory");
 Check(AlchemyState.Load(inventory.Save()).Committed.Contains("async"),"save preserves craft receipts");
-var upgradeStock=new AlchemyState();
-upgradeStock.Grant("ui",Material.Iron);upgradeStock.Grant("up",Material.Powder);
+// v0.22 (design-axes 7.3): modification spends the materials it puts in, one effect each, four per card.
+int[] Mix(int iron=0,int herb=0,int powder=0,int ether=0)=>[iron,herb,powder,ether];
+var upgradeStock=new AlchemyState { Counts=[1,0,1,0] };
 int upgraded=0;
-upgradeStock.CommitUpgrade(7,Material.Iron,Material.Powder,"upgrade1",()=>upgraded++);
-upgradeStock.CommitUpgrade(7,Material.Iron,Material.Powder,"upgrade1",()=>upgraded++);
-Check(upgraded==1 && upgradeStock.Total==0,"upgrade consumes materials once");
-var failedUpgrade=new AlchemyState();failedUpgrade.Grant("fi",Material.Herb);failedUpgrade.Grant("fe",Material.Ether);
-Reject(()=>failedUpgrade.CommitUpgrade(8,Material.Herb,Material.Ether,"bad",()=>throw new InvalidOperationException()),"failed upgrade throws");
-Check(failedUpgrade.Total==2,"failed upgrade preserves materials");
-var limitedUpgrade=new AlchemyState();
-foreach(var pair in new[]{("i0",Material.Iron),("p0",Material.Powder),("i1",Material.Iron),("p1",Material.Powder)}) limitedUpgrade.Grant(pair.Item1,pair.Item2);
-limitedUpgrade.CommitUpgrade(9,Material.Iron,Material.Powder,"first",()=>{});
-Reject(()=>limitedUpgrade.CommitUpgrade(9,Material.Iron,Material.Powder,"second",()=>{}),"only one existing-card upgrade per workshop");
-limitedUpgrade.CommitUpgrade(10,Material.Iron,Material.Powder,"next",()=>{});
-Check(limitedUpgrade.Total==0,"a later workshop restores the upgrade action");
+upgradeStock.CommitInfusion(7,InfusionRules.Empty(),Mix(iron:1,powder:1),true,"upgrade1",()=>upgraded++);
+upgradeStock.CommitInfusion(7,InfusionRules.Empty(),Mix(iron:1,powder:1),true,"upgrade1",()=>upgraded++);
+Check(upgraded==1 && upgradeStock.Total==0,"modification consumes exactly the materials put in, once");
+var failedUpgrade=new AlchemyState { Counts=[0,1,0,1] };
+Reject(()=>failedUpgrade.CommitInfusion(8,InfusionRules.Empty(),Mix(herb:1,ether:1),false,"bad",()=>throw new InvalidOperationException()),"failed modification throws");
+Check(failedUpgrade.Total==2,"failed modification preserves materials");
+Check(!InfusionRules.Allows(InfusionRules.Empty(),Mix(powder:1),false) && InfusionRules.Allows(InfusionRules.Empty(),Mix(powder:1),true),"powder goes into attacks only");
+Check(InfusionRules.Allows(InfusionRules.Empty(),Mix(iron:2,powder:2),true) && !InfusionRules.Allows(InfusionRules.Empty(),Mix(iron:3,powder:2),true),
+    "materials mix freely up to four per card");
+Check(InfusionRules.Allows(Mix(herb:3),Mix(ether:1),false) && !InfusionRules.Allows(Mix(herb:3),Mix(ether:2),false) && InfusionRules.Room(Mix(herb:3))==1,
+    "a later modification only fills the card's remaining room");
+Check(!InfusionRules.Allows(InfusionRules.Empty(),InfusionRules.Empty(),true),"a modification needs at least one material");
+Reject(()=>new AlchemyState { Counts=[1,0,0,0] }.CommitInfusion(8,InfusionRules.Empty(),Mix(iron:2),false,"short",()=>{}),"modification cannot spend materials the box lacks");
+var limitedUpgrade=new AlchemyState { Counts=[2,0,2,0] };
+limitedUpgrade.CommitInfusion(9,InfusionRules.Empty(),Mix(iron:1,powder:1),true,"first",()=>{});
+Reject(()=>limitedUpgrade.CommitInfusion(9,InfusionRules.Empty(),Mix(iron:1,powder:1),true,"second",()=>{}),"only one modification per workshop");
+limitedUpgrade.CommitInfusion(10,InfusionRules.Empty(),Mix(iron:1,powder:1),true,"next",()=>{});
+Check(limitedUpgrade.Total==0,"a later workshop restores the modification action");
 var facilities=new AlchemyState { Counts=[6,6,6,1], RareCounts=[1,0,0] };
 int craftedAtWorkshop=0;
 await facilities.CommitCraftAtAsync(12,Recipes.All[0],"facility-craft",()=>{craftedAtWorkshop++;return Task.CompletedTask;},()=>craftedAtWorkshop--);
 Reject(()=>facilities.CommitCraftAtAsync(12,Recipes.All[0],"facility-craft-2",()=>Task.CompletedTask,()=>{}).GetAwaiter().GetResult(),
     "synthesis is available only once per workshop");
-facilities.CommitUpgrade(12,Material.Iron,Material.Powder,"facility-mod",()=>{});
+facilities.CommitInfusion(12,InfusionRules.Empty(),Mix(iron:1,powder:1),true,"facility-mod",()=>{});
 await facilities.CommitBrewAtAsync(12,Material.Herb,"facility-brew",()=>Task.FromResult(true));
 facilities.CommitRareAt(12,RareMaterial.Mercury,"facility-enchant",()=>{},()=>{});
 Check(craftedAtWorkshop==1

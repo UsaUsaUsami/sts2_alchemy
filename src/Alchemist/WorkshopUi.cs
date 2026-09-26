@@ -45,6 +45,7 @@ public static class WorkshopUi
     private static CardModel? selectedUpgrade;
     private static CardModel? selectedRareCard;
     private static readonly List<Core.Material> craftInputs = [];
+    private static readonly int[] infuseInputs = new int[4];
     private static readonly List<CardModel> previewCards = [];
     public static bool IsOpen => GodotObject.IsInstanceValid(overlay);
     public static bool IsBusy => busy;
@@ -78,7 +79,7 @@ public static class WorkshopUi
         }
         var combat = box.Combat;
         launcher!.Text = combat is null ? $"素材・工房  {box.Inventory.Total}/{AlchemyState.Capacity}"
-            : $"素材 {box.Inventory.Total}/{AlchemyState.Capacity}  炉 {combat.FurnaceUsed}/{HarvestCombat.FurnaceLimit}\n現在相：{MaterialBox.PhaseName(combat.Phases.Current)}"+(combat.LastTransition.Length>0?$"　（{combat.LastTransition}）":"")
+            : $"素材 {box.Inventory.Total}/{AlchemyState.Capacity}  炉 {combat.FurnaceUsed}/{combat.Limit}\n現在相：{MaterialBox.PhaseName(combat.Phases.Current)}"+(combat.LastTransition.Length>0?$"　（{combat.LastTransition}）":"")
               +(combat.Life.HomunculusAppeared?$"\nホムンクルスHP：{LifeAxis.State(box.Owner)?.HomunculusHp ?? 0}":"");
         // Phase colour keeps the current phase readable at a glance; outside combat the button is neutral.
         launcher.AddThemeColorOverride("font_color", PhaseTint(combat?.Phases.Current ?? AlchemyPhase.None));
@@ -318,16 +319,25 @@ public static class WorkshopUi
         else if (clickable) Text("選んで詳細を確認",16,wrapper,new Color("aebbc0"));
         return wrapper;
     }
-    // Modification is independent of the rest site's Upgrade: an upgraded card can still be modified, and
-    // only cards that cause transitions (an element, no enchantment yet) are candidates. Air cards are out:
-    // their transition draw ignores modifiers (原則5), so tuning them would do nothing.
-    private static bool CanModify(CardModel card) => card is AlchemyCard { Element: not (AlchemyPhase.None or AlchemyPhase.Air) } && card.Enchantment is null;
-    private static (Core.Material First,Core.Material Second) UpgradeCost(CardModel card) => card.Type switch
+    // Modification is independent of the rest site's Upgrade: an upgraded card can still be modified. Since
+    // v0.22 (design-axes 7.3) any card the game lets carry an enchantment is a candidate, air cards included,
+    // and a modified card can take more materials at a later workshop until it holds four.
+    private static bool CanModify(CardModel card) => card.Enchantment switch
     {
-        CardType.Attack => (Core.Material.Iron,Core.Material.Powder),
-        CardType.Skill => (Core.Material.Herb,Core.Material.Ether),
-        _ => (Core.Material.Powder,Core.Material.Ether)
+        null => ModelDb.Enchantment<WorkshopInfusion>().CanEnchant(card),
+        WorkshopInfusion infusion => InfusionRules.Room(infusion.Counts) > 0,
+        _ => false
     };
+    private static int[] CurrentInfusion(CardModel card) => (card.Enchantment as WorkshopInfusion)?.Counts ?? InfusionRules.Empty();
+    private static bool CanAddInfusion(CardModel card, Core.Material material)
+    {
+        var add=(int[])infuseInputs.Clone(); add[(int)material]++;
+        return box!.Inventory.CanSpend(add) && InfusionRules.Allows(CurrentInfusion(card),add,card.Type==CardType.Attack);
+    }
+    private static string InfusionText(IReadOnlyList<int> counts) => counts.Sum()==0 ? "なし" : string.Join("、", new[]{
+        (counts[(int)Core.Material.Powder],"鋭利"),(counts[(int)Core.Material.Iron],"ブロック+"),
+        (counts[(int)Core.Material.Herb],"ドレイン+"),(counts[(int)Core.Material.Ether],"調合準備+")}
+        .Where(x=>x.Item1>0).Select(x=>$"{x.Item2}{x.Item1}"));
     private static CardModel UpgradePreview(CardModel source)
     {
         var preview=CardModel.FromSerializable(source.ToSerializable());
@@ -345,15 +355,13 @@ public static class WorkshopUi
         var holder=MountCard(stage,upgraded?UpgradePreview(card):card,scale,clickable);
         if(holder is not null)
         {
-            if(clickable) holder.Connect(NCardHolder.SignalName.Pressed,Callable.From<NCardHolder>(_=>{selectedUpgrade=card;Refresh();}));
+            if(clickable) holder.Connect(NCardHolder.SignalName.Pressed,Callable.From<NCardHolder>(_=>{selectedUpgrade=card;Array.Clear(infuseInputs);Refresh();}));
             UpdateCardWhenReady(holder,PileType.Deck,upgraded?CardPreviewMode.Upgrade:CardPreviewMode.Normal);
         }
         if(clickable)
         {
-            var cost=UpgradeCost(card);
-            bool affordable=box!.Inventory.CanUpgradeAt(box.Owner.RunState.TotalFloor,cost.First,cost.Second);
-            Text($"{Recipes.Name(cost.First)} ＋ {Recipes.Name(cost.Second)}",17,wrapper,affordable?new Color("f2d18b"):new Color("90989c"));
-            if(!affordable) Text("素材不足",15,wrapper,new Color("d88b82"));
+            var current=CurrentInfusion(card);
+            Text(current.Sum()==0?"未改造":$"改造 {current.Sum()}/{InfusionRules.Limit}：{InfusionText(current)}",16,wrapper,new Color("f2d18b"));
         }
         return wrapper;
     }
@@ -446,29 +454,44 @@ public static class WorkshopUi
     {
         var cards=box!.Owner.Deck.Cards.Where(CanModify).ToArray();
         Text("改造するカードを選ぶ",32,content,new Color("f2d18b"));
-        Text("相を持つ錬金術師カードへ「このカードによる相転移の効果+1」を恒久付与します。休憩所のアップグレードとは別で、強化済みのカードも改造できます。",19);
+        Text($"素材1個につき効果+1。種類を混ぜてよく、1枚に合計{InfusionRules.Limit}個まで入れられます。火薬＝ダメージ+1（アタックのみ）、鉄＝使用時ブロック+1、薬草＝使用時ドレイン+1、エーテル＝使用時に調合準備+1。休憩所のアップグレードとは別で、強化済みのカードも改造できます。",19);
         if(!box.Inventory.CanUseFacility(box.Owner.RunState.TotalFloor,WorkshopFacility.Modification))
             Text("この工房の改造設備は使用済みです。",20,content,new Color("d8c082"));
         var grid=new GridContainer { Columns=3,SizeFlagsHorizontal=Control.SizeFlags.ExpandFill };
         grid.AddThemeConstantOverride("h_separation",10);grid.AddThemeConstantOverride("v_separation",16);
         content!.AddChild(grid);
         foreach(var card in cards) grid.AddChild(DeckCardDisplay(card,0.62f,true));
-        if(cards.Length==0) Text("改造できる未加工カードはありません。",22);
+        if(cards.Length==0) Text("改造できるカードはありません。",22);
     }
     private static void UpgradeConfirmation(CardModel card)
     {
-        var cost=UpgradeCost(card);
+        var current=CurrentInfusion(card);
+        bool attack=card.Type==CardType.Attack;
         bool can=CanModify(card) && box!.Owner.Deck.Cards.Contains(card)
-            && box.Inventory.CanUpgradeAt(box.Owner.RunState.TotalFloor,cost.First,cost.Second);
-        Text("このカードを改造しますか？",32,content,new Color("f2d18b"));
+            && box.Inventory.CanInfuseAt(box.Owner.RunState.TotalFloor,current,infuseInputs,attack);
+        Text("入れる素材を選ぶ",32,content,new Color("f2d18b"));
         var row=new HBoxContainer(); row.AddThemeConstantOverride("separation",12); content!.AddChild(row);
-        var current=new VBoxContainer(); row.AddChild(current); Text("現在",21,current); current.AddChild(DeckCardDisplay(card,0.72f,false));
+        var shown=new VBoxContainer(); row.AddChild(shown); shown.AddChild(DeckCardDisplay(card,0.72f,false));
         var actions=new VBoxContainer { SizeFlagsHorizontal=Control.SizeFlags.ExpandFill }; row.AddChild(actions);
-        Text("工房改造：このカードで起こす相転移の効果+1",20,actions,new Color("8fd6a5"));
-        Text($"必要素材\n{Recipes.Name(cost.First)} ＋ {Recipes.Name(cost.Second)}",22,actions);
-        if(!can) Text("素材が不足しています。",19,actions,new Color("d88b82"));
-        Button(can?"このカードを改造する":"改造できません",()=>UpgradeCard(card),!can,actions);
-        Button("一覧へ戻る",()=>{selectedUpgrade=null;Refresh();},parent:actions);
+        Text($"現在の改造：{InfusionText(current)}（{current.Sum()}/{InfusionRules.Limit}）",20,actions);
+        var materials=new GridContainer { Columns=2,SizeFlagsHorizontal=Control.SizeFlags.ExpandFill };
+        materials.AddThemeConstantOverride("h_separation",10); actions.AddChild(materials);
+        foreach(var material in Enum.GetValues<Core.Material>())
+        {
+            string note=material==Core.Material.Powder && !attack ? "（アタックのみ）" : "";
+            Button($"{Recipes.Name(material)}を入れる{note}\n所持 {box!.Inventory.Counts[(int)material]} / 投入 {infuseInputs[(int)material]}",
+                ()=>AddInfuseMaterial(card,material),!CanAddInfusion(card,material),materials);
+        }
+        var after=current.Zip(infuseInputs,(a,b)=>a+b).ToArray();
+        Text($"改造後：{InfusionText(after)}（{after.Sum()}/{InfusionRules.Limit}）",22,actions,new Color("8fd6a5"));
+        if(infuseInputs.Sum()>0) Button("入れた素材を戻す",()=>{Array.Clear(infuseInputs);Refresh();},parent:actions);
+        Button(can?"この内容で改造する":"素材を1個以上選んでください",()=>UpgradeCard(card),!can,actions);
+        Button("一覧へ戻る",()=>{selectedUpgrade=null;Array.Clear(infuseInputs);Refresh();},parent:actions);
+    }
+    private static void AddInfuseMaterial(CardModel card, Core.Material material)
+    {
+        if(!CanAddInfusion(card,material)) return;
+        infuseInputs[(int)material]++; Refresh();
     }
     private static void RareGallery()
     {
@@ -594,8 +617,8 @@ public static class WorkshopUi
             var currentBox=box;
             int floor=currentBox.Owner.RunState.TotalFloor;
             bool synthesisReady=Recipes.All.Any(currentBox.Inventory.CanCraft);
-            bool modificationReady=currentBox.Owner.Deck.Cards.Where(CanModify)
-                .Any(c=>{var cost=UpgradeCost(c);return currentBox.Inventory.CanSpend(cost.First,cost.Second);});
+            bool modificationReady=currentBox.Inventory.Settled && currentBox.Owner.Deck.Cards.Where(CanModify)
+                .Any(c=>Enum.GetValues<Core.Material>().Any(m=>currentBox.Inventory.Counts[(int)m]>0 && (m!=Core.Material.Powder || c.Type==CardType.Attack)));
             bool brewingReady=currentBox.Owner.HasOpenPotionSlots && currentBox.Inventory.Counts.Any(n=>n>0);
             bool enchantmentReady=currentBox.Inventory.RareCounts.Any(n=>n>0)
                 && currentBox.Owner.Deck.Cards.Any(c=>c is IRareInscribable { AlchemistRareModifier.Length: 0 });
@@ -771,11 +794,17 @@ public static class WorkshopUi
         busy=true;
         try
         {
-            var cost=UpgradeCost(card);
-            box.Inventory.CommitUpgrade(box.Owner.RunState.TotalFloor,cost.First,cost.Second,Guid.NewGuid().ToString("N"),()=>
-            { if(CardCmd.Enchant<WorkshopTuning>(card,1) is null) throw new InvalidOperationException("改造を付与できませんでした。"); });
-            status=$"{card.Title}を工房改造しました。";
+            var add=(int[])infuseInputs.Clone();
+            box.Inventory.CommitInfusion(box.Owner.RunState.TotalFloor,CurrentInfusion(card),add,card.Type==CardType.Attack,Guid.NewGuid().ToString("N"),()=>
+            {
+                if(card.Enchantment is WorkshopInfusion existing) { existing.Add(add); return; }
+                var infusion=(WorkshopInfusion)ModelDb.Enchantment<WorkshopInfusion>().ToMutable();
+                infusion.Add(add);
+                if(CardCmd.Enchant(infusion,card,infusion.Amount) is null) throw new InvalidOperationException("改造を付与できませんでした。");
+            });
+            status=$"{card.Title}を工房改造しました（{InfusionText(CurrentInfusion(card))}）。";
             selectedUpgrade=null;
+            Array.Clear(infuseInputs);
         }
         catch(Exception ex) { status=$"改造できませんでした：{ex.Message}"; GD.PushError(ex.ToString()); }
         finally { busy=false;if(IsOpen)Refresh(); }

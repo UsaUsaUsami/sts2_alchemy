@@ -231,17 +231,19 @@ public sealed class AlchemyState
         }
         catch { Counts = before; rollbackCard(); throw; }
     }
-    public bool CanSpend(Material first, Material second) => Settled
-        && Counts[(int)first] >= (first == second ? 2 : 1) && Counts[(int)second] >= 1;
-    public bool CanUpgradeAt(int floor, Material first, Material second)
-        => CanUseFacility(floor, WorkshopFacility.Modification) && CanSpend(first, second);
-    public void CommitUpgrade(int floor, Material first, Material second, string operation, Action upgrade)
+    /// Whether the box holds `add` (one count per normal material) and nothing is left unresolved.
+    public bool CanSpend(IReadOnlyList<int> add) => Settled && add.Count == Counts.Length
+        && add.All(n => n >= 0) && add.Select((n, i) => Counts[i] >= n).All(x => x);
+    /// design-axes 7.3: the modification facility takes one to four materials for one card, once per visit.
+    public bool CanInfuseAt(int floor, IReadOnlyList<int> current, IReadOnlyList<int> add, bool isAttack)
+        => CanUseFacility(floor, WorkshopFacility.Modification) && CanSpend(add) && InfusionRules.Allows(current, add, isAttack);
+    public void CommitInfusion(int floor, IReadOnlyList<int> current, IReadOnlyList<int> add, bool isAttack, string operation, Action apply)
     {
         if (Committed.Contains(operation)) return;
-        if (!CanUpgradeAt(floor,first,second)) throw new InvalidOperationException("この工房では既に強化したか、必要素材が不足しているか、未解決の受け取りがあります。");
-        upgrade();
-        Counts[(int)first]--;
-        Counts[(int)second]--;
+        if (!CanInfuseAt(floor, current, add, isAttack))
+            throw new InvalidOperationException("この工房の改造は使用済みか、素材が不足しているか、このカードには入れられない素材です。");
+        apply();
+        for (int i = 0; i < Counts.Length; i++) Counts[i] -= add[i];
         WorkshopUpgradeFloor = floor;
         MarkFacilityUsed(floor, WorkshopFacility.Modification);
         Committed.Add(operation);

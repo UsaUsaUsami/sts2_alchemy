@@ -128,7 +128,7 @@ public sealed class SkyPower : AlchemyPower
 public sealed class PreparationPower : AlchemyPower, IPhaseTransitionModifier, IPhaseTransitionListener
 {
     protected override PowerModel IconSource => ModelDb.Power<VigorPower>();
-    public override List<(string,string)> Localization => new PowerLoc("調合準備","次の相転移の効果を強化する。","次の相転移の効果を{Amount}強化する。");
+    public override List<(string,string)> Localization => new PowerLoc("調合準備","次の相転移の効果を強化する。風への転移でも消費される。","次の相転移の効果を{Amount}強化する。風への転移でも消費される。");
     public void ModifyPhaseTransition(PhaseTransitionContext t) { if (!t.IsEcho && t.Owner.Creature == Owner) t.Amount += Amount; }
     public Task AfterPhaseTransition(PhaseTransitionContext t) => t.Owner.Creature == Owner ? PowerCmd.Remove(this) : Task.CompletedTask;
 }
