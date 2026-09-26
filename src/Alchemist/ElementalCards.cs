@@ -39,7 +39,8 @@ public sealed class StoneEdge() : ElementCard(1,CardType.Attack,CardRarity.Event
 }
 public sealed class SoothingMist() : ElementCard(1,CardType.Skill,CardRarity.Common,TargetType.AnyEnemy,AlchemyPhase.Water)
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<WeakPower>(2)];
+    // v0.21.1: 1 (was 2). The water transition adds its own weak, so the card itself stays small.
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<WeakPower>(1)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<WeakPower>()];
     public override List<(string,string)> Localization => new CardLoc("鎮静の霧","[gold]脱力[/gold]{WeakPower:diff()}を与える。\n[gold]水相[/gold]");
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>PowerCmd.Apply<WeakPower>(c,p.Target!,DynamicVars.Weak.BaseValue,Owner.Creature,this);

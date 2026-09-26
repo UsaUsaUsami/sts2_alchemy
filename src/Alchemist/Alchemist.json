@@ -3,7 +3,7 @@
   "name": "錬金術師 — 採取と工房（試作）",
   "author": "syouh",
   "description": "四元素の相転移、素材採取、4設備の工房を試す単独プレイ用MOD。外見はゲーム内の仮素材を参照。",
-  "version": "0.21.0",
+  "version": "0.21.1",
   "has_pck": false,
   "has_dll": true,
   "affects_gameplay": true,

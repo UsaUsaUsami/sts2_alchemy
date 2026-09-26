@@ -363,7 +363,7 @@ public static class Smoke
                 await CardCmd.AutoPlay(new ThrowingPlayerChoiceContext(),c,target,skipCardPileVisuals:true);
             }
             await Play(cs.CreateCard<SoothingMist>(player),foe);
-            Check(box.Combat.Phases.Current==AlchemyPhase.Water && foe.GetPower<WeakPower>()?.Amount==2+PhaseRules.BaseAmount(AlchemyPhase.Water),
+            Check(box.Combat.Phases.Current==AlchemyPhase.Water && foe.GetPower<WeakPower>()?.Amount==1+PhaseRules.BaseAmount(AlchemyPhase.Water),
                 $"earth to water adds the water transition's weak (weak {foe.GetPower<WeakPower>()?.Amount})");
             int hpBefore=foe.CurrentHp;
             await Play(cs.CreateCard<Alchemist.Ignition>(player),foe);
@@ -446,6 +446,8 @@ public static class Smoke
             var pet=LifeAxis.Pet(player);
             Check(pet is { IsAlive: true, CurrentHp: 5 } && pet.GetPower<HomunculusPower>() is not null && cs.Allies.Contains(pet),
                 $"the homunculus steps onto the field as a pet with the drained HP (hp {pet?.CurrentHp})");
+            Check(NCombatRoom.Instance?.GetCreatureNode(pet!) is not { } petNode || petNode.IsInteractable,
+                "the homunculus keeps its health bar (other pets are made non-interactable, which hides it)");
             await Play(cs.CreateCard<LifeHarvest>(player),null);
             Check(foe.CurrentHp==994-9 && life.HomunculusHp==14 && foe.GetPower<LifeDrainPower>()?.Amount==1,
                 $"life harvest triggers drain three times, decaying each time (hp {foe.CurrentHp}, homunculus {life.HomunculusHp})");

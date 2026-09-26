@@ -2,6 +2,7 @@
 using BaseLib.Abstracts;
 using BaseLib.Utils;
 using Godot;
+using HarmonyLib;
 using MegaCrit.Sts2.Core.Animation;
 using MegaCrit.Sts2.Core.Assets;
 using MegaCrit.Sts2.Core.Bindings.MegaSpine;
@@ -13,9 +14,11 @@ using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.HoverTips;
+using MegaCrit.Sts2.Core.Models.Monsters;
 using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Combat;
+using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.ValueProps;
 
 namespace Alchemist;
@@ -192,5 +195,22 @@ public sealed class DrainMiasmaPower : AlchemyPower
         if (!participants.Contains(Owner)) return;
         Flash();
         await PowerCmd.Apply<LifeDrainPower>(new ThrowingPlayerChoiceContext(), Owner.CombatState!.HittableEnemies, Amount, Owner, null);
+    }
+}
+
+/// <summary>
+/// NCombatRoom.AddCreature makes every pet except Osty non-interactable, which also hides its health bar and
+/// stacks it on the player. The homunculus HP is the whole point of the pet, so it gets Osty's treatment:
+/// health bar shown and placed to the player's right.
+/// </summary>
+[HarmonyPatch(typeof(NCombatRoom), nameof(NCombatRoom.AddCreature))]
+public static class HomunculusPetNodePatch
+{
+    public static void Postfix(NCombatRoom __instance, Creature creature)
+    {
+        if (creature.Monster is not HomunculusPet || creature.PetOwner is not { } owner) return;
+        if (__instance.GetCreatureNode(creature) is not { } node || __instance.GetCreatureNode(owner.Creature) is not { } ownerNode) return;
+        node.ToggleIsInteractable(true);
+        node.Position = ownerNode.Position + Vector2.Right * ownerNode.Hitbox.Size.X * 0.5f + Osty.MinOffset;
     }
 }

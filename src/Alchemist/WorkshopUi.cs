@@ -78,7 +78,8 @@ public static class WorkshopUi
         }
         var combat = box.Combat;
         launcher!.Text = combat is null ? $"素材・工房  {box.Inventory.Total}/{AlchemyState.Capacity}"
-            : $"素材 {box.Inventory.Total}/{AlchemyState.Capacity}  炉 {combat.FurnaceUsed}/{HarvestCombat.FurnaceLimit}\n現在相：{MaterialBox.PhaseName(combat.Phases.Current)}"+(combat.LastTransition.Length>0?$"　（{combat.LastTransition}）":"");
+            : $"素材 {box.Inventory.Total}/{AlchemyState.Capacity}  炉 {combat.FurnaceUsed}/{HarvestCombat.FurnaceLimit}\n現在相：{MaterialBox.PhaseName(combat.Phases.Current)}"+(combat.LastTransition.Length>0?$"　（{combat.LastTransition}）":"")
+              +(combat.Life.HomunculusAppeared?$"\nホムンクルスHP：{LifeAxis.State(box.Owner)?.HomunculusHp ?? 0}":"");
         // Phase colour keeps the current phase readable at a glance; outside combat the button is neutral.
         launcher.AddThemeColorOverride("font_color", PhaseTint(combat?.Phases.Current ?? AlchemyPhase.None));
         // Unresolved reward slots are reached from the rewards screen button, so only overflow receipts
