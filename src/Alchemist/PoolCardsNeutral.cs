@@ -35,7 +35,7 @@ public sealed class AlchInfusion() : MaterialSpendingCard(0,CardType.Skill,CardR
 public sealed class AlchEchoStrike() : AlchemyCard(1,CardType.Attack,CardRarity.Common,TargetType.AnyEnemy)
 {
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new DamageVar(6,ValueProp.Move)];
-    public override List<(string,string)> Localization=>new CardLoc("反響打ち","{Damage:diff()}ダメージ。現在相の相転移効果をもう一度発動する（相は変わらない）。");
+    public override List<(string,string)> Localization=>new CardLoc("反響打ち","{Damage:diff()}ダメージ。現在相の[gold]相転移[/gold]効果をもう一度発動する（相は変わらない）。");
     protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p){await Hit(c,p,DynamicVars.Damage.BaseValue);await PhaseTransitions.Echo(c,Owner,this,p.Target,p);}
     protected override void OnUpgrade()=>DynamicVars.Damage.UpgradeValueBy(3);
 }
@@ -43,7 +43,7 @@ public sealed class AlchPreparation() : AlchemyCard(1,CardType.Skill,CardRarity.
 {
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new BlockVar(5,ValueProp.Move),new PowerVar<PreparationPower>(2)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<PreparationPower>()];
-    public override List<(string,string)> Localization=>new CardLoc("調合準備","{Block:diff()}[gold]ブロック[/gold]を得る。次の相転移の効果を{PreparationPower:diff()}強化する。");
+    public override List<(string,string)> Localization=>new CardLoc("調合準備","{Block:diff()}[gold]ブロック[/gold]を得る。次の[gold]相転移[/gold]の効果を{PreparationPower:diff()}強化する。");
     protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p){await CardBlock(p);await ApplySelf<PreparationPower>(c,DynamicVars["PreparationPower"].BaseValue);}
     protected override void OnUpgrade()=>DynamicVars["PreparationPower"].UpgradeValueBy(2);
 }
@@ -51,7 +51,7 @@ public sealed class AlchSynergy() : AlchemyCard(1,CardType.Skill,CardRarity.Unco
 {
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new CardsVar(1),new PowerVar<SynergyPower>(1)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<SynergyPower>()];
-    public override List<(string,string)> Localization=>new CardLoc("相乗","カードを{Cards:diff()}枚引く。次の相転移の効果が、追加で{SynergyPower:diff()}回発動する。");
+    public override List<(string,string)> Localization=>new CardLoc("相乗","カードを{Cards:diff()}枚引く。次の[gold]相転移[/gold]の効果が、追加で{SynergyPower:diff()}回発動する。");
     protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p){await Draw(c,DynamicVars.Cards.BaseValue);await ApplySelf<SynergyPower>(c,DynamicVars["SynergyPower"].BaseValue);}
     // v0.19: the upgrade used to make it cost 0, a card that replaced itself for free (原則4).
     protected override void OnUpgrade()=>DynamicVars.Cards.UpgradeValueBy(1);
@@ -91,7 +91,7 @@ public sealed class AlchPhilosophersStone() : AlchemyCard(3,CardType.Power,CardR
 {
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new PowerVar<PhilosophersStonePower>(1)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<PhilosophersStonePower>()];
-    public override List<(string,string)> Localization=>new CardLoc("賢者の石","相転移の効果を{PhilosophersStonePower:diff()}強化する。");
+    public override List<(string,string)> Localization=>new CardLoc("賢者の石","[gold]相転移[/gold]の効果を{PhilosophersStonePower:diff()}強化する。");
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>ApplySelf<PhilosophersStonePower>(c,DynamicVars["PhilosophersStonePower"].BaseValue);
     protected override void OnUpgrade()=>EnergyCost.UpgradeBy(-1);
 }
@@ -107,8 +107,8 @@ public sealed class AlchFlux() : AlchemyCard(1,CardType.Skill,CardRarity.Rare,Ta
 }
 public sealed class AlchChainReaction() : AlchemyCard(1,CardType.Attack,CardRarity.Rare,TargetType.AnyEnemy)
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars=>[new DynamicVar("Bonus",10)];
-    public override List<(string,string)> Localization=>new CardLoc("連鎖反応","このターンに起きた相転移1回につき{Bonus:diff()}ダメージを与える。");
+    protected override IEnumerable<DynamicVar> CanonicalVars=>[new PreviewDamageVar((c,_)=>c.TransitionsThisTurn*c.DynamicVars["Bonus"].BaseValue),new DynamicVar("Bonus",10)];
+    public override List<(string,string)> Localization=>new CardLoc("連鎖反応","このターンに起きた[gold]相転移[/gold]1回につき{Bonus:diff()}ダメージを与える。{InCombat:\n（{Total:diff()}ダメージ）|}");
     // Phase-less, so playing it never adds a transition of its own before counting.
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>TransitionsThisTurn>0?Hit(c,p,TransitionsThisTurn*DynamicVars["Bonus"].BaseValue):Task.CompletedTask;
     protected override void OnUpgrade()=>DynamicVars["Bonus"].UpgradeValueBy(3);

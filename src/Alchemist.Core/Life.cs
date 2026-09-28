@@ -61,10 +61,11 @@ public sealed class LifeState
 
 public static class DrainRules
 {
-    /// A trigger deals damage equal to the stacks, then loses one stack, on the same turn-start timing as
+    /// A trigger deals damage equal to the stacks, then the stacks halve (rounded down), on the same turn-start timing as
     /// the base game's poison.
     public static int Damage(int stacks) => Math.Max(0, stacks);
-    public static int StacksAfterTrigger(int stacks) => Math.Max(0, stacks - 1);
+    /// Halving (v0.22.4) rather than poison's minus one: small applications barely change, large piles fade fast.
+    public static int StacksAfterTrigger(int stacks) => Math.Max(0, stacks / 2);
 
     /// HP actually lost: damage past the target's remaining HP is not drained into the homunculus.
     public static int HpLost(int unblockedDamage, int overkillDamage) => Math.Max(0, unblockedDamage - overkillDamage);

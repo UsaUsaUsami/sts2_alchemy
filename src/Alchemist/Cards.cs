@@ -2,7 +2,9 @@ using Alchemist.Core;
 using BaseLib.Abstracts;
 using BaseLib.Utils;
 using MegaCrit.Sts2.Core.CardSelection;
+using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
+using MegaCrit.Sts2.Core.Hooks;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
@@ -13,6 +15,43 @@ using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.ValueProps;
 
 namespace Alchemist;
+
+/// <summary>
+/// Display only (v0.22.4, ユーザー要望): what an attack whose damage depends on the combat will deal if played now.
+/// Cards show it as "{InCombat:\n（{Total:diff()}ダメージ）|}", like Body Slam, so nobody has to count transitions
+/// or homunculus HP. The card's OnPlay still does its own math; the calculation here mirrors it. Strength, Weak,
+/// Vulnerable and workshop infusions are applied the same way the game previews CalculatedDamageVar.
+/// </summary>
+public sealed class PreviewDamageVar(Func<AlchemyCard, Creature?, decimal> raw) : DynamicVar(Key, 0m)
+{
+    public const string Key = "Total";
+    public override void UpdateCardPreview(CardModel card, CardPreviewMode previewMode, Creature? target, bool runGlobalHooks)
+    {
+        decimal amount = card is AlchemyCard alchemy && CombatManager.Instance.IsInProgress && card.CombatState != null
+            ? Math.Max(0m, raw(alchemy, target)) : 0m;
+        if (card.Enchantment is { } enchantment)
+        {
+            amount += enchantment.EnchantDamageAdditive(amount, ValueProp.Move);
+            amount *= enchantment.EnchantDamageMultiplicative(amount, ValueProp.Move);
+        }
+        EnchantedValue = amount;
+        PreviewValue = Math.Max(0m, runGlobalHooks
+            ? Hook.ModifyDamage(card.Owner.RunState, card.CombatState ?? card.Owner.Creature.CombatState, target, card.Owner.Creature,
+                amount, ValueProp.Move, card, null, ModifyDamageHookType.All, previewMode, out _)
+            : amount);
+    }
+}
+
+/// <summary>Display only: a count that depends on the combat (e.g. how many hits), shown as {Hits:diff()} in combat.</summary>
+public sealed class PreviewCountVar(string name, Func<AlchemyCard, decimal> count) : DynamicVar(name, 0m)
+{
+    public override void UpdateCardPreview(CardModel card, CardPreviewMode previewMode, Creature? target, bool runGlobalHooks)
+    {
+        decimal value = card is AlchemyCard alchemy && CombatManager.Instance.IsInProgress && card.CombatState != null ? count(alchemy) : 0m;
+        EnchantedValue = value;
+        PreviewValue = value;
+    }
+}
 
 [Pool(typeof(AlchemyCardPool))]
 public abstract class AlchemyCard(int cost, CardType type, CardRarity rarity, TargetType target)
@@ -31,13 +70,16 @@ public abstract class AlchemyCard(int cost, CardType type, CardRarity rarity, Ta
     public override string BetaPortraitPath => Artwork.BetaPortraitPath;
 
     // Shared vocabulary for card effects, so individual cards stay declarative.
-    protected MaterialBox? Box => Owner.GetRelic<MaterialBox>();
-    protected AlchemyPhase CurrentPhase => Box?.Combat?.Phases.Current ?? AlchemyPhase.None;
-    protected int TransitionCount => Box?.Combat?.Phases.TransitionCount ?? 0;
-    protected int TransitionsThisTurn => Box?.Combat?.Phases.TransitionsThisTurn ?? 0;
+    // Internal rather than protected so the static preview calculations (PreviewDamageVar) can read them too.
+    internal MaterialBox? Box => Owner.GetRelic<MaterialBox>();
+    internal AlchemyPhase CurrentPhase => Box?.Combat?.Phases.Current ?? AlchemyPhase.None;
+    internal int TransitionCount => Box?.Combat?.Phases.TransitionCount ?? 0;
+    internal int TransitionsThisTurn => Box?.Combat?.Phases.TransitionsThisTurn ?? 0;
+    internal int TransitionsInto(AlchemyPhase phase) => Box?.Combat?.Phases.TransitionsInto(phase) ?? 0;
+    internal int HomunculusHp => LifeAxis.State(Owner)?.HomunculusHp ?? 0;
     /// Checked inside OnPlay, before MaterialBox moves the phase to this card's element.
-    protected bool WillTransition => PhaseRules.IsElement(Element) && PhaseRules.IsElement(CurrentPhase) && CurrentPhase != Element;
-    protected bool InOwnPhase => PhaseRules.IsElement(Element) && CurrentPhase == Element;
+    internal bool WillTransition => PhaseRules.IsElement(Element) && PhaseRules.IsElement(CurrentPhase) && CurrentPhase != Element;
+    internal bool InOwnPhase => PhaseRules.IsElement(Element) && CurrentPhase == Element;
     protected bool HasNormalMaterial => Box?.Inventory is { Settled: true } inventory && inventory.Counts.Any(n => n > 0);
     protected bool HasMaterial(Material m) => Box?.Inventory is { Settled: true } inventory && inventory.Counts[(int)m] > 0;
     /// Spends one of the material the card names (design-axes 6.2). No selection screen: the kind is fixed.

@@ -56,7 +56,7 @@ public sealed class MercuryMaterialCard() : MaterialCard
 public sealed class StardustMaterialCard() : MaterialCard
 {
     protected override CardModel Artwork => ModelDb.Card<Inflame>();
-    public override List<(string, string)> Localization => new CardLoc("星砂", "リプレイを刻む希少素材。工房で錬成カードへ恒久加工する。");
+    public override List<(string, string)> Localization => new CardLoc("星砂", "リプレイとコスト+1を刻む希少素材。工房で錬成カードへ恒久加工する。");
 }
 [Pool(typeof(AlchemyCardPool))]
 public sealed class VoidCrystalMaterialCard() : MaterialCard

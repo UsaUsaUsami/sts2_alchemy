@@ -45,13 +45,24 @@ public abstract class CraftedCard(int cost, CardType type, TargetType target) : 
         }
     }
     private bool Has(RareMaterial m) => RareModifier?.Material == m;
+    /// What the inscription currently adds to the base cost. Tracked so the change is made relative to the cost
+    /// after any upgrade (an upgraded card keeps its -1), and so re-applying never stacks it.
+    private int inscribedCostDelta;
+    public const int StardustCostIncrease = 1;
     private void ApplyInscription()
     {
+        // v0.22.4 (ユーザー判断): a replay on top of the card is too strong for free, so stardust also costs 1 more.
+        int wanted = Has(RareMaterial.Stardust) ? StardustCostIncrease : Has(RareMaterial.VoidCrystal) ? -1 : 0;
+        int uninscribed = EnergyCost.GetWithModifiers(CostModifiers.None) - inscribedCostDelta;
+        int inscribed = Math.Max(0, uninscribed + wanted);
+        if (inscribed - uninscribed != inscribedCostDelta) EnergyCost.SetCustomBaseCost(inscribed);
+        inscribedCostDelta = inscribed - uninscribed;
         if (Has(RareMaterial.Stardust) && BaseReplayCount < 1) BaseReplayCount = 1;
-        if (Has(RareMaterial.VoidCrystal)) { EnergyCost.SetCustomBaseCost(Math.Max(0, baseCost - 1)); AddKeyword(CardKeyword.Exhaust); }
+        if (Has(RareMaterial.VoidCrystal)) AddKeyword(CardKeyword.Exhaust);
         if (Has(RareMaterial.Mercury)) AddKeyword(CardKeyword.Retain);
     }
-    protected override void AfterDowngraded() => ApplyInscription();
+    // A downgrade resets the cost to the printed one, taking the inscription's change with it.
+    protected override void AfterDowngraded() { inscribedCostDelta = 0; ApplyInscription(); }
 
     protected abstract string CardTitle { get; }
     protected abstract string CardText { get; }
@@ -72,7 +83,7 @@ public abstract class CorePowerCard<TPower>(AlchemyPhase element, int amount, st
     protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<TPower>(amount)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<TPower>()];
     protected override string CardTitle => title;
-    protected override string CardText => (effect ?? $"[gold]{PhaseRules.Name(element)}相[/gold]への相転移の効果を{{{typeof(TPower).Name}:diff()}}強化する。")
+    protected override string CardText => (effect ?? $"[gold]{PhaseRules.Name(element)}相[/gold]への[gold]相転移[/gold]の効果を{{{typeof(TPower).Name}:diff()}}強化する。")
         + $"\n[gold]{PhaseRules.Name(element)}相[/gold]";
     protected override Task OnPlay(PlayerChoiceContext c, CardPlay p) => ApplySelf<TPower>(c, DynamicVars[typeof(TPower).Name].BaseValue);
     protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
@@ -82,7 +93,11 @@ public sealed class WaterCore() : CorePowerCard<WaterCorePower>(AlchemyPhase.Wat
     "[gold]水相[/gold]へ転移するたび、[gold]脱力[/gold]に加えて[gold]弱体[/gold]{WaterCorePower:diff()}を与える。");
 public sealed class FireCore() : CorePowerCard<FireCorePower>(AlchemyPhase.Fire, 3, "劫火の心核");
 public sealed class AirCore() : CorePowerCard<AirCorePower>(AlchemyPhase.Air, 1, "疾風の心核",
-    "[gold]風相[/gold]へ転移したとき、次の相転移の効果を{AirCorePower:diff()}強化する。");
+    "[gold]風相[/gold]へ転移したとき、次の[gold]相転移[/gold]の効果を{AirCorePower:diff()}強化する。")
+{
+    // v0.23 (ユーザーレビュー): the upgrade doubles the charge instead of making it free.
+    protected override void OnUpgrade() => DynamicVars["AirCorePower"].UpgradeValueBy(1);
+}
 
 /// <summary>
 /// Two different materials: after its effect the card enters its first element, then MaterialBox enters the
@@ -137,14 +152,15 @@ public sealed class SteamBurst() : DualElementCard(1, CardType.Attack, TargetTyp
     protected override async Task Effect(PlayerChoiceContext c, CardPlay p) { await HitAll(c, p, DynamicVars.Damage.BaseValue); await ApplyAll<WeakPower>(c, DynamicVars.Weak.BaseValue); }
     protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(3);
 }
+// v0.23 (ユーザーレビュー): poison became drain, at the same numbers (drain halves, so it deals less in total).
 public sealed class Drizzle() : DualElementCard(1, CardType.Skill, TargetType.AnyEnemy, AlchemyPhase.Water, AlchemyPhase.Air)
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<PoisonPower>(4), new CardsVar(1)];
-    protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<PoisonPower>()];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<LifeDrainPower>(4), new CardsVar(1)];
+    protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<LifeDrainPower>()];
     protected override string CardTitle => "毒霧雨";
-    protected override string EffectText => "[gold]毒[/gold]{PoisonPower:diff()}を与える。カードを{Cards:diff()}枚引く。";
-    protected override async Task Effect(PlayerChoiceContext c, CardPlay p) { await ApplyTo<PoisonPower>(c, p.Target!, DynamicVars.Poison.BaseValue); await Draw(c, DynamicVars.Cards.BaseValue); }
-    protected override void OnUpgrade() => DynamicVars.Poison.UpgradeValueBy(3);
+    protected override string EffectText => "[gold]ドレイン[/gold]{LifeDrainPower:diff()}を与える。カードを{Cards:diff()}枚引く。";
+    protected override async Task Effect(PlayerChoiceContext c, CardPlay p) { await ApplyTo<LifeDrainPower>(c, p.Target!, DynamicVars["LifeDrainPower"].BaseValue); await Draw(c, DynamicVars.Cards.BaseValue); }
+    protected override void OnUpgrade() => DynamicVars["LifeDrainPower"].UpgradeValueBy(3);
 }
 public sealed class FireWhirl() : DualElementCard(1, CardType.Attack, TargetType.AllEnemies, AlchemyPhase.Fire, AlchemyPhase.Air)
 {
@@ -211,11 +227,12 @@ public sealed class CraftCultureVat() : CraftedCard(2, CardType.Power, TargetTyp
     protected override Task OnPlay(PlayerChoiceContext c, CardPlay p) => ApplySelf<CultureVatPower>(c, DynamicVars["CultureVatPower"].BaseValue);
     protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }
-/// <summary>Two iron and a herb. Reads the homunculus without spending it.</summary>
+/// <summary>Two iron and a herb. Reads the homunculus without spending it; exhausted since v0.23 (ユーザーレビュー「強い」).</summary>
 public sealed class CraftFleshArmor() : CraftedCard(1, CardType.Skill, TargetType.Self)
 {
     public override AlchemyPhase Element => AlchemyPhase.Earth;
     public override bool GainsBlock => true;
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Percent", 50)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<HomunculusPower>()];
     protected override string CardTitle => "血肉の鎧";
@@ -227,7 +244,7 @@ public sealed class CraftFleshArmor() : CraftedCard(1, CardType.Skill, TargetTyp
     }
     protected override void OnUpgrade() => DynamicVars["Percent"].UpgradeValueBy(50);
 }
-/// <summary>Two powder and a herb. A fixed-cost exit: does nothing without the homunculus HP to spend.</summary>
+/// <summary>Three powder and a herb (two powder before v0.23). A fixed-cost exit: does nothing without the homunculus HP to spend.</summary>
 public sealed class CraftFusion() : CraftedCard(2, CardType.Attack, TargetType.AnyEnemy)
 {
     public override AlchemyPhase Element => AlchemyPhase.Fire;
@@ -241,8 +258,9 @@ public sealed class CraftFusion() : CraftedCard(2, CardType.Attack, TargetType.A
     }
     protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(10);
 }
-/// <summary>One of each material. Doubles the homunculus once, then exhausts.</summary>
-public sealed class CraftMitosis() : CraftedCard(1, CardType.Skill, TargetType.Self)
+/// <summary>One of each material. Doubles the homunculus once, then exhausts. v0.23 (ユーザーレビュー「強すぎ」): 2 cost
+/// either way, and the upgrade adds retain so it can wait for a full homunculus.</summary>
+public sealed class CraftMitosis() : CraftedCard(2, CardType.Skill, TargetType.Self)
 {
     public override AlchemyPhase Element => AlchemyPhase.Air;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
@@ -251,21 +269,21 @@ public sealed class CraftMitosis() : CraftedCard(1, CardType.Skill, TargetType.S
     protected override string CardText => "[gold]ホムンクルスHP[/gold]を2倍にする。\n[gold]風相[/gold]";
     protected override Task OnPlay(PlayerChoiceContext c, CardPlay p)
         => LifeAxis.GainHomunculus(c, Owner, LifeAxis.State(Owner)?.HomunculusHp ?? 0);
-    protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
+    protected override void OnUpgrade() => AddKeyword(CardKeyword.Retain);
 }
-/// <summary>Five materials. The life axis's top finisher: all of the homunculus, twice over, with no death.</summary>
-public sealed class CraftGateOfTruth() : CraftedCard(3, CardType.Attack, TargetType.AnyEnemy)
+/// <summary>
+/// Five materials. The life axis's reading finisher (design-axes 3.2 参照型): once the homunculus is grown it hits
+/// every enemy each turn without spending it. v0.23 (ユーザーレビュー): it was a spend-all hit, which is 人体錬成's
+/// role without the death, so it became this power. The class keeps its name so saved cards keep their id.
+/// </summary>
+public sealed class CraftGateOfTruth() : CraftedCard(3, CardType.Power, TargetType.Self)
 {
     public override AlchemyPhase Element => AlchemyPhase.Fire;
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Multiplier", 2)];
-    protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<HomunculusPower>()];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<GateOfTruthPower>(8), new DynamicVar("Threshold", GateOfTruthPower.Threshold)];
+    protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<GateOfTruthPower>(), HoverTipFactory.FromPower<HomunculusPower>()];
     protected override string CardTitle => "真理の扉";
-    protected override string CardText => "[gold]ホムンクルスHP[/gold]をすべて消費し、その{Multiplier}倍のダメージを与える。\n[gold]火相[/gold]";
-    protected override async Task OnPlay(PlayerChoiceContext c, CardPlay p)
-    {
-        int spent = await LifeAxis.SpendAllHomunculus(c, Owner);
-        if (spent > 0) await Hit(c, p, spent * DynamicVars["Multiplier"].IntValue);
-    }
+    protected override string CardText => "自分のターン開始時、[gold]ホムンクルスHP[/gold]が{Threshold}以上なら、敵全体に{GateOfTruthPower:diff()}ダメージを与える。\n[gold]火相[/gold]";
+    protected override Task OnPlay(PlayerChoiceContext c, CardPlay p) => ApplySelf<GateOfTruthPower>(c, DynamicVars["GateOfTruthPower"].BaseValue);
     protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }
 /// <summary>
@@ -278,7 +296,8 @@ public sealed class CraftThreePhaseTorrent() : CraftedCard(1, CardType.Attack, T
     public override bool GainsBlock => true;
     protected override IEnumerable<DynamicVar> CanonicalVars => [new DamageVar(8, ValueProp.Move), new BlockVar(5, ValueProp.Move)];
     protected override string CardTitle => "三相の奔流";
-    protected override string CardText => "{Damage:diff()}ダメージ。{Block:diff()}[gold]ブロック[/gold]を得る。相転移を最大3回起こす。\n[gold]地相→火相→風相[/gold]";
+    // v0.23 (ユーザーレビュー): no "up to three transitions" line; the phase line already says it.
+    protected override string CardText => "{Damage:diff()}ダメージ。{Block:diff()}[gold]ブロック[/gold]を得る。\n[gold]地相→火相→風相[/gold]";
     protected override async Task OnPlay(PlayerChoiceContext c, CardPlay p)
     {
         await Hit(c, p, DynamicVars.Damage.BaseValue);

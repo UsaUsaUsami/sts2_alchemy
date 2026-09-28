@@ -29,7 +29,7 @@ public static class RareMaterials
 {
     public static readonly IReadOnlyList<RareMaterialDefinition> All = [
         new(RareMaterial.Mercury, "rare.mercury", "水銀", "流動化", "このカードは保留を得る。"),
-        new(RareMaterial.Stardust, "rare.stardust", "星砂", "リプレイ", "このカードをプレイした時、効果をもう1回発動する。"),
+        new(RareMaterial.Stardust, "rare.stardust", "星砂", "リプレイ", "コストが1増え、このカードをプレイした時、効果をもう1回発動する。"),
         new(RareMaterial.VoidCrystal, "rare.void_crystal", "虚無結晶", "凝縮", "コストが1減り、廃棄を得る。")
     ];
 

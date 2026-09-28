@@ -1,11 +1,13 @@
 using Alchemist.Core;
 using Godot;
+using HarmonyLib;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
+using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Powers;
@@ -163,4 +165,42 @@ public static class PhaseTransitions
         AlchemyPhase.Air => VfxColor.Green,
         _ => VfxColor.White
     };
+}
+
+/// <summary>
+/// 相転移 as a keyword (v0.22.4, ユーザー要望): a tooltip that says what the word means. Its text lives in the
+/// material box's loc table, next to the other box strings.
+/// </summary>
+public static class PhaseTransitionTip
+{
+    public const string TitleKey = "phaseTransition.title";
+    public const string DescriptionKey = "phaseTransition.description";
+    public static string Text =>
+        "属性カードを使って、今と違う相へ移ること。移った先の相の効果が発動する。\n" +
+        $"地：{PhaseRules.BaseAmount(AlchemyPhase.Earth)}[gold]ブロック[/gold]　水：敵に[gold]脱力[/gold]{PhaseRules.BaseAmount(AlchemyPhase.Water)}\n" +
+        $"火：敵に{PhaseRules.BaseAmount(AlchemyPhase.Fire)}ダメージ　風：カードを{PhaseRules.BaseAmount(AlchemyPhase.Air)}枚引く\n" +
+        "同じ相のカードを続けて使ったときと、無相から最初の相へ移ったときは起きない。";
+
+    // Built on each use: HoverTip resolves its text at construction, so a cached one made before the loc loaded would keep the key.
+    public static IHoverTip Tip => new HoverTip(Loc(TitleKey), Loc(DescriptionKey));
+    private static LocString Loc(string key) => new("relics", $"{ModelDb.Relic<MaterialBox>().Id.Entry}.{key}");
+
+    private static readonly Dictionary<Type, bool> mentions = [];
+    /// Cards whose text talks about transitions (相転移, 〜へ転移) get the tooltip, like a keyword would.
+    public static bool Mentions(CardModel card)
+    {
+        var type = card.GetType();
+        if (!mentions.TryGetValue(type, out bool found))
+            mentions[type] = found = card is AlchemyCard alchemy && alchemy.Localization.Any(e => e.Item2.Contains("転移"));
+        return found;
+    }
+}
+
+[HarmonyPatch(typeof(CardModel), nameof(CardModel.HoverTips), MethodType.Getter)]
+static class PhaseTransitionTipPatch
+{
+    static void Postfix(CardModel __instance, ref IEnumerable<IHoverTip> __result)
+    {
+        if (PhaseTransitionTip.Mentions(__instance)) __result = [PhaseTransitionTip.Tip, .. __result];
+    }
 }

@@ -17,8 +17,8 @@ namespace Alchemist;
 // v0.21: 報酬60枚への縮小で報酬プールから外した（旧セーブ読込用に定義だけ残す）。
 public sealed class EarthRockSmash() : ElementCard(2,CardType.Attack,CardRarity.Event,TargetType.AnyEnemy,AlchemyPhase.Earth)
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars=>[new DamageVar(12,ValueProp.Move),new DynamicVar("Bonus",6)];
-    public override List<(string,string)> Localization=>new CardLoc("岩砕き","{Damage:diff()}ダメージ。[gold]地相[/gold]で使うと、さらに{Bonus:diff()}ダメージ。\n[gold]地相[/gold]");
+    protected override IEnumerable<DynamicVar> CanonicalVars=>[new PreviewDamageVar((c,_)=>c.DynamicVars.Damage.BaseValue+(c.InOwnPhase?c.DynamicVars["Bonus"].BaseValue:0)),new DamageVar(12,ValueProp.Move),new DynamicVar("Bonus",6)];
+    public override List<(string,string)> Localization=>new CardLoc("岩砕き","{Damage:diff()}ダメージ。[gold]地相[/gold]で使うと、さらに{Bonus:diff()}ダメージ。{InCombat:\n（{Total:diff()}ダメージ）|}\n[gold]地相[/gold]");
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>Hit(c,p,DynamicVars.Damage.BaseValue+(InOwnPhase?DynamicVars["Bonus"].BaseValue:0));
     protected override void OnUpgrade()=>DynamicVars.Damage.UpgradeValueBy(4);
 }
@@ -40,7 +40,8 @@ public sealed class EarthTremor() : ElementCard(1,CardType.Attack,CardRarity.Unc
 }
 public sealed class EarthBulwarkBash() : ElementCard(1,CardType.Attack,CardRarity.Uncommon,TargetType.AnyEnemy,AlchemyPhase.Earth)
 {
-    public override List<(string,string)> Localization=>new CardLoc("城塞打ち","現在の[gold]ブロック[/gold]と同じダメージを与える。\n[gold]地相[/gold]");
+    protected override IEnumerable<DynamicVar> CanonicalVars=>[new PreviewDamageVar((c,_)=>c.Owner.Creature.Block)];
+    public override List<(string,string)> Localization=>new CardLoc("城塞打ち","現在の[gold]ブロック[/gold]と同じダメージを与える。{InCombat:\n（{Total:diff()}ダメージ）|}\n[gold]地相[/gold]");
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>Hit(c,p,Owner.Creature.Block);
     protected override void OnUpgrade()=>EnergyCost.UpgradeBy(-1);
 }
@@ -52,13 +53,23 @@ public sealed class EarthIronWall() : ElementCard(2,CardType.Skill,CardRarity.Ev
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>CardBlock(p);
     protected override void OnUpgrade()=>DynamicVars.Block.UpgradeValueBy(5);
 }
+/// <summary>v0.23 (ユーザーレビュー): 土壁 left the reward pool for the starter; this is the heavier common block.</summary>
+public sealed class EarthBedrock() : ElementCard(2,CardType.Skill,CardRarity.Common,TargetType.Self,AlchemyPhase.Earth)
+{
+    protected override IEnumerable<DynamicVar> CanonicalVars=>[new BlockVar(12,ValueProp.Move)];
+    public override List<(string,string)> Localization=>new CardLoc("岩盤","{Block:diff()}[gold]ブロック[/gold]を得る。\n[gold]地相[/gold]");
+    protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>CardBlock(p);
+    protected override void OnUpgrade()=>DynamicVars.Block.UpgradeValueBy(3);
+}
+// v0.23 (ユーザーレビュー): flat plating was the Ironclad's card. Plating now grows with this turn's transitions (原則7).
 public sealed class EarthBlessing() : ElementCard(1,CardType.Skill,CardRarity.Uncommon,TargetType.Self,AlchemyPhase.Earth)
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars=>[new PowerVar<PlatingPower>(4)];
+    protected override IEnumerable<DynamicVar> CanonicalVars=>[new PreviewCountVar("Total",c=>c.TransitionsThisTurn*c.DynamicVars["Bonus"].BaseValue),new DynamicVar("Bonus",1)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<PlatingPower>()];
-    public override List<(string,string)> Localization=>new CardLoc("大地の加護","[gold]プレート[/gold]{PlatingPower:diff()}を得る。\n[gold]地相[/gold]");
-    protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>ApplySelf<PlatingPower>(c,DynamicVars["PlatingPower"].BaseValue);
-    protected override void OnUpgrade()=>DynamicVars["PlatingPower"].UpgradeValueBy(2);
+    public override List<(string,string)> Localization=>new CardLoc("大地の加護","このターンに起きた[gold]相転移[/gold]1回につき[gold]プレート[/gold]{Bonus:diff()}を得る。{InCombat:\n（[gold]プレート[/gold]{Total:diff()}）|}\n[gold]地相[/gold]");
+    protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)
+        =>TransitionsThisTurn>0?ApplySelf<PlatingPower>(c,TransitionsThisTurn*DynamicVars["Bonus"].BaseValue):Task.CompletedTask;
+    protected override void OnUpgrade()=>DynamicVars["Bonus"].UpgradeValueBy(1);
 }
 public sealed class EarthFortify() : ElementCard(1,CardType.Skill,CardRarity.Uncommon,TargetType.Self,AlchemyPhase.Earth)
 {
@@ -87,7 +98,8 @@ public sealed class EarthThornShell() : ElementCard(1,CardType.Power,CardRarity.
 // v0.21: 報酬60枚への縮小で報酬プールから外した（旧セーブ読込用に定義だけ残す）。
 public sealed class EarthLandslide() : ElementCard(2,CardType.Attack,CardRarity.Event,TargetType.AllEnemies,AlchemyPhase.Earth)
 {
-    public override List<(string,string)> Localization=>new CardLoc("山崩し","敵全体に、現在の[gold]ブロック[/gold]と同じダメージを与える。\n[gold]地相[/gold]");
+    protected override IEnumerable<DynamicVar> CanonicalVars=>[new PreviewDamageVar((c,_)=>c.Owner.Creature.Block)];
+    public override List<(string,string)> Localization=>new CardLoc("山崩し","敵全体に、現在の[gold]ブロック[/gold]と同じダメージを与える。{InCombat:\n（{Total:diff()}ダメージ）|}\n[gold]地相[/gold]");
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>HitAll(c,p,Owner.Creature.Block);
     protected override void OnUpgrade()=>EnergyCost.UpgradeBy(-1);
 }
@@ -100,11 +112,12 @@ public sealed class EarthImmovable() : ElementCard(2,CardType.Skill,CardRarity.E
     protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p){await CardBlock(p);await ApplySelf<BlurPower>(c,1);}
     protected override void OnUpgrade()=>DynamicVars.Block.UpgradeValueBy(4);
 }
-public sealed class EarthMemory() : ElementCard(1,CardType.Skill,CardRarity.Rare,TargetType.Self,AlchemyPhase.Earth)
+// v0.23 (ユーザーレビュー「強すぎる」): 2 cost, 2 per transition (was 1 cost, 3).
+public sealed class EarthMemory() : ElementCard(2,CardType.Skill,CardRarity.Rare,TargetType.Self,AlchemyPhase.Earth)
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars=>[new DynamicVar("Bonus",3)];
+    protected override IEnumerable<DynamicVar> CanonicalVars=>[new DynamicVar("Bonus",2)];
     public override bool GainsBlock=>true;
-    public override List<(string,string)> Localization=>new CardLoc("大地の記憶","この戦闘で起きた相転移1回につき{Bonus:diff()}[gold]ブロック[/gold]を得る。\n[gold]地相[/gold]");
+    public override List<(string,string)> Localization=>new CardLoc("大地の記憶","この戦闘で起きた[gold]相転移[/gold]1回につき{Bonus:diff()}[gold]ブロック[/gold]を得る。\n[gold]地相[/gold]");
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>TransitionCount>0?Block(p,TransitionCount*DynamicVars["Bonus"].BaseValue):Task.CompletedTask;
     protected override void OnUpgrade()=>DynamicVars["Bonus"].UpgradeValueBy(1);
 }
@@ -117,12 +130,15 @@ public sealed class EarthEntrench() : ElementCard(2,CardType.Skill,CardRarity.Ev
         ?CreatureCmd.GainBlock(Owner.Creature,Owner.Creature.Block,ValueProp.Unpowered,p):Task.CompletedTask;
     protected override void OnUpgrade()=>EnergyCost.UpgradeBy(-1);
 }
-public sealed class EarthKing() : ElementCard(3,CardType.Power,CardRarity.Rare,TargetType.Self,AlchemyPhase.Earth)
+// v0.23 (ユーザーレビュー「バリケードと一緒」): like StS1's Calipers, block is kept but loses a fixed amount.
+// The upgrade lowers the loss, so the power keeps its amount as "block lost".
+public sealed class EarthKing() : ElementCard(2,CardType.Power,CardRarity.Rare,TargetType.Self,AlchemyPhase.Earth)
 {
-    protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<BarricadePower>()];
-    public override List<(string,string)> Localization=>new CardLoc("大地の王","[gold]ブロック[/gold]がターン開始時に失われなくなる。\n[gold]地相[/gold]");
-    protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>ApplySelf<BarricadePower>(c,1);
-    protected override void OnUpgrade()=>EnergyCost.UpgradeBy(-1);
+    protected override IEnumerable<DynamicVar> CanonicalVars=>[new PowerVar<EarthKingPower>(20)];
+    protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<EarthKingPower>()];
+    public override List<(string,string)> Localization=>new CardLoc("大地の王","ターン開始時、[gold]ブロック[/gold]がすべて失われる代わりに、{EarthKingPower:diff()}だけ失われる。\n[gold]地相[/gold]");
+    protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>ApplySelf<EarthKingPower>(c,DynamicVars["EarthKingPower"].BaseValue);
+    protected override void OnUpgrade()=>DynamicVars["EarthKingPower"].UpgradeValueBy(-5);
 }
 /// <summary>鉄の素材消費カード（仮名：鉄壁錬成、design-axes 6.2）. Weak without iron, well above 土壁 with it.</summary>
 public sealed class EarthIronBulwark() : ElementCard(1,CardType.Skill,CardRarity.Common,TargetType.Self,AlchemyPhase.Earth)

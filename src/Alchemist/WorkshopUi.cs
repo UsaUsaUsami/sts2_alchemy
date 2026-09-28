@@ -336,7 +336,7 @@ public static class WorkshopUi
     }
     private static string InfusionText(IReadOnlyList<int> counts) => counts.Sum()==0 ? "なし" : string.Join("、", new[]{
         (counts[(int)Core.Material.Powder],"鋭利"),(counts[(int)Core.Material.Iron],"ブロック+"),
-        (counts[(int)Core.Material.Herb],"ドレイン+"),(counts[(int)Core.Material.Ether],"調合準備+")}
+        (counts[(int)Core.Material.Herb],"ドレイン+"),(counts[(int)Core.Material.Ether],"励起+")}
         .Where(x=>x.Item1>0).Select(x=>$"{x.Item2}{x.Item1}"));
     private static CardModel UpgradePreview(CardModel source)
     {
@@ -454,7 +454,7 @@ public static class WorkshopUi
     {
         var cards=box!.Owner.Deck.Cards.Where(CanModify).ToArray();
         Text("改造するカードを選ぶ",32,content,new Color("f2d18b"));
-        Text($"素材1個につき効果+1。種類を混ぜてよく、1枚に合計{InfusionRules.Limit}個まで入れられます。火薬＝ダメージ+1（アタックのみ）、鉄＝使用時ブロック+1、薬草＝使用時ドレイン+1、エーテル＝使用時に調合準備+1。休憩所のアップグレードとは別で、強化済みのカードも改造できます。",19);
+        Text($"素材1個につき効果+1。種類を混ぜてよく、1枚に合計{InfusionRules.Limit}個まで入れられます。火薬＝ダメージ+1（アタックのみ）、鉄＝使用時ブロック+1、薬草＝使用時ドレイン+1、エーテル＝使用時に励起+1。休憩所のアップグレードとは別で、強化済みのカードも改造できます。",19);
         if(!box.Inventory.CanUseFacility(box.Owner.RunState.TotalFloor,WorkshopFacility.Modification))
             Text("この工房の改造設備は使用済みです。",20,content,new Color("d8c082"));
         var grid=new GridContainer { Columns=3,SizeFlagsHorizontal=Control.SizeFlags.ExpandFill };

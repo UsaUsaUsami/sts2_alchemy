@@ -19,6 +19,7 @@ using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
+using MegaCrit.Sts2.Core.Nodes.Vfx;
 using MegaCrit.Sts2.Core.ValueProps;
 
 namespace Alchemist;
@@ -90,7 +91,7 @@ public static class LifeAxis
             : drain.Owner.CombatState?.Players.FirstOrDefault(p => p.GetRelic<MaterialBox>() is not null);
 
     /// One drain trigger: the owner loses HP equal to the stacks, the alchemist's homunculus gains what was
-    /// actually lost, then one stack decays. Shared by the turn-start trigger and 生命の収穫.
+    /// actually lost, then the stacks halve (DrainRules). Shared by the turn-start trigger and 生命の収穫.
     public static async Task TriggerDrain(LifeDrainPower drain)
     {
         var owner = drain.Owner;
@@ -108,7 +109,8 @@ public static class LifeAxis
             foreach (var nourish in alchemist.Creature.Powers.OfType<NourishPower>().ToList())
                 if (lost > 0) await nourish.OnDrained();
         }
-        if (owner.IsAlive) await PowerCmd.Decrement(drain);
+        if (owner.IsAlive && drain.Amount > 0)
+            await PowerCmd.ModifyAmount(new ThrowingPlayerChoiceContext(), drain, DrainRules.StacksAfterTrigger(drain.Amount) - drain.Amount, null, null);
     }
 }
 
@@ -123,9 +125,10 @@ public sealed class HomunculusPet() : CustomPetModel(visibleHp: true), ILocaliza
     public override IEnumerable<string> AssetPaths => [BorrowedVisuals];
     public override NCreatureVisuals? CreateCustomVisuals()
         => PreloadManager.Cache.GetScene(BorrowedVisuals).Instantiate<NCreatureVisuals>(PackedScene.GenEditState.Disabled);
-    // Osty's skeleton names its animations differently from the defaults.
+    // Osty's own state machine: BaseLib's SetupAnimationState has no "Revive" trigger, so a pet that fell and
+    // then regained HP stayed frozen on the last frame of "die". Osty's adds revive and dead_loop.
     public override CreatureAnimator? SetupCustomAnimationStates(MegaSprite controller)
-        => SetupAnimationState(controller, "idle_loop", deadName: "die", hitName: "hurt", attackName: "attack", castName: "cast");
+        => ModelDb.Monster<Osty>().GenerateAnimator(controller);
     public List<(string, string)> Localization => [("name", "ホムンクルス")];
 }
 
@@ -135,8 +138,8 @@ public sealed class LifeDrainPower : AlchemyPower
     public override PowerType Type => PowerType.Debuff;
     protected override PowerModel IconSource => ModelDb.Power<PoisonPower>();
     public override List<(string,string)> Localization => new PowerLoc("ドレイン",
-        "ターン開始時、この数値分のHPを失う。失ったHPは錬金術師のホムンクルスHPになる。その後1減る。",
-        "ターン開始時、{Amount}のHPを失い、同じ量を[gold]ホムンクルスHP[/gold]として奪われる。その後1減る。");
+        "ターン開始時、この数値分のHPを失う。失ったHPは錬金術師のホムンクルスHPになる。その後半分になる（端数切り捨て）。",
+        "ターン開始時、{Amount}のHPを失い、同じ量を[gold]ホムンクルスHP[/gold]として奪われる。その後半分になる（端数切り捨て）。");
     // Same hook and participant check as the base game's PoisonPower.
     public override async Task AfterSideTurnStart(CombatSide side, IReadOnlyList<Creature> participants, ICombatState combatState)
     {
@@ -215,5 +218,23 @@ public static class HomunculusPetNodePatch
         if (__instance.GetCreatureNode(creature) is not { } node || __instance.GetCreatureNode(owner.Creature) is not { } ownerNode) return;
         node.ToggleIsInteractable(true);
         node.Position = ownerNode.Position + Vector2.Right * ownerNode.Hitbox.Size.X * 0.5f + Osty.MinOffset;
+    }
+}
+
+/// <summary>
+/// ユーザー報告（v0.23.0）: a hit bigger than the homunculus's HP showed the whole hit over the homunculus and the
+/// overflow again over the alchemist. The damage number adds a creature's overkill to what it lost, except for
+/// Osty, whose overflow is shown on its owner instead. The homunculus gets the same exception.
+/// </summary>
+[HarmonyPatch(typeof(NDamageNumVfx), nameof(NDamageNumVfx.Create), typeof(Creature), typeof(DamageResult))]
+public static class HomunculusDamageNumberPatch
+{
+    /// The number shown over `target`, or null to leave the game's own rule.
+    public static int? Shown(Creature target, DamageResult result) => target.Monster is HomunculusPet ? result.UnblockedDamage : null;
+    public static bool Prefix(Creature target, DamageResult result, ref NDamageNumVfx? __result)
+    {
+        if (Shown(target, result) is not { } shown) return true;
+        __result = NDamageNumVfx.Create(target, shown);
+        return false;
     }
 }

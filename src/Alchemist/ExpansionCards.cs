@@ -22,12 +22,14 @@ namespace Alchemist;
 /// <summary>F-1（仮名：自己培養）. One of the three forbidden cards that put a status on yourself (3.4).</summary>
 public sealed class LifeSelfCultivation() : ElementCard(1,CardType.Power,CardRarity.Rare,TargetType.Self,AlchemyPhase.Water)
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars=>[new PowerVar<SelfCultivationPower>(1)];
+    protected override IEnumerable<DynamicVar> CanonicalVars=>[new PowerVar<SelfCultivationPower>(2)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<SelfCultivationPower>(),HoverTipFactory.FromPower<LifeDrainPower>()];
     public override List<(string,string)> Localization=>new CardLoc("自己培養","自分のターン開始時、自分に[gold]ドレイン[/gold]{SelfCultivationPower:diff()}を付与する。自分に付いた[gold]ドレイン[/gold]で得る[gold]ホムンクルスHP[/gold]は2倍になる。\n[gold]水相[/gold]");
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>ApplySelf<SelfCultivationPower>(c,DynamicVars["SelfCultivationPower"].BaseValue);
-    // Cost rather than stacks: a larger self-drain would pile up every turn (design-axes 4.3 F-1).
-    protected override void OnUpgrade()=>EnergyCost.UpgradeBy(-1);
+    // v0.23 (ユーザーレビュー): drain 1 halved straight back to 0 (v0.22.4), worth 1 HP for 2 homunculus HP a turn.
+    // 2 (upgrade 3) settles at 3 HP for 6 (5 for 10); halving keeps the stack from piling up, so the upgrade
+    // raises it instead of lowering the cost (design-axes 4.3 F-1 revised).
+    protected override void OnUpgrade()=>DynamicVars["SelfCultivationPower"].UpgradeValueBy(1);
 }
 
 public sealed class SelfCultivationPower : AlchemyPower
@@ -82,13 +84,14 @@ public sealed class AlchAlkahest() : ElementCard(2,CardType.Attack,CardRarity.Ra
 
 /// <summary>
 /// F-3（仮名：四元の刃）. Cheaper for each kind of normal material held. Kinds, not count: counting units would
-/// reward hoarding, against spending in combat (design-axes 6.1).
+/// reward hoarding, against spending in combat (design-axes 6.1). v0.23 (ユーザーレビュー): 5 cost, so all four
+/// normal kinds leave it at 1 and only holding a rare material as well brings it to 0.
 /// </summary>
-public sealed class AirElementBlade() : ElementCard(4,CardType.Attack,CardRarity.Uncommon,TargetType.AnyEnemy,AlchemyPhase.Air)
+public sealed class AirElementBlade() : ElementCard(5,CardType.Attack,CardRarity.Uncommon,TargetType.AnyEnemy,AlchemyPhase.Air)
 {
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new DamageVar(18,ValueProp.Move)];
-    public override List<(string,string)> Localization=>new CardLoc("四元の刃","{Damage:diff()}ダメージ。所持している通常素材の種類数だけコストが下がる。\n[gold]風相[/gold]");
-    private int KindsHeld=>Box?.Inventory.Counts.Count(n=>n>0) ?? 0;
+    public override List<(string,string)> Localization=>new CardLoc("四元の刃","{Damage:diff()}ダメージ。所持している通常素材の種類数だけコストが下がる。希少素材を持っていれば、さらに1下がる。\n[gold]風相[/gold]");
+    private int KindsHeld=>Box?.Inventory is { } inventory ? inventory.Counts.Count(n=>n>0)+(inventory.RareCounts.Any(n=>n>0)?1:0) : 0;
     public override bool TryModifyEnergyCostInCombat(CardModel card,decimal originalCost,out decimal modifiedCost)
     {
         modifiedCost=originalCost;
@@ -104,7 +107,7 @@ public sealed class AirElementBlade() : ElementCard(4,CardType.Attack,CardRarity
 public sealed class AlchPhaseWheel() : AlchemyCard(3,CardType.Power,CardRarity.Rare,TargetType.Self)
 {
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<PhaseWheelPower>()];
-    public override List<(string,string)> Localization=>new CardLoc("四相輪転","カードを使うたび、そのカードで相転移が起きなかったなら、次の相へ進む（地→水→火→風→地）。");
+    public override List<(string,string)> Localization=>new CardLoc("四相輪転","カードを使うたび、そのカードで[gold]相転移[/gold]が起きなかったなら、次の相へ進む（地→水→火→風→地）。");
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>ApplySelf<PhaseWheelPower>(c,1);
     protected override void OnUpgrade()=>EnergyCost.UpgradeBy(-1);
 }

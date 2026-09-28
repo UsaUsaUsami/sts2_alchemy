@@ -41,20 +41,21 @@ public sealed class LifeDrainMiasma() : ElementCard(1,CardType.Power,CardRarity.
 }
 
 /// <summary>
-/// 手本C（仮名：大いなる業）. Its cost falls as drain takes HP this combat; the hand shows the current cost because
-/// the card answers the game's own cost hook for itself.
+/// 手本C（仮名：大いなる業）. Its cost falls with the homunculus HP it reads (v0.23 ユーザーレビュー; it used to read HP
+/// drained this combat). Nothing is spent. The hand shows the current cost because the card answers the game's own
+/// cost hook for itself.
 /// </summary>
 public sealed class LifeGreatWork() : ElementCard(5,CardType.Attack,CardRarity.Uncommon,TargetType.AnyEnemy,AlchemyPhase.Fire)
 {
-    public const int DrainPerCost = 10;
-    protected override IEnumerable<DynamicVar> CanonicalVars=>[new DamageVar(50,ValueProp.Move),new DynamicVar("Step",DrainPerCost)];
-    protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<LifeDrainPower>()];
-    public override List<(string,string)> Localization=>new CardLoc("大いなる業","{Damage:diff()}ダメージ。この戦闘で[gold]ドレイン[/gold]により敵が失ったHP{Step}ごとに、コストが1下がる。\n[gold]火相[/gold]");
+    public const int HomunculusPerCost = 10;
+    protected override IEnumerable<DynamicVar> CanonicalVars=>[new DamageVar(50,ValueProp.Move),new DynamicVar("Step",HomunculusPerCost)];
+    protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<HomunculusPower>()];
+    public override List<(string,string)> Localization=>new CardLoc("大いなる業","{Damage:diff()}ダメージ。[gold]ホムンクルスHP[/gold]{Step}ごとに、コストが1下がる。\n[gold]火相[/gold]");
     public override bool TryModifyEnergyCostInCombat(CardModel card,decimal originalCost,out decimal modifiedCost)
     {
         modifiedCost=originalCost;
         if(card!=this || LifeAxis.State(Owner) is not { } life) return false;
-        modifiedCost=DrainRules.ReducedCost((int)originalCost,life.HpDrainedThisCombat,DrainPerCost);
+        modifiedCost=DrainRules.ReducedCost((int)originalCost,life.HomunculusHp,HomunculusPerCost);
         return modifiedCost!=originalCost;
     }
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>Hit(c,p,DynamicVars.Damage.BaseValue);
@@ -64,9 +65,9 @@ public sealed class LifeGreatWork() : ElementCard(5,CardType.Attack,CardRarity.U
 /// <summary>人体錬成. Does not spend the homunculus: the price is the death it puts on you.</summary>
 public sealed class HumanTransmutation() : ElementCard(3,CardType.Attack,CardRarity.Rare,TargetType.AnyEnemy,AlchemyPhase.Fire)
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars=>[new DynamicVar("Multiplier",3)];
+    protected override IEnumerable<DynamicVar> CanonicalVars=>[new PreviewDamageVar((c,_)=>c.HomunculusHp*c.DynamicVars["Multiplier"].BaseValue),new DynamicVar("Multiplier",3)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<HomunculusPower>(),HoverTipFactory.FromPower<DeathMarkPower>()];
-    public override List<(string,string)> Localization=>new CardLoc("人体錬成","敵1体に[gold]ホムンクルスHP[/gold]×{Multiplier:diff()}のダメージを与える。自分に[gold]死亡[/gold]を付与する。\n[gold]火相[/gold]");
+    public override List<(string,string)> Localization=>new CardLoc("人体錬成","敵1体に[gold]ホムンクルスHP[/gold]×{Multiplier:diff()}のダメージを与える。自分に[gold]死亡[/gold]を付与する。{InCombat:\n（{Total:diff()}ダメージ）|}\n[gold]火相[/gold]");
     protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p)
     {
         int homunculus=LifeAxis.State(Owner)?.HomunculusHp ?? 0;

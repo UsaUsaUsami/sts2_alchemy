@@ -18,12 +18,12 @@ public static class Recipes
         new("craft.earth_core.v1", [Material.Iron, Material.Iron], "大地の心核", "1コスト / パワー / 自身 / 地相\n地相への相転移の効果を3強化する。強化後0コスト。", "純相", "地へ移るたびの守りを厚くする。"),
         new("craft.water_core.v1", [Material.Herb, Material.Herb], "流水の心核", "1コスト / パワー / 自身 / 水相\n水相へ転移するたび、脱力に加えて弱体1を与える。強化後0コスト。", "純相", "水へ移るたびに弱体も与える。"),
         new("craft.fire_core.v1", [Material.Powder, Material.Powder], "劫火の心核", "1コスト / パワー / 自身 / 火相\n火相への相転移の効果を3強化する。強化後0コスト。", "純相", "火へ移るたびの火力を上げる。"),
-        new("craft.air_core.v1", [Material.Ether, Material.Ether], "疾風の心核", "1コスト / パワー / 自身 / 風相\n風相へ転移したとき、次の相転移の効果を1強化する。強化後0コスト。", "純相", "風を経由した次の転移を強める。"),
+        new("craft.air_core.v1", [Material.Ether, Material.Ether], "疾風の心核", "1コスト / パワー / 自身 / 風相\n風相へ転移したとき、次の相転移の効果を1強化する。強化後2。", "純相", "風を経由した次の転移を強める。"),
         new("craft.mud_rampart.v1", [Material.Iron, Material.Herb], "泥の城壁", "1コスト / スキル / 敵1体 / 地相→水相\n7ブロック、脱力1。強化後10ブロック、脱力2。", "複相", "守りながら地と水へ続けて移る。"),
         new("craft.lava_shot.v1", [Material.Iron, Material.Powder], "溶岩弾", "1コスト / アタック / 敵1体 / 地相→火相\n9ダメージ、4ブロック。強化後12ダメージ、6ブロック。", "複相", "攻防を1枚で行い、地と火へ続けて移る。"),
         new("craft.sandstorm.v1", [Material.Iron, Material.Ether], "砂嵐", "1コスト / スキル / 自身 / 地相→風相\n6ブロック、1ドロー。強化後9ブロック、2ドロー。", "複相", "守りと手札補充を兼ね、地と風へ続けて移る。"),
         new("craft.steam_burst.v1", [Material.Herb, Material.Powder], "蒸気爆発", "1コスト / アタック / 敵全体 / 水相→火相\n敵全体に6ダメージと脱力1。強化後9ダメージ。", "複相", "集団戦で水と火へ続けて移る。"),
-        new("craft.drizzle.v1", [Material.Herb, Material.Ether], "毒霧雨", "1コスト / スキル / 敵1体 / 水相→風相\n毒4、1ドロー。強化後毒7。", "複相", "毒を撒き、水と風へ続けて移る。"),
+        new("craft.drizzle.v1", [Material.Herb, Material.Ether], "毒霧雨", "1コスト / スキル / 敵1体 / 水相→風相\nドレイン4、1ドロー。強化後ドレイン7。", "複相", "ドレインを与え、水と風へ続けて移る。"),
         new("craft.fire_whirl.v1", [Material.Powder, Material.Ether], "火炎旋風", "1コスト / アタック / 敵全体 / 火相→風相\n敵全体に4ダメージを2回。強化後6ダメージを2回。", "複相", "集団戦で火と風へ続けて移る。"),
         // v0.21 (design-axes 7.1): fixed recipes of three to five materials. Every two-material recipe is a
         // phase card, so these fill the life and general slots, plus one five-material triple-phase finisher.
@@ -32,11 +32,12 @@ public static class Recipes
         new("craft.ether_catalyst.v1", [Material.Ether, Material.Ether, Material.Ether], "精霊の触媒", "0コスト / スキル / 自身 / 風相\nカードを2枚引き、エナジーを1得る。廃棄。強化後3枚。", "汎用", "1ターンの手数を増やす。"),
         new("craft.philosophers_blood.v1", [Material.Herb, Material.Herb, Material.Iron], "賢者の血", "1コスト / パワー / 自身 / 水相\nホムンクルスが攻撃を肩代わりするたび、攻撃した敵にドレイン2。強化後0コスト。", "生命", "盾になったホムンクルスが反撃で生命を奪う。"),
         new("craft.culture_vat.v1", [Material.Herb, Material.Herb, Material.Ether], "培養槽", "2コスト / パワー / 自身 / 水相\n自分のターン開始時、ホムンクルスHPを3得る。強化後1コスト。", "生命", "毎ターン器を満たす。"),
-        new("craft.flesh_armor.v1", [Material.Iron, Material.Iron, Material.Herb], "血肉の鎧", "1コスト / スキル / 自身 / 地相\nホムンクルスHPの半分のブロックを得る。強化後、同じ量のブロック。", "生命", "溜めた器を守りに変える。"),
-        new("craft.fusion.v1", [Material.Powder, Material.Powder, Material.Herb], "融合", "2コスト / アタック / 敵1体 / 火相\nホムンクルスHPを10消費できれば、30ダメージ。強化後40。", "生命", "器を削って大きく殴る。"),
-        new("craft.mitosis.v1", [Material.Iron, Material.Herb, Material.Powder, Material.Ether], "分裂", "1コスト / スキル / 自身 / 風相\nホムンクルスHPを2倍にする。廃棄。強化後0コスト。", "生命", "四素材を揃えて器を倍にする。"),
-        new("craft.gate_of_truth.v1", [Material.Herb, Material.Herb, Material.Herb, Material.Iron, Material.Powder], "真理の扉", "3コスト / アタック / 敵1体 / 火相\nホムンクルスHPをすべて消費し、その2倍のダメージを与える。強化後2コスト。", "生命", "生命軸の最上位の切り札。"),
-        new("craft.three_phase_torrent.v1", [Material.Iron, Material.Iron, Material.Powder, Material.Powder, Material.Ether], "三相の奔流", "1コスト / アタック / 敵1体 / 地相→火相→風相\n8ダメージ、5ブロック。相転移を最大3回起こす。強化後11ダメージ、7ブロック。", "三相", "1枚で最大3回相転移する最上位の切り札。")];
+        new("craft.flesh_armor.v1", [Material.Iron, Material.Iron, Material.Herb], "血肉の鎧", "1コスト / スキル / 自身 / 地相\nホムンクルスHPの半分のブロックを得る。廃棄。強化後、同じ量のブロック。", "生命", "溜めた器を守りに変える。"),
+        // v0.23 (ユーザーレビュー): one more powder. The id keeps its meaning: it still makes the same card.
+        new("craft.fusion.v1", [Material.Powder, Material.Powder, Material.Powder, Material.Herb], "融合", "2コスト / アタック / 敵1体 / 火相\nホムンクルスHPを10消費できれば、30ダメージ。強化後40。", "生命", "器を削って大きく殴る。"),
+        new("craft.mitosis.v1", [Material.Iron, Material.Herb, Material.Powder, Material.Ether], "分裂", "2コスト / スキル / 自身 / 風相\nホムンクルスHPを2倍にする。廃棄。強化後、保留。", "生命", "四素材を揃えて器を倍にする。"),
+        new("craft.gate_of_truth.v1", [Material.Herb, Material.Herb, Material.Herb, Material.Iron, Material.Powder], "真理の扉", "3コスト / パワー / 自身 / 火相\n自分のターン開始時、ホムンクルスHPが20以上なら、敵全体に8ダメージ。強化後2コスト。", "生命", "育てきったホムンクルスで毎ターン全体を焼く切り札。"),
+        new("craft.three_phase_torrent.v1", [Material.Iron, Material.Iron, Material.Powder, Material.Powder, Material.Ether], "三相の奔流", "1コスト / アタック / 敵1体 / 地相→火相→風相\n8ダメージ、5ブロック。強化後11ダメージ、7ブロック。", "三相", "1枚で最大3回相転移する最上位の切り札。")];
     private static bool SameMultiset(IReadOnlyList<Material> a, IReadOnlyList<Material> b)
         => a.Count == b.Count && a.OrderBy(m => m).SequenceEqual(b.OrderBy(m => m));
     public static IEnumerable<Recipe> FindAll(IReadOnlyList<Material> materials) => All.Where(r => SameMultiset(r.Materials, materials));

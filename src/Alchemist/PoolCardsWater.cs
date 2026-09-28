@@ -40,9 +40,9 @@ public sealed class WaterTorrent() : ElementCard(1,CardType.Attack,CardRarity.Un
 }
 public sealed class WaterErosion() : ElementCard(1,CardType.Attack,CardRarity.Uncommon,TargetType.AnyEnemy,AlchemyPhase.Water)
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars=>[new DamageVar(8,ValueProp.Move),new DynamicVar("Bonus",6)];
+    protected override IEnumerable<DynamicVar> CanonicalVars=>[new PreviewDamageVar((c,t)=>c.DynamicVars.Damage.BaseValue+(t?.GetPower<WeakPower>() is not null?c.DynamicVars["Bonus"].BaseValue:0)),new DamageVar(8,ValueProp.Move),new DynamicVar("Bonus",6)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<WeakPower>()];
-    public override List<(string,string)> Localization=>new CardLoc("浸食","{Damage:diff()}ダメージ。対象が[gold]脱力[/gold]状態なら、さらに{Bonus:diff()}ダメージ。\n[gold]水相[/gold]");
+    public override List<(string,string)> Localization=>new CardLoc("浸食","{Damage:diff()}ダメージ。対象が[gold]脱力[/gold]状態なら、さらに{Bonus:diff()}ダメージ。{InCombat:\n（{Total:diff()}ダメージ）|}\n[gold]水相[/gold]");
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)
         =>Hit(c,p,DynamicVars.Damage.BaseValue+(p.Target?.GetPower<WeakPower>() is not null?DynamicVars["Bonus"].BaseValue:0));
     protected override void OnUpgrade()=>DynamicVars.Damage.UpgradeValueBy(3);
@@ -125,7 +125,7 @@ public sealed class WaterClearStream() : ElementCard(1,CardType.Skill,CardRarity
 {
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new PowerVar<LifeDrainPower>(2),new DynamicVar("Bonus",1)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<LifeDrainPower>()];
-    public override List<(string,string)> Localization=>new CardLoc("清流","[gold]ドレイン[/gold]{LifeDrainPower:diff()}を与える。さらに、この戦闘で起きた相転移1回につき[gold]ドレイン[/gold]{Bonus:diff()}を与える。\n[gold]水相[/gold]");
+    public override List<(string,string)> Localization=>new CardLoc("清流","[gold]ドレイン[/gold]{LifeDrainPower:diff()}を与える。さらに、この戦闘で起きた[gold]相転移[/gold]1回につき[gold]ドレイン[/gold]{Bonus:diff()}を与える。\n[gold]水相[/gold]");
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)
         =>ApplyTo<LifeDrainPower>(c,p.Target!,DynamicVars["LifeDrainPower"].BaseValue+TransitionCount*DynamicVars["Bonus"].BaseValue);
     protected override void OnUpgrade()=>DynamicVars["Bonus"].UpgradeValueBy(1);
@@ -135,7 +135,7 @@ public sealed class WaterBlessing() : ElementCard(2,CardType.Power,CardRarity.Ev
 {
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new PowerVar<WaterBlessingPower>(2)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<WaterBlessingPower>(),HoverTipFactory.FromPower<PoisonPower>()];
-    public override List<(string,string)> Localization=>new CardLoc("水神の加護","相転移するたび、敵全体に[gold]毒[/gold]{WaterBlessingPower:diff()}を与える。\n[gold]水相[/gold]");
+    public override List<(string,string)> Localization=>new CardLoc("水神の加護","[gold]相転移[/gold]するたび、敵全体に[gold]毒[/gold]{WaterBlessingPower:diff()}を与える。\n[gold]水相[/gold]");
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>ApplySelf<WaterBlessingPower>(c,DynamicVars["WaterBlessingPower"].BaseValue);
     protected override void OnUpgrade()=>DynamicVars["WaterBlessingPower"].UpgradeValueBy(1);
 }

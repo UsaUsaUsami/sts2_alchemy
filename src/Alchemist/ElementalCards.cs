@@ -21,7 +21,8 @@ public abstract class ElementCard(int cost, CardType type, CardRarity rarity, Ta
     public sealed override AlchemyPhase Element => element;
 }
 
-public sealed class EarthenGuard() : ElementCard(1,CardType.Skill,CardRarity.Common,TargetType.Self,AlchemyPhase.Earth)
+// v0.23 (ユーザーレビュー): starter-only. Basic keeps it out of rewards and the merchant; 岩盤 took its reward slot.
+public sealed class EarthenGuard() : ElementCard(1,CardType.Skill,CardRarity.Basic,TargetType.Self,AlchemyPhase.Earth)
 {
     protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(8,ValueProp.Move)];
     public override List<(string,string)> Localization => new CardLoc("土壁","{Block:diff()}[gold]ブロック[/gold]を得る。\n[gold]地相[/gold]");
@@ -37,7 +38,8 @@ public sealed class StoneEdge() : ElementCard(1,CardType.Attack,CardRarity.Event
     protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p){await DamageCmd.Attack(DynamicVars.Damage.BaseValue).FromCard(this,p).Targeting(p.Target!).Execute(c);await CreatureCmd.GainBlock(Owner.Creature,DynamicVars.Block,p);}
     protected override void OnUpgrade()=>DynamicVars.Damage.UpgradeValueBy(3);
 }
-public sealed class SoothingMist() : ElementCard(1,CardType.Skill,CardRarity.Common,TargetType.AnyEnemy,AlchemyPhase.Water)
+// v0.23: starter-only (Basic). そよ風 took its reward slot.
+public sealed class SoothingMist() : ElementCard(1,CardType.Skill,CardRarity.Basic,TargetType.AnyEnemy,AlchemyPhase.Water)
 {
     // v0.21.1: 1 (was 2). The water transition adds its own weak, so the card itself stays small.
     protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<WeakPower>(1)];
@@ -54,13 +56,19 @@ public sealed class TidalGuard() : ElementCard(1,CardType.Skill,CardRarity.Event
     protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p){await CreatureCmd.GainBlock(Owner.Creature,DynamicVars.Block,p);await CardPileCmd.Draw(c,DynamicVars.Cards.BaseValue,Owner);}
     protected override void OnUpgrade()=>DynamicVars.Block.UpgradeValueBy(3);
 }
+// v0.23 (ユーザーレビュー「面白みがない」): Vulnerable first, so its own hit already lands on it.
 public sealed class Ignition() : ElementCard(1,CardType.Attack,CardRarity.Common,TargetType.AnyEnemy,AlchemyPhase.Fire)
 {
     protected override CardModel Artwork=>ModelDb.Card<Thunderclap>();
-    protected override IEnumerable<DynamicVar> CanonicalVars=>[new DamageVar(10,ValueProp.Move)];
-    public override List<(string,string)> Localization=>new CardLoc("点火","{Damage:diff()}ダメージ。\n[gold]火相[/gold]");
-    protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>DamageCmd.Attack(DynamicVars.Damage.BaseValue).FromCard(this,p).Targeting(p.Target!).Execute(c);
-    protected override void OnUpgrade()=>DynamicVars.Damage.UpgradeValueBy(4);
+    protected override IEnumerable<DynamicVar> CanonicalVars=>[new PowerVar<VulnerablePower>(1),new DamageVar(6,ValueProp.Move)];
+    protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<VulnerablePower>()];
+    public override List<(string,string)> Localization=>new CardLoc("点火","[gold]弱体[/gold]{VulnerablePower:diff()}を与え、{Damage:diff()}ダメージ。\n[gold]火相[/gold]");
+    protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p)
+    {
+        await PowerCmd.Apply<VulnerablePower>(c,p.Target!,DynamicVars.Vulnerable.BaseValue,Owner.Creature,this);
+        await DamageCmd.Attack(DynamicVars.Damage.BaseValue).FromCard(this,p).Targeting(p.Target!).Execute(c);
+    }
+    protected override void OnUpgrade()=>DynamicVars.Damage.UpgradeValueBy(3);
 }
 public sealed class FlashPowder() : ElementCard(1,CardType.Attack,CardRarity.Uncommon,TargetType.AllEnemies,AlchemyPhase.Fire)
 {
@@ -88,7 +96,8 @@ public sealed class Slipstream() : ElementCard(1,CardType.Skill,CardRarity.Event
     protected override void OnUpgrade()=>DynamicVars.Block.UpgradeValueBy(3);
 }
 
-public sealed class InstantAlchemy() : AlchemyCard(1,CardType.Skill,CardRarity.Common,TargetType.Self)
+// v0.23: starter-only (Basic). 風の衣 took its reward slot.
+public sealed class InstantAlchemy() : AlchemyCard(1,CardType.Skill,CardRarity.Basic,TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords=>[CardKeyword.Exhaust];
     public override List<(string,string)> Localization=>new CardLoc("即席錬成","通常素材を1個選んで消費する。対応する0コストの一時カードを手札に加える。",("selectionScreenPrompt","消費する素材を選択"));
@@ -129,7 +138,7 @@ public sealed class PhaseResonance() : AlchemyCard(1,CardType.Power,CardRarity.E
     protected override CardModel Artwork=>ModelDb.Card<Inflame>();
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new PowerVar<PhaseResonancePower>(2)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<PhaseResonancePower>()];
-    public override List<(string,string)> Localization=>new CardLoc("相の共鳴","相転移するたび、{PhaseResonancePower:diff()}[gold]ブロック[/gold]を得る。");
+    public override List<(string,string)> Localization=>new CardLoc("相の共鳴","[gold]相転移[/gold]するたび、{PhaseResonancePower:diff()}[gold]ブロック[/gold]を得る。");
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>PowerCmd.Apply<PhaseResonancePower>(c,Owner.Creature,DynamicVars["PhaseResonancePower"].BaseValue,Owner.Creature,this);
     protected override void OnUpgrade()=>DynamicVars["PhaseResonancePower"].UpgradeValueBy(1);
 }

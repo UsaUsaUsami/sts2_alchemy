@@ -38,6 +38,9 @@ turn.Enter(AlchemyPhase.Earth); turn.Enter(AlchemyPhase.Fire); turn.Enter(Alchem
 Check(turn.TransitionsThisTurn==2 && turn.TransitionCount==2,"per-turn transitions count only real transitions");
 turn.StartTurn(); turn.Enter(AlchemyPhase.Air); turn.Enter(AlchemyPhase.Water);
 Check(turn.TransitionsThisTurn==1 && turn.TransitionCount==3 && turn.Current==AlchemyPhase.Water,"a new turn resets only the per-turn count; the phase carries over");
+turn.Enter(AlchemyPhase.Air);
+Check(turn.TransitionsInto(AlchemyPhase.Air)==2 && turn.TransitionsInto(AlchemyPhase.Earth)==0 && turn.TransitionsInto(AlchemyPhase.Fire)==1,
+    "transitions are counted per destination for the combat; entering from no phase is not one");
 var triggered=new AlchemyPhaseState(triggerFromNone:true);
 Check(triggered.Enter(AlchemyPhase.Fire).Triggered,"the first transition from the neutral phase can be switched on");
 var inventory = new AlchemyState();
@@ -275,9 +278,9 @@ var uncoverable=WorkshopPlanner.SelectGuaranteed(Layered((col,_)=>col==0?Worksho
 Check(!uncoverable.MidGuaranteed && !uncoverable.LateGuaranteed,"impossible coverage is reported, not patched over");
 Check(uncoverable.Coords.Count>0 && uncoverable.Coords.All(p=>p.Col!=0),"fallback still places a workshop without touching protected points");
 // Life axis (design-axes.md 3).
-Check(DrainRules.Damage(3)==3 && DrainRules.StacksAfterTrigger(3)==2 && DrainRules.StacksAfterTrigger(1)==0 && DrainRules.StacksAfterTrigger(0)==0,
-    "a drain trigger deals its stacks and then decays by one");
-Check(DrainRules.TotalOverTriggers(3,3)==6 && DrainRules.TotalOverTriggers(5,3)==12 && DrainRules.TotalOverTriggers(2,4)==3,
+Check(DrainRules.Damage(3)==3 && DrainRules.StacksAfterTrigger(3)==1 && DrainRules.StacksAfterTrigger(10)==5 && DrainRules.StacksAfterTrigger(1)==0 && DrainRules.StacksAfterTrigger(0)==0,
+    "a drain trigger deals its stacks and then halves, rounded down");
+Check(DrainRules.TotalOverTriggers(3,3)==4 && DrainRules.TotalOverTriggers(5,3)==8 && DrainRules.TotalOverTriggers(2,4)==3 && DrainRules.TotalOverTriggers(10,9)==18,
     "repeated drain triggers decay each time and stop when the stacks run out");
 Check(DrainRules.HpLost(10,0)==10 && DrainRules.HpLost(10,7)==3 && DrainRules.HpLost(0,0)==0,
     "overkill past the target's HP is not drained");

@@ -14,6 +14,9 @@ public sealed class AlchemyPhaseState(bool triggerFromNone = false)
     public int TransitionCount { get; private set; }
     /// Transitions since the start of the current player turn.
     public int TransitionsThisTurn { get; private set; }
+    private readonly int[] transitionsInto = new int[5];
+    /// Transitions into `phase` this combat (嵐刃 counts air, v0.23).
+    public int TransitionsInto(AlchemyPhase phase) => transitionsInto[(int)phase];
     public void StartTurn() => TransitionsThisTurn = 0;
 
     /// Sets the phase a combat opens in (design-axes 6.3 G-1). Not a transition: nothing resolves, nothing
@@ -34,7 +37,7 @@ public sealed class AlchemyPhaseState(bool triggerFromNone = false)
         Previous = from;
         Current = next;
         bool triggered = from != AlchemyPhase.None || TriggerFromNone;
-        if (triggered) { TransitionCount++; TransitionsThisTurn++; }
+        if (triggered) { TransitionCount++; TransitionsThisTurn++; transitionsInto[(int)next]++; }
         return new(from, next, triggered);
     }
 

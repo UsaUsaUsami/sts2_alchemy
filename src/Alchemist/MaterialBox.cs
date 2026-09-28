@@ -9,6 +9,7 @@ using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.Entities.RestSite;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
+using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Relics;
 using MegaCrit.Sts2.Core.Models.Powers;
@@ -39,14 +40,18 @@ public class MaterialBox : CustomRelicModel
     public virtual bool OpensInRandomPhase => false;
     public override List<(string,string)> Localization => BoxLoc("素材ボックス", "相を変え、素材を選ぶ。");
     protected List<(string,string)> BoxLoc(string title, string flavor) => new RelicLoc(title,
-        $"属性カードを使うと地・水・火・風の相が変化する。異なる相へ移ると相転移効果が発動する。\n{(OpensInRandomPhase ? "戦闘開始時はランダムな相に入る（相転移ではない）。" : "戦闘開始時は無相。")}各戦闘の最初に炉の起動が{FurnaceTokens}枚手札へ加わり、現在相に対応する素材を採取する（戦闘全体で{FurnaceTokens}回まで）。\nエリート報酬は1枠、ボス報酬は2枠。希少素材は工房で恒久加工できる。", flavor,
+        // v0.22.4 (ユーザー判断): only what the relic does. The furnace card and 相転移 explain themselves in tooltips.
+        $"戦闘開始時、[gold]炉の起動[/gold]を{FurnaceTokens}枚得る。{(OpensInRandomPhase ? "ランダムな相に入る。" : "")}", flavor,
         (RewardLocKey, "素材を選ぶ"),
+        (PhaseTransitionTip.TitleKey, "相転移"),
+        (PhaseTransitionTip.DescriptionKey, PhaseTransitionTip.Text),
         ("phaseShift.Earth", "地相へ転移"), ("phaseShift.Water", "水相へ転移"),
         ("phaseShift.Fire", "火相へ転移"), ("phaseShift.Air", "風相へ転移"),
         ("boxFull", "素材ボックスが満杯"));
     // Orobas (Touch of Orobas) refines the starter relic. Without this BaseLib falls back to the base game's
     // Circlet, which would take the whole material box with it (v0.21 bug).
     public override RelicModel? GetUpgradeReplacement() => ModelDb.Relic<RefinedMaterialBox>();
+    protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromCard<FurnaceActivation>(), PhaseTransitionTip.Tip];
     [SavedProperty]
     public string AlchemistState { get => Inventory.Save(); set => state = AlchemyState.Load(value); }
     protected override void AfterCloned() { base.AfterCloned(); state = null; Combat = null; }

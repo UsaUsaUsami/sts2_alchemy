@@ -79,26 +79,34 @@ public sealed class LifeSymbiosis() : ElementCard(1,CardType.Power,CardRarity.Un
 }
 public sealed class LifeVeinStrike() : ElementCard(2,CardType.Attack,CardRarity.Uncommon,TargetType.AnyEnemy,AlchemyPhase.Fire)
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars=>[new DamageVar(10,ValueProp.Move),new DynamicVar("Threshold",20)];
+    protected override IEnumerable<DynamicVar> CanonicalVars=>[new PreviewCountVar("HitCount",c=>c.HomunculusHp>=c.DynamicVars["Threshold"].BaseValue?2:1),new DamageVar(10,ValueProp.Move),new DynamicVar("Threshold",20)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<HomunculusPower>()];
-    public override List<(string,string)> Localization=>new CardLoc("命脈の一撃","{Damage:diff()}ダメージ。[gold]ホムンクルスHP[/gold]が{Threshold}以上なら、2回与える。\n[gold]火相[/gold]");
+    public override List<(string,string)> Localization=>new CardLoc("命脈の一撃","{Damage:diff()}ダメージ。[gold]ホムンクルスHP[/gold]が{Threshold}以上なら、2回与える。{InCombat:\n（{HitCount:diff()}回）|}\n[gold]火相[/gold]");
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)
         =>Hit(c,p,DynamicVars.Damage.BaseValue,(LifeAxis.State(Owner)?.HomunculusHp ?? 0)>=DynamicVars["Threshold"].IntValue?2:1);
     protected override void OnUpgrade()=>DynamicVars.Damage.UpgradeValueBy(3);
 }
-/// <summary>腐食の抱擁. Takes over 濃縮's slot: the drain version of doubling poison.</summary>
+/// <summary>腐食の抱擁. Takes over 濃縮's slot: the drain version of doubling poison. v0.23 (ユーザーレビュー「0コストは強い」):
+/// +50% (rounded down), and the upgrade makes it +100% (double) instead of free.</summary>
 public sealed class LifeCorrosiveEmbrace() : ElementCard(1,CardType.Skill,CardRarity.Rare,TargetType.AnyEnemy,AlchemyPhase.Water)
 {
+    // A percentage, because the card text rounds a 1.5 multiplier down to "1".
+    protected override IEnumerable<DynamicVar> CanonicalVars=>[new DynamicVar("Percent",50)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<LifeDrainPower>()];
-    public override List<(string,string)> Localization=>new CardLoc("腐食の抱擁","対象の[gold]ドレイン[/gold]を2倍にする。\n[gold]水相[/gold]");
+    public override List<(string,string)> Localization=>new CardLoc("腐食の抱擁","対象の[gold]ドレイン[/gold]を{Percent:diff()}%増やす（端数切り捨て）。\n[gold]水相[/gold]");
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)
-        =>p.Target?.GetPower<LifeDrainPower>() is { Amount: > 0 } drain ? ApplyTo<LifeDrainPower>(c,p.Target,drain.Amount) : Task.CompletedTask;
-    protected override void OnUpgrade()=>EnergyCost.UpgradeBy(-1);
+    {
+        if(p.Target?.GetPower<LifeDrainPower>() is not { Amount: > 0 } drain) return Task.CompletedTask;
+        int added=drain.Amount*DynamicVars["Percent"].IntValue/100;
+        return added>0 ? ApplyTo<LifeDrainPower>(c,p.Target,added) : Task.CompletedTask;
+    }
+    protected override void OnUpgrade()=>DynamicVars["Percent"].UpgradeValueBy(50);
 }
 public sealed class LifeTorrent() : ElementCard(2,CardType.Attack,CardRarity.Rare,TargetType.AllEnemies,AlchemyPhase.Fire)
 {
+    protected override IEnumerable<DynamicVar> CanonicalVars=>[new PreviewDamageVar((c,_)=>c.HomunculusHp)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<HomunculusPower>()];
-    public override List<(string,string)> Localization=>new CardLoc("生命の奔流","[gold]ホムンクルスHP[/gold]をすべて消費し、その量のダメージを敵全体に与える。\n[gold]火相[/gold]");
+    public override List<(string,string)> Localization=>new CardLoc("生命の奔流","[gold]ホムンクルスHP[/gold]をすべて消費し、その量のダメージを敵全体に与える。{InCombat:\n（{Total:diff()}ダメージ）|}\n[gold]火相[/gold]");
     protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p)
     {
         int spent=await LifeAxis.SpendAllHomunculus(c,Owner);
@@ -106,14 +114,15 @@ public sealed class LifeTorrent() : ElementCard(2,CardType.Attack,CardRarity.Rar
     }
     protected override void OnUpgrade()=>EnergyCost.UpgradeBy(-1);
 }
-/// <summary>目覚めた器. Air to fill the slot 順風 left; the effect itself does not read the phase.</summary>
-public sealed class LifeAwakenedVessel() : ElementCard(3,CardType.Power,CardRarity.Rare,TargetType.Self,AlchemyPhase.Air)
+/// <summary>目覚めた器. Air to fill the slot 順風 left; the effect itself does not read the phase.
+/// v0.23 (ユーザーレビュー): 2 cost either way; the upgrade raises the hit (12 to 18) instead.</summary>
+public sealed class LifeAwakenedVessel() : ElementCard(2,CardType.Power,CardRarity.Rare,TargetType.Self,AlchemyPhase.Air)
 {
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new PowerVar<AwakenedVesselPower>(12),new DynamicVar("Spend",AwakenedVesselPower.Cost)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<HomunculusPower>()];
     public override List<(string,string)> Localization=>new CardLoc("目覚めた器","自分のターン開始時、[gold]ホムンクルスHP[/gold]を{Spend}消費して、ランダムな敵に{AwakenedVesselPower:diff()}ダメージを与える。\n[gold]風相[/gold]");
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>ApplySelf<AwakenedVesselPower>(c,DynamicVars["AwakenedVesselPower"].BaseValue);
-    protected override void OnUpgrade()=>EnergyCost.UpgradeBy(-1);
+    protected override void OnUpgrade()=>DynamicVars["AwakenedVesselPower"].UpgradeValueBy(6);
 }
 
 /// <summary>養分: each drain trigger that took HP adds this much more homunculus HP.</summary>
@@ -181,6 +190,22 @@ public sealed class PhilosophersBloodPower : AlchemyPower
         if (result.UnblockedDamage <= 0 || dealer is not { IsAlive: true } attacker || attacker.Side == Owner.Side) return;
         Flash();
         await PowerCmd.Apply<LifeDrainPower>(c, attacker, Amount, Owner, null);
+    }
+}
+
+/// <summary>真理の扉 (錬成, v0.23): while the homunculus holds Threshold HP, every enemy takes Amount each turn. Nothing is spent.</summary>
+public sealed class GateOfTruthPower : AlchemyPower
+{
+    public const int Threshold = 20;
+    protected override PowerModel IconSource => ModelDb.Power<DemonFormPower>();
+    public override List<(string,string)> Localization => new PowerLoc("真理の扉",
+        $"自分のターン開始時、ホムンクルスHPが{Threshold}以上なら、敵全体にダメージを与える。",
+        $"自分のターン開始時、[gold]ホムンクルスHP[/gold]が{Threshold}以上なら、敵全体に{{Amount}}ダメージを与える。");
+    public override async Task AfterSideTurnStart(CombatSide side, IReadOnlyList<Creature> participants, ICombatState combatState)
+    {
+        if (!participants.Contains(Owner) || Owner.Player is not { } player || (LifeAxis.State(player)?.HomunculusHp ?? 0) < Threshold) return;
+        Flash();
+        await DamageAllEnemies(new ThrowingPlayerChoiceContext(), Amount);
     }
 }
 

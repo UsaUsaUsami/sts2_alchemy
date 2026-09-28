@@ -124,11 +124,53 @@ public sealed class SkyPower : AlchemyPower
     }
 }
 
+/// <summary>風の残像 (v0.23): at turn end, one hit on a random enemy for each transition this turn.</summary>
+public sealed class WindAfterimagePower : AlchemyPower
+{
+    protected override PowerModel IconSource => ModelDb.Power<AfterimagePower>();
+    public override List<(string,string)> Localization => new PowerLoc("風の残像",
+        "ターン終了時、このターンに起きた相転移1回につき、ランダムな敵にダメージを与える。",
+        "ターン終了時、このターンに起きた[gold]相転移[/gold]1回につき、ランダムな敵に{Amount}ダメージを与える。");
+    public override async Task BeforeSideTurnEndEarly(PlayerChoiceContext c, CombatSide side, IEnumerable<Creature> participants)
+    {
+        var phases = Owner.Player?.GetRelic<MaterialBox>()?.Combat?.Phases;
+        if (!participants.Contains(Owner) || Owner.Player is not { } player || phases is not { TransitionsThisTurn: > 0 }) return;
+        Flash();
+        for (int i = 0; i < phases.TransitionsThisTurn; i++)
+        {
+            var enemies = Owner.CombatState?.HittableEnemies;
+            if (enemies is not { Count: > 0 } || player.RunState.Rng.CombatTargets.NextItem(enemies) is not { } target) return;
+            await CreatureCmd.Damage(c, target, Amount, ValueProp.Unpowered, Owner, null, null);
+        }
+    }
+}
+
+/// <summary>
+/// 大地の王 (v0.23): StS1's Calipers. The turn-start block clear is prevented and only Amount is lost instead.
+/// Single, so a second copy never raises the loss. When Blur or Barricade also holds the block, nothing is lost.
+/// </summary>
+public sealed class EarthKingPower : AlchemyPower
+{
+    public override PowerStackType StackType => PowerStackType.Single;
+    protected override PowerModel IconSource => ModelDb.Power<BarricadePower>();
+    public override List<(string,string)> Localization => new PowerLoc("大地の王",
+        "ターン開始時、ブロックがすべて失われる代わりに、一定量だけ失われる。",
+        "ターン開始時、[gold]ブロック[/gold]がすべて失われる代わりに、{Amount}だけ失われる。");
+    public override bool ShouldClearBlock(Creature creature) => creature != Owner;
+    public override async Task AfterPreventingBlockClear(AbstractModel preventer, Creature creature)
+    {
+        if (creature != Owner || Owner.GetPower<BlurPower>() is not null || Owner.GetPower<BarricadePower>() is not null) return;
+        Flash();
+        if (Owner.Block > 0) await CreatureCmd.LoseBlock(new ThrowingPlayerChoiceContext(), Owner, Math.Min(Amount, Owner.Block), Owner);
+    }
+}
+
 /// <summary>Strengthens the next real transition once, then removes itself.</summary>
 public sealed class PreparationPower : AlchemyPower, IPhaseTransitionModifier, IPhaseTransitionListener
 {
     protected override PowerModel IconSource => ModelDb.Power<VigorPower>();
-    public override List<(string,string)> Localization => new PowerLoc("調合準備","次の相転移の効果を強化する。風への転移でも消費される。","次の相転移の効果を{Amount}強化する。風への転移でも消費される。");
+    // v0.23 (ユーザーレビュー): the buff had the card's name. 励起 is the state just before a transition.
+    public override List<(string,string)> Localization => new PowerLoc("励起","次の相転移の効果を強化する。風への転移でも消費される。","次の相転移の効果を{Amount}強化する。風への転移でも消費される。");
     public void ModifyPhaseTransition(PhaseTransitionContext t) { if (!t.IsEcho && t.Owner.Creature == Owner) t.Amount += Amount; }
     public Task AfterPhaseTransition(PhaseTransitionContext t) => t.Owner.Creature == Owner ? PowerCmd.Remove(this) : Task.CompletedTask;
 }

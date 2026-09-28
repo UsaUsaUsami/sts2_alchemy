@@ -83,6 +83,6 @@ public sealed class WorkshopInfusion : CustomEnchantmentModel, ILocalizationProv
 
     public List<(string,string)> Localization => [
         ("title", "工房改造"),
-        ("description", "素材1個につき効果+1。火薬：ダメージ+1（アタックのみ）。鉄：使用時にブロック+1。薬草：使用時にドレイン+1。エーテル：使用時に調合準備+1。"),
-        ("extraCardText", "[gold]工房改造[/gold]{Powder:cond:>0? 鋭利{Powder}|}{Iron:cond:>0? ブロック+{Iron}|}{Herb:cond:>0? ドレイン+{Herb}|}{Ether:cond:>0? 調合準備+{Ether}|}")];
+        ("description", "素材1個につき効果+1。火薬：ダメージ+1（アタックのみ）。鉄：使用時にブロック+1。薬草：使用時にドレイン+1。エーテル：使用時に励起+1。"),
+        ("extraCardText", "[gold]工房改造[/gold]{Powder:cond:>0? 鋭利{Powder}|}{Iron:cond:>0? ブロック+{Iron}|}{Herb:cond:>0? ドレイン+{Herb}|}{Ether:cond:>0? 励起+{Ether}|}")];
 }
