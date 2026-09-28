@@ -488,6 +488,16 @@ design-axes.md 11章5の「相転移とドローの無限ループ検出テス�
 - ユーザー報告：ホムンクルスのHPを確認できない。原因は`NCombatRoom.AddCreature`で、オスティ以外のペットは`ToggleIsInteractable(false)`になり、HPバー（`_stateDisplay`）も隠れること。`HomunculusPetNodePatch`（Postfix）でホムンクルスだけ操作可能に戻し、オスティと同じくプレイヤーの右（`Osty.MinOffset`）に置く。戦闘中のランチャー表示にもホムンクルスHPを追加した。
 - ユーザー判断：スターター《鎮静の霧》の脱力はカードからは1でよい（相転移の脱力があるため）。2→1、強化で2。
 
+## 2026-09-29: v0.24.0 MOD名の変更・専用の基本カード・大地の加護の廃棄
+
+- ユーザー指示：MOD名をAlchemyへ（design-axes 11の決定を実施。プールがほぼ固まったため）。`src/Alchemist`→`src/Alchemy`、`Alchemist.Core`→`Alchemy.Core`、テストの2プロジェクト、マニフェスト（id `Alchemy`、テスト用は`AlchemySmoke`）、DLL名、名前空間、Harmonyのid・ログの接頭辞を変更。クラス名の`Alchemist…`（`AlchemistCharacter`、`[SavedProperty]`の`AlchemistState`・`AlchemistRareModifier`など）とカードプールの内部タイトルは、キャラクター名なので残した。
+  - 影響：内部IDの接頭辞が`ALCHEMY-`に（スモークのカード書き出し204件で確認）。旧セーブの錬金術師のカード・レリックはゲームの「削除された〜」になる。ユーザー環境に進行中のランはなかった。
+  - `scripts/update.ps1`が旧`mods/Alchemist`をバックアップして外し、`mods/Alchemy`を導入する。ゲームは`settings.save`の一覧にないMODを既定で有効にする（`ModManager`の`?? true`）。旧`Alchemist`の設定行は残るが、フォルダがないので影響しない。
+  - 別MOD「The Alchemist」と同時に入れた場合の動作は未確認（先方のソースは見ていない）。
+- 不具合修正（ユーザー報告）：ネオーボーナスの変化でアイアンクラッドのカードになる。変化の候補は元のカードのプールから選ばれる（`CardFactory.GetDefaultTransformationOptions`の`original.Pool`）ため、流用していた`StrikeIronclad`・`DefendIronclad`がアイアンクラッドのプールを引いていた。錬金術師専用の`StrikeAlchemist`・`DefendAlchemist`（Basic、6ダメージ／5ブロック、強化+3、タグStrike／Defend、絵はアイアンクラッドのもの）を作り、初期デッキを置き換えた。スモークで、変化の候補64枚がすべて錬金術師のプールであることを確認。
+- 同じ理由で、レリックプールとポーションプールは今もアイアンクラッドのものを流用している（`AlchemyRelicPool`・`IroncladPotionPool`）。宝箱や商人でアイアンクラッド専用のレリック・ポーションが出る。今回は未対応。
+- ユーザー判断：《大地の加護》に廃棄。
+
 ## 2026-09-28: v0.23.1 連鎖反応の調整と旧カードの削除
 
 - ユーザー判断：《連鎖反応》を「このターンの3回目以降の相転移1回につき20（強化25）」に（旧：1回につき10（13））。`docs/pool-balance.md`のシミュレーションで、相転移を意識しないデッキでも1ターン平均約3回・3回のターンが約35%あり、比例の10では準備なしで強かった（原則4）。新しい形では意識しないデッキで約4割減（報酬8枚：25→15）、相転移寄りでは同等以上（14枚：42→44）。design-axes 5の「1〜2回では弱く、4回を超えると強く」に合わせた。

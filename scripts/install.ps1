@@ -6,8 +6,8 @@ $release = Get-Content -LiteralPath (Join-Path $GameRoot 'release_info.json') -R
 if ($release.version -ne 'v0.111.0') { throw "対象外ゲーム版: $($release.version)。対象はv0.111.0です。" }
 $base = Get-Content -LiteralPath (Join-Path $GameRoot 'mods/BaseLib/BaseLib.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 if ($base.version -ne 'v3.4.5') { throw "対象外BaseLib版: $($base.version)。対象はv3.4.5です。" }
-$destination = Join-Path $GameRoot 'mods/Alchemist'
+$destination = Join-Path $GameRoot 'mods/Alchemy'
 if (Test-Path -LiteralPath $destination) { throw "既存の$destinationがあります。上書きを避けるため停止しました。" }
-if (!(Test-Path "$root/dist/Alchemist/Alchemist.dll")) { throw '先にscripts/build.ps1を実行してください。' }
-Copy-Item -LiteralPath "$root/dist/Alchemist" -Destination $destination -Recurse
+if (!(Test-Path "$root/dist/Alchemy/Alchemy.dll")) { throw '先にscripts/build.ps1を実行してください。' }
+Copy-Item -LiteralPath "$root/dist/Alchemy" -Destination $destination -Recurse
 Write-Output "導入完了: $destination"

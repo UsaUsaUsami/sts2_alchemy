@@ -1,4 +1,4 @@
-﻿# 錬金術師MOD（Alchemist）— Slay the Spire 2向け試作版
+﻿# 錬金術師MOD（Alchemy）— Slay the Spire 2向け試作版
 
 素材採取・カード錬成・ポーション調合を軸とする錬金術師キャラクターのMOD。現状は試作段階。詳細な仕様方針は`AGENTS.md`、実装済みの変更は`docs/design-decisions.md`を参照。
 
@@ -20,9 +20,9 @@
 ```
 
 内部で以下を順に行う：
-1. `tests/Alchemist.Core.Tests`のルール検証テストを実行（失敗時はビルドを中断）
-2. `src/Alchemist`をReleaseビルド
-3. `dist/Alchemist/`に`Alchemist.dll`・`Alchemist.json`を配置
+1. `tests/Alchemy.Core.Tests`のルール検証テストを実行（失敗時はビルドを中断）
+2. `src/Alchemy`をReleaseビルド
+3. `dist/Alchemy/`に`Alchemy.dll`・`Alchemy.json`を配置
 
 ## 導入
 
@@ -32,8 +32,15 @@
 
 - StS2が起動中の場合はエラーで停止する。事前に終了しておくこと。
 - ゲーム本体のバージョン、`mods/BaseLib/BaseLib.json`のバージョンが対応版と異なる場合はエラーで停止する。
-- `mods/Alchemist`が既に存在する場合は停止する。更新にはゲームを終了して `scripts/update.ps1` を実行する。旧DLL・マニフェストを `artifacts/backups/` に保存してから更新する。
-- 導入後、ゲーム内のMOD設定でBaseLibとAlchemistを有効化する必要がある（初回導入時はMOD一覧に追加されるだけで、既定では無効の場合がある）。
+- `mods/Alchemy`が既に存在する場合は停止する。更新にはゲームを終了して `scripts/update.ps1` を実行する。旧DLL・マニフェストを `artifacts/backups/` に保存してから更新する。
+- 導入後、ゲーム内のMOD設定でBaseLibとAlchemyを有効化する必要がある（初回導入時はMOD一覧に追加されるだけで、既定では無効の場合がある）。
+
+## v0.24.0：MOD名をAlchemyに・専用のストライクとディフェンド
+
+- MOD名（フォルダ・マニフェストのid・DLL・名前空間）を **Alchemist → Alchemy** に変えた。別MOD「The Alchemist」との衝突を避けるため。カードなどの内部IDも`ALCHEMIST-…`から`ALCHEMY-…`に変わるので、**v0.23以前の進行中のランは再開できない**（過去の履歴や図鑑の記録は「削除されたカード」として表示される）。表示名は日本語のまま。
+- 更新は`scripts/update.ps1`でよい。旧`mods/Alchemist`は`artifacts/backups/`に保存してから外し、`mods/Alchemy`を入れる。新しいMODはゲームの既定で有効になる。
+- 初期デッキのストライク・ディフェンドを、アイアンクラッドからの流用から錬金術師専用のものに変えた（数値とタグは同じ、絵は流用のまま）。ネオーの変化などで、アイアンクラッドのカードに変わっていたのを直した。
+- 《大地の加護》に廃棄を付けた。
 
 ## v0.23.1：連鎖反応の調整と旧カードの削除
 
@@ -168,7 +175,7 @@ v0.13.0以前の節は`docs/history.md`へ移した。そこにある「カー�
 
 ## アンインストール時の注意
 
-`mods/Alchemist`フォルダを削除するだけでよいが、Alchemist使用中のランのセーブは復元できなくなる可能性がある。アンインストール前に該当ランを終了しておくことを推奨する。
+`mods/Alchemy`フォルダを削除するだけでよいが、このMODを使用中のランのセーブは復元できなくなる可能性がある。アンインストール前に該当ランを終了しておくことを推奨する。
 
 ## 開発記録
 

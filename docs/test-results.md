@@ -1,5 +1,10 @@
 ﻿# テスト結果記録
 
+## 隔離実機スモーク（2026-09-29、v0.24.0：MOD名の変更・専用の基本カード）
+
+- ルール検証211件PASS。`scripts/smoke.ps1 -Name v024-rename`：**373件PASS・FAIL 0**。カードなどのIDが`ALCHEMY-`になったこと（204件）、スターターのストライクを変化させた候補64枚がすべて錬金術師のプールであることを確認。隔離環境の旧`mods/Alchemist`・`AlchemistSmoke`は削除して入れ替えた。
+- `scripts/update.ps1`でユーザー環境へ反映：旧`mods/Alchemist`を`artifacts/backups/20260929-004605-642/Alchemist`に保存して外し、`mods/Alchemy`（0.24.0）を導入。実際にゲームがAlchemyを有効で読み込むかは、起動して確認が必要。
+
 ## 隔離実機スモーク（2026-09-28、v0.23.1：連鎖反応の調整と旧カードの削除）
 
 - ルール検証211件PASS。`scripts/smoke.ps1 -Name v0231-cleanup`：**372件PASS・FAIL 0**（削除した35枚分のカードごとの検証がなくなり390→372）。《連鎖反応》がこのターンの3回目以降1回につき20を与えることを確認。

@@ -16,8 +16,8 @@ rows = [json.loads(line.split("ALCHEMIST_CARDDUMP ", 1)[1])
 if not rows:
     sys.exit(f"no ALCHEMIST_CARDDUMP lines in {log}")
 
-version = re.search(r'"version":\s*"([^"]+)"', (ROOT / "src/Alchemist/Alchemist.json").read_text(encoding="utf-8-sig")).group(1)
-STARTER = {"EarthenGuard", "SoothingMist", "InstantAlchemy"}
+version = re.search(r'"version":\s*"([^"]+)"', (ROOT / "src/Alchemy/Alchemy.json").read_text(encoding="utf-8-sig")).group(1)
+STARTER = {"StrikeAlchemist", "DefendAlchemist", "EarthenGuard", "SoothingMist", "InstantAlchemy"}
 TYPE = {"Attack": "アタック", "Skill": "スキル", "Power": "パワー"}
 RARITY = {"Basic": "初期", "Common": "コモン", "Uncommon": "アンコモン", "Rare": "レア", "Ancient": "エンシェント", "Token": "トークン", "Event": "報酬外"}
 TARGET = {"AnyEnemy": "敵1体", "AllEnemies": "敵全体", "Self": "自身", "None": "-", "RandomEnemy": "ランダムな敵"}
@@ -102,7 +102,7 @@ md += ["## 概要", "",
        f"- 工房の錬成：**{len(crafted)}種**", f"- エンシェント：{len(ancient)}枚、トークン・一時カード：{len(tokens)}枚",
        "",
        "## 初期デッキ", "",
-       "ストライク×3、ディフェンド×3（アイアンクラッドの基本カードを流用）と、以下の3枚。", "",
+       "ストライク×3、ディフェンド×3、土壁・鎮静の霧・即席錬成の9枚。", "",
        table(sorted([r for r in rows if r["cls"] in STARTER], key=order), show_rarity=True), ""]
 for rarity in ["Common", "Uncommon", "Rare"]:
     items = sorted([r for r in pool if r["rarity"] == rarity], key=order)

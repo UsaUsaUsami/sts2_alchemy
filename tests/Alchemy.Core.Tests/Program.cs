@@ -1,0 +1,377 @@
+﻿using Alchemy.Core;
+
+int passed = 0;
+void Check(bool ok, string name) { if (!ok) throw new Exception(name); passed++; Console.WriteLine($"PASS {name}"); }
+void Reject(Action action, string name) { try { action(); } catch (InvalidOperationException) { Check(true,name); return; } catch (InvalidDataException) { Check(true,name); return; } catch (ArgumentException) { Check(true,name); return; } throw new Exception(name); }
+var combat = new HarvestCombat();
+Check(combat.Phases.Current == AlchemyPhase.None,"combat starts without an element");
+var firstElement=combat.Phases.Enter(AlchemyPhase.Earth);
+Check(!firstElement.Triggered && combat.Phases.Current==AlchemyPhase.Earth,"first element establishes the phase without a transition effect");
+var sameElement=combat.Phases.Enter(AlchemyPhase.Earth);
+Check(!sameElement.Triggered && combat.Phases.TransitionCount==0,"playing the same element does not transition");
+var transition=combat.Phases.Enter(AlchemyPhase.Water);
+Check(transition.Triggered && transition.From==AlchemyPhase.Earth && transition.To==AlchemyPhase.Water
+    && combat.Phases.TransitionCount==1,"different elements trigger one destination transition");
+Check(combat.Phases.Current==AlchemyPhase.Water,"phase persists until another elemental card is played");
+Check(AlchemyPhaseState.MaterialFor(AlchemyPhase.Earth)==Material.Iron
+    && AlchemyPhaseState.MaterialFor(AlchemyPhase.Water)==Material.Herb
+    && AlchemyPhaseState.MaterialFor(AlchemyPhase.Fire)==Material.Powder
+    && AlchemyPhaseState.MaterialFor(AlchemyPhase.Air)==Material.Ether
+    && AlchemyPhaseState.MaterialFor(AlchemyPhase.None) is null,"each active phase maps to one normal material");
+var emptyCombat=new HarvestCombat();
+Check(!emptyCombat.UseFurnace(),"furnace cannot harvest in no phase");
+emptyCombat.Phases.Enter(AlchemyPhase.Fire);
+Check(emptyCombat.CanUseFurnace && emptyCombat.UseFurnace() && emptyCombat.UseFurnace() && !emptyCombat.UseFurnace() && !emptyCombat.CanUseFurnace,
+    "furnace has a shared cap of two uses and reports it before play");
+Check(new HarvestCombat().FurnaceUsed == 0 && new HarvestCombat().Phases.Current==AlchemyPhase.None,"new combat resets furnace and phase");
+Check(PhaseRules.Next(AlchemyPhase.Earth)==AlchemyPhase.Water && PhaseRules.Next(AlchemyPhase.Air)==AlchemyPhase.Earth
+    && PhaseRules.Next(AlchemyPhase.None)==AlchemyPhase.None,"advance effects cycle the four elements and do nothing without one");
+Reject(()=>combat.Phases.Enter(AlchemyPhase.None),"nothing can transition back to the neutral phase");
+Check(PhaseRules.Elements.All(e=>PhaseRules.BaseAmount(e)>0) && PhaseRules.BaseAmount(AlchemyPhase.None)==0,
+    "each destination has one base effect amount and the neutral phase has none");
+Check(PhaseRules.Elements.All(e=>PhaseRules.PhaseFor(PhaseRules.MaterialFor(e)!.Value)==e),"phase and material mappings are inverse");
+Check(PhaseRules.FromMaterials([Material.Herb,Material.Iron,Material.Herb])==AlchemyPhase.Water
+    && PhaseRules.FromMaterials([Material.Powder,Material.Iron])==AlchemyPhase.Fire
+    && PhaseRules.FromMaterials([])==AlchemyPhase.None,"crafted element follows the dominant material, ties to the first listed");
+var turn=new AlchemyPhaseState();
+turn.Enter(AlchemyPhase.Earth); turn.Enter(AlchemyPhase.Fire); turn.Enter(AlchemyPhase.Air);
+Check(turn.TransitionsThisTurn==2 && turn.TransitionCount==2,"per-turn transitions count only real transitions");
+turn.StartTurn(); turn.Enter(AlchemyPhase.Air); turn.Enter(AlchemyPhase.Water);
+Check(turn.TransitionsThisTurn==1 && turn.TransitionCount==3 && turn.Current==AlchemyPhase.Water,"a new turn resets only the per-turn count; the phase carries over");
+turn.Enter(AlchemyPhase.Air);
+Check(turn.TransitionsInto(AlchemyPhase.Air)==2 && turn.TransitionsInto(AlchemyPhase.Earth)==0 && turn.TransitionsInto(AlchemyPhase.Fire)==1,
+    "transitions are counted per destination for the combat; entering from no phase is not one");
+var triggered=new AlchemyPhaseState(triggerFromNone:true);
+Check(triggered.Enter(AlchemyPhase.Fire).Triggered,"the first transition from the neutral phase can be switched on");
+var inventory = new AlchemyState();
+Check(inventory.Total == 0,"empty initial inventory");
+var legacyFull=new AlchemyState();
+legacyFull.Counts[0]=AlchemyState.LegacyCapacity;
+var legacyLoaded=AlchemyState.Load(legacyFull.Save());
+Check(legacyLoaded.Total==AlchemyState.LegacyCapacity && legacyLoaded.Grant("after-load",Material.Herb) && legacyLoaded.Pending.Count==1
+    && legacyLoaded.Total==AlchemyState.LegacyCapacity,"a full box from any version loads and only queues new receipts");
+for (int i=0;i<AlchemyState.Capacity;i++) inventory.Grant($"kill{i}",Material.Iron);
+Check(inventory.Total == AlchemyState.Capacity,"capacity cap, same type counts individually");
+Check(!inventory.Grant("kill0",Material.Iron),"grant is idempotent");
+inventory.Grant("overflow",Material.Herb);
+Check(inventory.Total == AlchemyState.Capacity && inventory.Pending.Count == 1,"overflow deferred");
+Reject(()=>inventory.Resolve(true),"full acceptance needs exchange");
+inventory.Resolve(true,Material.Iron);
+Check(inventory.Counts[0] == AlchemyState.Capacity-1 && inventory.Counts[1] == 1 && inventory.Pending.Count == 0,"exchange atomic");
+inventory.Grant("decline",Material.Powder); inventory.Resolve(false);
+Check(inventory.Total == AlchemyState.Capacity && inventory.Counts[2] == 0,"decline only pending reward");
+var saved = AlchemyState.Load(inventory.Save());
+Check(saved.Total == AlchemyState.Capacity && !saved.Grant("overflow",Material.Herb),"save preserves receipt ids");
+Reject(()=>AlchemyState.Load("{\"Schema\":99}"),"unknown schema not reset");
+Reject(()=>AlchemyState.Load("{\"Counts\":[-1,0,0,0]}"),"negative count rejected");
+foreach (var a in Enum.GetValues<Material>()) foreach (var b in Enum.GetValues<Material>())
+    Check(Recipes.Find(a,b) == Recipes.Find(b,a),$"recipe order {a}/{b}");
+var recipe = Recipes.All[0]; int deck = 0;
+inventory.Commit(recipe,"op1",()=>deck++,()=>deck--);
+inventory.Commit(recipe,"op1",()=>deck++,()=>deck--);
+Check(deck==1 && inventory.Total==AlchemyState.Capacity-2,"craft consumes two, duplicate ignored");
+Reject(()=>inventory.Commit(recipe,"failure",()=>{deck++;throw new InvalidOperationException();},()=>deck--),"failed delivery throws");
+Check(deck==1 && inventory.Total==AlchemyState.Capacity-2,"failed delivery rolled back");
+await inventory.CommitAsync(recipe,"async",()=>{deck++;return Task.CompletedTask;},()=>deck--);
+Check(deck==2 && inventory.Total==AlchemyState.Capacity-4,"async delivery and cost agree");
+var empty = new AlchemyState();
+Reject(()=>empty.Commit(recipe,"empty",()=>deck++,()=>deck--),"insufficient ingredients do not deliver");
+Check(deck==2 && empty.Total==0,"no negative inventory");
+Check(AlchemyState.Load(inventory.Save()).Committed.Contains("async"),"save preserves craft receipts");
+// v0.22 (design-axes 7.3): modification spends the materials it puts in, one effect each, four per card.
+int[] Mix(int iron=0,int herb=0,int powder=0,int ether=0)=>[iron,herb,powder,ether];
+var upgradeStock=new AlchemyState { Counts=[1,0,1,0] };
+int upgraded=0;
+upgradeStock.CommitInfusion(7,InfusionRules.Empty(),Mix(iron:1,powder:1),true,"upgrade1",()=>upgraded++);
+upgradeStock.CommitInfusion(7,InfusionRules.Empty(),Mix(iron:1,powder:1),true,"upgrade1",()=>upgraded++);
+Check(upgraded==1 && upgradeStock.Total==0,"modification consumes exactly the materials put in, once");
+var failedUpgrade=new AlchemyState { Counts=[0,1,0,1] };
+Reject(()=>failedUpgrade.CommitInfusion(8,InfusionRules.Empty(),Mix(herb:1,ether:1),false,"bad",()=>throw new InvalidOperationException()),"failed modification throws");
+Check(failedUpgrade.Total==2,"failed modification preserves materials");
+Check(!InfusionRules.Allows(InfusionRules.Empty(),Mix(powder:1),false) && InfusionRules.Allows(InfusionRules.Empty(),Mix(powder:1),true),"powder goes into attacks only");
+Check(InfusionRules.Allows(InfusionRules.Empty(),Mix(iron:2,powder:2),true) && !InfusionRules.Allows(InfusionRules.Empty(),Mix(iron:3,powder:2),true),
+    "materials mix freely up to four per card");
+Check(InfusionRules.Allows(Mix(herb:3),Mix(ether:1),false) && !InfusionRules.Allows(Mix(herb:3),Mix(ether:2),false) && InfusionRules.Room(Mix(herb:3))==1,
+    "a later modification only fills the card's remaining room");
+Check(!InfusionRules.Allows(InfusionRules.Empty(),InfusionRules.Empty(),true),"a modification needs at least one material");
+Reject(()=>new AlchemyState { Counts=[1,0,0,0] }.CommitInfusion(8,InfusionRules.Empty(),Mix(iron:2),false,"short",()=>{}),"modification cannot spend materials the box lacks");
+var limitedUpgrade=new AlchemyState { Counts=[2,0,2,0] };
+limitedUpgrade.CommitInfusion(9,InfusionRules.Empty(),Mix(iron:1,powder:1),true,"first",()=>{});
+Reject(()=>limitedUpgrade.CommitInfusion(9,InfusionRules.Empty(),Mix(iron:1,powder:1),true,"second",()=>{}),"only one modification per workshop");
+limitedUpgrade.CommitInfusion(10,InfusionRules.Empty(),Mix(iron:1,powder:1),true,"next",()=>{});
+Check(limitedUpgrade.Total==0,"a later workshop restores the modification action");
+var facilities=new AlchemyState { Counts=[6,6,6,1], RareCounts=[1,0,0] };
+int craftedAtWorkshop=0;
+await facilities.CommitCraftAtAsync(12,Recipes.All[0],"facility-craft",()=>{craftedAtWorkshop++;return Task.CompletedTask;},()=>craftedAtWorkshop--);
+Reject(()=>facilities.CommitCraftAtAsync(12,Recipes.All[0],"facility-craft-2",()=>Task.CompletedTask,()=>{}).GetAwaiter().GetResult(),
+    "synthesis is available only once per workshop");
+facilities.CommitInfusion(12,InfusionRules.Empty(),Mix(iron:1,powder:1),true,"facility-mod",()=>{});
+await facilities.CommitBrewAtAsync(12,Material.Herb,"facility-brew",()=>Task.FromResult(true));
+facilities.CommitRareAt(12,RareMaterial.Mercury,"facility-enchant",()=>{},()=>{});
+Check(craftedAtWorkshop==1
+    && !facilities.CanUseFacility(12,WorkshopFacility.Synthesis)
+    && !facilities.CanUseFacility(12,WorkshopFacility.Modification)
+    && !facilities.CanUseFacility(12,WorkshopFacility.Brewing)
+    && !facilities.CanUseFacility(12,WorkshopFacility.Enchantment),
+    "all four workshop facilities can each be used once during the same visit");
+Check(Enum.GetValues<WorkshopFacility>().Where(f=>f!=WorkshopFacility.None).All(f=>facilities.CanUseFacility(13,f)),
+    "a later workshop restores all four facilities");
+var failedBrew=new AlchemyState { Counts=[1,0,0,0] };
+Reject(()=>failedBrew.CommitBrewAtAsync(2,Material.Iron,"failed-brew",()=>Task.FromResult(false)).GetAwaiter().GetResult(),
+    "failed potion delivery is rejected");
+Check(failedBrew.Counts[0]==1 && failedBrew.CanUseFacility(2,WorkshopFacility.Brewing),
+    "failed potion delivery consumes neither material nor facility");
+var phaseSave=new AlchemyState { NextCombatMaterial=Material.Ether };
+phaseSave.WorkshopNodes[0]=["2,4","5,9"];
+var loadedPhase=AlchemyState.Load(phaseSave.Save());
+Check(loadedPhase.NextCombatMaterial==Material.Ether && loadedPhase.WorkshopNodes[0].SequenceEqual(["2,4","5,9"]),"phase and workshop map survive save");
+var pending = new AlchemyState(); for(int i=0;i<AlchemyState.Capacity+2;i++) pending.Grant($"p{i}",Material.Iron);
+var reload = AlchemyState.Load(pending.Save());
+Check(reload.Pending.Count==2 && !reload.CanCraft(recipe),"pending saved and blocks storage abuse");
+// Furnace and material reward slots use the configured harvest yield; normal card rewards are separate.
+var harvestState=new AlchemyState();
+Check(harvestState.GrantHarvest("harvest0",Material.Powder) && harvestState.Count(MaterialChoice.Normal(Material.Powder))==AlchemyState.YieldPerEvent,
+    "a harvest event grants the doubled yield");
+Check(!harvestState.GrantHarvest("harvest0",Material.Powder) && harvestState.Count(MaterialChoice.Normal(Material.Powder))==AlchemyState.YieldPerEvent,
+    "a resent harvest event does not grant twice");
+// Elite and boss reward slots (AGENTS.md 4.4), counted apart from the kill cap.
+Check(MaterialOffers.EliteSlots==1 && MaterialOffers.BossSlots==2 && MaterialOffers.CandidateCount==3,
+    "one elite slot, two boss slots, three candidates each");
+var eliteRoll=MaterialOffers.RollMixed(9876543210,"12:4:reward0");
+Check(eliteRoll.Length==3 && eliteRoll.Distinct().Count()==3 && eliteRoll.All(m=>m.IsValid),
+    "a slot offers three distinct materials");
+Check(eliteRoll.SequenceEqual(MaterialOffers.RollMixed(9876543210,"12:4:reward0")),"same seed and slot reroll identically");
+Check(!eliteRoll.SequenceEqual(MaterialOffers.RollMixed(9876543211,"12:4:reward0"))
+   || !eliteRoll.SequenceEqual(MaterialOffers.RollMixed(9876543210,"12:4:reward1")),"seed and slot both affect the roll");
+Check(Enumerable.Range(0,400).SelectMany(i=>MaterialOffers.Roll((ulong)i,"r")).Distinct().Count()==4,
+    "every material can appear across seeds");
+var rareRoll=MaterialOffers.RollRare(123,"boss:rare");
+Check(rareRoll.Length==3 && rareRoll.All(x=>x.Class==MaterialClass.Rare) && rareRoll.Distinct().Count()==3,
+    "boss guaranteed slot contains three distinct rare materials");
+Check(Enumerable.Range(0,400).Count(i=>MaterialOffers.RollMixed((ulong)i,"elite").Any(x=>x.Class==MaterialClass.Rare)) is >70 and <130,
+    "mixed slots include one rare candidate at about twenty-five percent");
+var offers=new AlchemyState();
+Check(offers.Offer("boss0",eliteRoll) && !offers.Offer("boss0",eliteRoll),"a slot is recorded once");
+Reject(()=>offers.Offer("bad",[Material.Iron,Material.Iron,Material.Herb]),"duplicate candidates rejected");
+Reject(()=>offers.Offer("bad",[Material.Iron,Material.Herb]),"wrong candidate count rejected");
+Check(!offers.Settled && !offers.CanCraft(Recipes.All[0]),"an open slot blocks crafting");
+Reject(()=>offers.TakeOffer("boss0",MaterialChoice.Rare(RareMaterial.Stardust)),"material outside the candidates rejected");
+offers.TakeOffer("boss0",eliteRoll[1]);
+Check(offers.Count(eliteRoll[1])==1 && offers.Total==1 && offers.Settled,
+    "taking a slot grants the doubled harvest yield");
+Reject(()=>offers.TakeOffer("boss0",eliteRoll[0]),"a slot cannot be taken twice");
+Check(!offers.Offer("boss0",eliteRoll),"a resolved slot is never re-offered");
+offers.Offer("boss1",eliteRoll); offers.DeclineOffer("boss1");
+Check(offers.Total==1 && offers.Settled && !offers.Offer("boss1",eliteRoll),"declining closes the slot for good");
+Reject(()=>offers.DeclineOffer("boss1"),"a declined slot cannot be declined twice");
+var fullBox=new AlchemyState();
+for(int i=0;i<AlchemyState.Capacity;i++) fullBox.Grant($"f{i}",Material.Iron);
+fullBox.Offer("eliteFull",eliteRoll); fullBox.TakeOffer("eliteFull",eliteRoll[0]);
+Check(fullBox.Total==AlchemyState.Capacity && fullBox.Pending.Count==1 && fullBox.Offers.Count==0,
+    "a full box defers every unit of the doubled yield to the shared receipt path");
+while (fullBox.Pending.Count>0) fullBox.Resolve(true,MaterialChoice.Normal(Material.Iron));
+Check(fullBox.Count(eliteRoll[0])==(eliteRoll[0]==MaterialChoice.Normal(Material.Iron)?AlchemyState.Capacity:1) && fullBox.Settled,
+    "deferred choice resolves by exchange, once per unit");
+var savedOffers=new AlchemyState();
+savedOffers.Offer("keep0",eliteRoll); savedOffers.Offer("keep1",MaterialOffers.Roll(7,"keep1"));
+var reloadedOffers=AlchemyState.Load(savedOffers.Save());
+Check(reloadedOffers.Offers.Count==2 && reloadedOffers.Offers[0].Candidates.SequenceEqual(eliteRoll),
+    "unresolved slots and their candidates survive save and load");
+Check(!reloadedOffers.Offer("keep0",eliteRoll),"reloaded slots are not re-offered");
+var migrated=AlchemyState.Load("{\"Schema\":1,\"Counts\":[1,0,0,0]}");
+Check(migrated.Schema==AlchemyState.CurrentSchema && migrated.Offers.Count==0 && migrated.Total==1,
+    "schema 1 saves migrate without losing materials");
+var migratedOffer=AlchemyState.Load("{\"Schema\":2,\"Offers\":[{\"Id\":\"x\",\"Candidates\":[0,1,2]}]}");
+Check(migratedOffer.Offers.Single().Candidates.All(x=>x.Class==MaterialClass.Normal),"schema 2 offers migrate to typed candidates");
+var migratedV3=AlchemyState.Load("{\"Schema\":3,\"Counts\":[0,0,0,0],\"RareCounts\":[0,0,0]}");
+Check(migratedV3.Schema==AlchemyState.CurrentSchema && migratedV3.WorkshopUpgradeFloor==-1,"schema 3 saves gain an unused workshop upgrade action");
+Reject(()=>AlchemyState.Load("{\"Schema\":2,\"Offers\":[{\"Id\":\"x\",\"Candidates\":[0,0,1]}]}"),"corrupt candidates rejected");
+Reject(()=>AlchemyState.Load("{\"Schema\":2,\"Received\":[\"x\"],\"Offers\":[{\"Id\":\"x\",\"Candidates\":[0,1,2]}]}"),"slot both received and open rejected");
+var rareStock=new AlchemyState();rareStock.GrantRare("rare",RareMaterial.Stardust);
+string applied="";
+rareStock.CommitRare(RareMaterial.Stardust,"apply",()=>applied="rare.stardust",()=>applied="");
+Check(applied=="rare.stardust" && rareStock.RareCounts[(int)RareMaterial.Stardust]==0,"rare processing consumes exactly one material");
+Reject(()=>rareStock.CommitRare(RareMaterial.Stardust,"again",()=>applied="bad",()=>applied="rare.stardust"),"missing rare material is rejected");
+var pairRecipes=Recipes.All.Where(r=>r.Materials.Count==2).ToArray();
+Check(Recipes.All.Length==20 && Recipes.All.Select(r=>r.Id).Distinct().Count()==20 && pairRecipes.Length==10,
+    "the workshop crafts twenty cards with stable ids, ten of them from two materials");
+Check(pairRecipes.Count(r=>r.Materials[0]==r.Materials[1])==4 && pairRecipes.Count(r=>r.Materials[0]!=r.Materials[1])==6,
+    "four pure-phase recipes and six dual-phase recipes");
+Check(Recipes.All.All(r=>r.Materials.Count is >=2 and <=5) && Recipes.All.Count(r=>r.Materials.Count==5)==2,
+    "recipes take two to five materials, with two five-material finishers (design-axes 7.1)");
+Check(Recipes.All.All(r=>Recipes.FindAll(r.Materials).Count()==1),"no two recipes share a material multiset");
+foreach(var a in Enum.GetValues<Material>()) foreach(var b in Enum.GetValues<Material>())
+{
+    var choices=Recipes.FindAll(a,b).ToArray();
+    Check(choices.Length>0 && choices.SequenceEqual(Recipes.FindAll(b,a)),$"all pairs craftable and order independent {a}/{b}");
+    foreach(var r in choices)
+    {
+        var stock=new AlchemyState(); stock.Grant("a",a);stock.Grant("b",b);
+        Check(stock.CanCraft(r),$"two collected materials can craft {r.Id}");
+    }
+}
+Check(Enum.GetValues<Material>().SelectMany((a,i)=>Enum.GetValues<Material>().Skip(i).Select(b=>Recipes.FindAll(a,b).Count())).All(n=>n==1),
+    "every unordered pair exposes exactly one cheap recipe");
+foreach(var r in Recipes.All)
+{
+    var stock=new AlchemyState();
+    for(int i=0;i<r.Materials.Count;i++) stock.Grant($"m{i}",r.Materials[i]);
+    int created=0;
+    await stock.CommitAsync(r,r.Id,()=>{created++;return Task.CompletedTask;},()=>created--);
+    Check(created==1 && stock.Total==0,"recipe consumes exactly its materials "+r.Id);
+}
+var shopA=MerchantMaterialOffers.Roll(1234,"act1:shop3");
+Check(shopA.Length==MerchantMaterialOffers.Slots && shopA.Select(x=>x.Material).Distinct().Count()==MerchantMaterialOffers.Slots,
+    "merchant has three distinct finite material slots");
+Check(shopA.SequenceEqual(MerchantMaterialOffers.Roll(1234,"act1:shop3")),"merchant stock is stable for the visit");
+Check(!shopA.SequenceEqual(MerchantMaterialOffers.Roll(1234,"act1:shop4")),"merchant visit id changes stock");
+// Recipe.Materials generalizes past pairs (commons 2 / uncommons 3 / rares 4); exercised directly here
+// since the catalog itself still only fills the two-material tier.
+var triple = new Recipe("test.triple.v0", [Material.Iron, Material.Iron, Material.Herb], "test", "");
+var quad = new Recipe("test.quad.v0", [Material.Powder, Material.Powder, Material.Ether, Material.Ether], "test", "");
+var threeStock = new AlchemyState(); threeStock.Grant("t0",Material.Herb); threeStock.Grant("t1",Material.Iron); threeStock.Grant("t2",Material.Iron);
+Check(threeStock.CanCraft(triple),"a three-material recipe can craft regardless of grant order");
+var shortStock = new AlchemyState(); shortStock.Grant("s0",Material.Iron); shortStock.Grant("s1",Material.Herb);
+Check(!shortStock.CanCraft(triple),"a three-material recipe needs all three units, not just distinct types");
+var fourStock = new AlchemyState();
+for(int i=0;i<2;i++) fourStock.Grant($"f{i}",Material.Powder);
+for(int i=0;i<2;i++) fourStock.Grant($"e{i}",Material.Ether);
+Check(fourStock.CanCraft(quad),"a four-material recipe can require two of one type and two of another");
+fourStock.Grant("extra",Material.Ether);
+Check(fourStock.CanCraft(quad) && fourStock.Total==5,"surplus materials do not block a smaller requirement");
+Check(Recipes.FindAll([Material.Herb,Material.Iron,Material.Iron]).SequenceEqual(Recipes.FindAll([Material.Iron,Material.Herb,Material.Iron])),
+    "FindAll matches the material multiset regardless of order");
+// A layered map: rows 1..14 have three columns each, every point feeding all three of the next row.
+List<CutNode> Layered(Func<int,int,int> cost)
+{
+    List<CutNode> graph = [new(new(0,0),WorkshopCut.Blocked,[..Enumerable.Range(0,3).Select(c=>new WorkshopCandidate(c,1))])];
+    for(int row=1;row<=14;row++)
+        for(int col=0;col<3;col++)
+            graph.Add(new(new(col,row),cost(col,row),
+                [..row==14?[new WorkshopCandidate(0,15)]:Enumerable.Range(0,3).Select(c=>new WorkshopCandidate(c,row+1))]));
+    graph.Add(new(new(0,15),WorkshopCut.Blocked,[]));
+    return graph;
+}
+IEnumerable<List<WorkshopCandidate>> Routes(IReadOnlyList<CutNode> graph, WorkshopCandidate at)
+{
+    var node=graph.Single(n=>n.At==at);
+    if(node.Children.Count==0) { yield return [at]; yield break; }
+    foreach(var child in node.Children)
+        foreach(var tail in Routes(graph,child)) { tail.Insert(0,at); yield return tail; }
+}
+var plainGraph=Layered((_,_)=>1);
+var layout=WorkshopPlanner.SelectGuaranteed(plainGraph,new(0,0),new(0,15),15);
+var guaranteed=layout.Coords;
+Check(layout.MidGuaranteed && layout.LateGuaranteed,"both bands report a real guarantee");
+Check(guaranteed.Count>0 && guaranteed.All(p=>p.Row>=WorkshopPlanner.EarliestRow),"guaranteed workshops respect the earliest row");
+int midEnd=WorkshopPlanner.MidBandEndRow(15);
+Check(Routes(plainGraph,new(0,0)).All(route=>route.Any(p=>guaranteed.Contains(p) && p.Row<=midEnd))
+   && Routes(plainGraph,new(0,0)).All(route=>route.Any(p=>guaranteed.Contains(p) && p.Row>midEnd)),"every route meets a mid and a late workshop");
+Check(WorkshopPlanner.PerAct==2,"two workshop bands per act");
+// Rows 6 and 11 hold a merchant in column 1; the cut must route around it, never through it.
+var blockedGraph=Layered((col,row)=>col==1 && row is 6 or 11 ? WorkshopCut.Blocked : 1);
+var aroundBlocked=WorkshopPlanner.SelectGuaranteed(blockedGraph,new(0,0),new(0,15),15).Coords;
+Check(aroundBlocked.All(p=>!(p.Col==1 && p.Row is 6 or 11)),"protected points are never converted");
+Check(Routes(blockedGraph,new(0,0)).All(route=>route.Any(p=>aroundBlocked.Contains(p))),"every route still meets a workshop");
+// A column of protected points spanning a whole band cannot be covered at all.
+var uncoverable=WorkshopPlanner.SelectGuaranteed(Layered((col,_)=>col==0?WorkshopCut.Blocked:1),new(0,0),new(0,15),15);
+Check(!uncoverable.MidGuaranteed && !uncoverable.LateGuaranteed,"impossible coverage is reported, not patched over");
+Check(uncoverable.Coords.Count>0 && uncoverable.Coords.All(p=>p.Col!=0),"fallback still places a workshop without touching protected points");
+// Life axis (design-axes.md 3).
+Check(DrainRules.Damage(3)==3 && DrainRules.StacksAfterTrigger(3)==1 && DrainRules.StacksAfterTrigger(10)==5 && DrainRules.StacksAfterTrigger(1)==0 && DrainRules.StacksAfterTrigger(0)==0,
+    "a drain trigger deals its stacks and then halves, rounded down");
+Check(DrainRules.TotalOverTriggers(3,3)==4 && DrainRules.TotalOverTriggers(5,3)==8 && DrainRules.TotalOverTriggers(2,4)==3 && DrainRules.TotalOverTriggers(10,9)==18,
+    "repeated drain triggers decay each time and stop when the stacks run out");
+Check(DrainRules.HpLost(10,0)==10 && DrainRules.HpLost(10,7)==3 && DrainRules.HpLost(0,0)==0,
+    "overkill past the target's HP is not drained");
+var life=new HarvestCombat().Life;
+Check(life.HomunculusHp==0 && !life.HomunculusAppeared,"the homunculus is absent at the start of combat");
+life.GainHomunculus(0);
+Check(!life.HomunculusAppeared,"gaining nothing does not summon the homunculus");
+life.RecordDrain(4);
+Check(life.HomunculusHp==4 && life.HpDrainedThisCombat==4 && life.HomunculusAppeared,"drain adds the HP it took to the homunculus and appears it");
+life.GainHomunculus(10);
+Check(!life.TrySpendHomunculus(15) && life.HomunculusHp==14,"a fixed-cost exit fails whole when the homunculus is short");
+Check(life.TrySpendHomunculus(4) && life.HomunculusHp==10,"a fixed-cost exit spends exactly its cost");
+Check(life.SpendAllHomunculus()==10 && life.HomunculusHp==0 && life.HomunculusAppeared && life.HpDrainedThisCombat==4,
+    "spending everything keeps the vessel shown and does not undo drain progress");
+life.GainHomunculus(12); life.SyncHomunculus(7);
+Check(life.HomunculusHp==7 && life.HpDrainedThisCombat==4 && life.TrySpendHomunculus(7) && !life.TrySpendHomunculus(1),
+    "hits the pet soaked lower the homunculus HP, and spending works from what is left");
+life.SyncHomunculus(-3);
+Check(life.HomunculusHp==0,"a fallen pet reads as 0 homunculus HP, never negative");
+Check(new HarvestCombat().Life.HomunculusHp==0 && !new HarvestCombat().Life.HomunculusAppeared && new HarvestCombat().Life.HpDrainedThisCombat==0,
+    "the homunculus and drain totals reset with each combat");
+Check(DrainRules.ReducedCost(5,0,10)==5 && DrainRules.ReducedCost(5,29,10)==3 && DrainRules.ReducedCost(5,999,10)==0,
+    "the drain-scaled attack loses one cost per ten drained HP and never goes below zero");
+Check(DeathMarkRules.TriggersAt(DebuffSide.Player,DebuffSide.Player) && !DeathMarkRules.TriggersAt(DebuffSide.Player,DebuffSide.Enemy)
+    && DeathMarkRules.TriggersAt(DebuffSide.Enemy,DebuffSide.Enemy),
+    "death resolves at its owner's next turn start, so a copy on an enemy resolves on the enemy turn first");
+bool Movable(string id)=>id is not "HUNTER_MARK";
+var transferred=DebuffTransfer.Plan([new("WEAK",2,true),new("STRENGTH",3,false),new("DEATH",1,true),new("FRAIL",0,true),new("STRENGTH_DOWN",-2,true),new("HUNTER_MARK",1,true)],Movable);
+Check(transferred.Select(x=>(x.PowerId,x.Amount)).SequenceEqual([("WEAK",2),("DEATH",1),("STRENGTH_DOWN",-2)]),
+    "the copy takes every listed current debuff at its amount, no buffs and no enemy gimmicks");
+var swapped=DebuffTransfer.Swap([new("WEAK",2,true),new("DRAIN",3,true)],[new("VULNERABLE",1,true),new("HUNTER_MARK",2,true),new("STRENGTH",5,false)],Movable);
+Check(swapped.ToEnemy.Select(x=>x.PowerId).SequenceEqual(["WEAK","DRAIN"]) && swapped.ToPlayer.Select(x=>(x.PowerId,x.Amount)).SequenceEqual([("VULNERABLE",1)]),
+    "the swap sends your listed debuffs over and brings back only listed debuffs, never the enemy's gimmick or buffs");
+// design-axes 3.1: a drain on yourself feeds your homunculus, doubled by 自己培養, and is not enemy HP drained.
+var selfLife=new LifeState();
+selfLife.RecordSelfDrain(3); selfLife.RecordSelfDrain(2,2);
+Check(selfLife.HomunculusHp==7 && selfLife.HpDrainedThisCombat==0,"self drain feeds the homunculus (x2 with the power) without counting as enemy HP drained");
+// 原則5: transitions never raise the number of cards drawn.
+Check(PhaseRules.Finalize(AlchemyPhase.Air,5,3)==(PhaseRules.BaseAmount(AlchemyPhase.Air),1)
+    && PhaseRules.Finalize(AlchemyPhase.Fire,6,2)==(6,2) && PhaseRules.Finalize(AlchemyPhase.Earth,5,1)==(5,1),
+    "modifiers strengthen every destination except the air draw");
+// Loop detection (原則4). Canaries first: the pre-v0.19 cards that fed loops must be caught.
+var spark=LoopProfiles.All.Single(c=>c.Id=="FireSpark");
+var oldWindBlade=new LoopCard("old AirWindBlade",0,LoopPhaseMove.Element,AlchemyPhase.Air,DrawIfTransition:1);
+var oldMomentum=new LoopCard("old AirMomentum",1,LoopPhaseMove.Element,AlchemyPhase.Air,Draw:2,EnergyIfTransition:1);
+var oldSynergy=new LoopCard("old AlchSynergy+",0,Draw:1);
+var oldSky=new LoopCard("old AirSky",2,IsPower:true,PowerDrawPerTransition:1);
+// A played card reaches the discard pile only after its own draw, so a pair that merely draws back what it
+// played thins the hand and stops; a loop needs more draws than plays.
+Check(LoopCheck.FindLoops([spark,oldWindBlade],2).Count==0,"a 0-cost pair that only replaces itself runs dry");
+Check(LoopCheck.FindLoops([spark,oldWindBlade,oldSky],3).Count>0,"loop check catches 0-cost transitions that draw more than they play");
+Check(LoopCheck.FindLoops([spark,oldMomentum],2).Count>0,"loop check catches an energy-neutral draw engine");
+Check(LoopCheck.FindLoops([oldSynergy],1).Count>0,"loop check catches a 0-cost card that replaces itself");
+Check(LoopCheck.FindLoops([spark,LoopProfiles.All.Single(c=>c.Id=="AlchFlux+"),oldSky],3).Count>0,"loop check catches a draw-per-transition power");
+Check(LoopCheck.FindLoops([spark,LoopProfiles.All.Single(c=>c.Id=="AlchFlux+")],2).Count==0,"alternating free cards alone only draw on every other transition and run dry");
+Check(LoopProfiles.All.Select(c=>c.Id).Distinct().Count()==LoopProfiles.All.Count,"loop profiles have unique ids");
+var poolLoops=LoopCheck.FindLoops(LoopProfiles.All,3);
+Check(poolLoops.Count==0,"no combination of up to three current cards loops within a turn: "+string.Join(" / ",poolLoops.Take(5)));
+// v0.22 (design-axes 4.3 F-4): a power that steps the phase after every card. Unconditionally it loops with
+// free cards (every play lands a transition and every fourth lands on air); stepping only after a card that
+// caused no transition keeps each play at one transition, which the pool search above already covers.
+var wheelAlways=new LoopCard("wheel-always",3,IsPower:true,PowerAdvance:LoopAdvance.Always);
+var alwaysLoops=LoopProfiles.All.Where(c=>!c.IsPower && c.Cost==0 && !c.Exhaust && !c.SpendsMaterial)
+    .Where(c=>LoopCheck.FindLoops([wheelAlways,c],2).Any(l=>l.Contains("wheel-always") && l.Contains(c.Id))).Select(c=>c.Id).ToArray();
+Console.WriteLine("INFO unconditional phase wheel loops with: "+string.Join(", ",alwaysLoops));
+Check(alwaysLoops.Length>0,"the loop search catches the unconditional phase wheel with a free card (canary)");
+Check(LoopProfiles.All.Single(c=>c.Id=="AlchPhaseWheel").PowerAdvance==LoopAdvance.IfNoTransition,"the real phase wheel steps only after a card that caused no transition");
+// v0.22 (design-axes 6.3 G-1): combats open in a seeded random element, which is not a transition.
+var opened=new AlchemyPhaseState();
+opened.Open(PhaseRules.Opening(42,"3:room:opening"));
+Check(PhaseRules.IsElement(opened.Current) && opened.TransitionCount==0 && opened.TransitionsThisTurn==0 && opened.Previous==AlchemyPhase.None,
+    "the opening element counts no transition and leaves no previous phase");
+Check(PhaseRules.Opening(42,"3:room:opening")==PhaseRules.Opening(42,"3:room:opening"),"the opening element is stable for the same seed and combat");
+var openings=Enumerable.Range(0,200).Select(i=>PhaseRules.Opening(7,$"{i}:opening")).ToArray();
+Check(PhaseRules.Elements.All(e=>openings.Count(x=>x==e)>=30),"every element opens combats about equally often");
+var openedDifferent=PhaseRules.Elements.First(e=>e!=opened.Current);
+var firstFromOpening=opened.Enter(openedDifferent);
+Check(firstFromOpening.Triggered && opened.TransitionCount==1,"the first elemental card after a different opening element transitions");
+Check(!new AlchemyPhaseState().Enter(AlchemyPhase.Earth).Triggered,"without an opening element the neutral start still does not trigger");
+Reject(()=>opened.Open(AlchemyPhase.Earth),"the opening element cannot be changed after a transition");
+// v0.22 (G-2): the refined starter relic raises the per-combat furnace cap to three; ancients are the only exception.
+var refined=new HarvestCombat(HarvestCombat.RefinedFurnaceLimit);
+refined.Phases.Open(AlchemyPhase.Fire);
+Check(refined.UseFurnace() && refined.UseFurnace() && refined.UseFurnace() && !refined.UseFurnace() && refined.FurnaceUsed==3,
+    "the refined box allows three furnace uses and no more");
+Check(new HarvestCombat().Limit==HarvestCombat.FurnaceLimit,"the ordinary box keeps two");
+Reject(()=>new HarvestCombat(4),"no furnace cap above the refined three");
+// v0.22 (6.4): every-turn gains are skipped, not queued, when the box is full.
+var trickle=new AlchemyState();
+Check(trickle.GrantIfRoom("t1",Material.Iron) && trickle.Counts[0]==1 && !trickle.GrantIfRoom("t1",Material.Iron),"a trickle gain is received once per id");
+for(int i=0;trickle.Total<AlchemyState.Capacity;i++) trickle.Grant($"fill{i}",Material.Herb);
+Check(!trickle.GrantIfRoom("t2",Material.Iron) && trickle.Pending.Count==0 && !trickle.Received.Contains("t2") && trickle.Total==AlchemyState.Capacity,
+    "a full box does not receive a trickle gain and queues nothing");
+Console.WriteLine($"{passed} checks passed.");

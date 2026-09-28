@@ -6,12 +6,12 @@ $runtime = Join-Path $root '.research/runtime'
 if (!(Test-Path (Join-Path $runtime 'SlayTheSpire2.exe'))) { throw "隔離実行環境がありません: $runtime" }
 Push-Location $root
 try {
-    foreach ($project in 'src/Alchemist/Alchemist.csproj', 'tests/Alchemist.Smoke/Alchemist.Smoke.csproj') {
+    foreach ($project in 'src/Alchemy/Alchemy.csproj', 'tests/Alchemy.Smoke/Alchemy.Smoke.csproj') {
         & "$env:DOTNET_ROOT/dotnet.exe" build $project -c Release --disable-build-servers -p:UseSharedCompilation=false
         if ($LASTEXITCODE -ne 0) { throw "ビルドに失敗しました: $project" }
     }
-    Copy-Item src/Alchemist/bin/Release/net9.0/Alchemist.dll, src/Alchemist/Alchemist.json "$runtime/mods/Alchemist" -Force
-    Copy-Item tests/Alchemist.Smoke/bin/Release/net9.0/AlchemistSmoke.dll, tests/Alchemist.Smoke/AlchemistSmoke.json "$runtime/mods/AlchemistSmoke" -Force
+    Copy-Item src/Alchemy/bin/Release/net9.0/Alchemy.dll, src/Alchemy/Alchemy.json "$runtime/mods/Alchemy" -Force
+    Copy-Item tests/Alchemy.Smoke/bin/Release/net9.0/AlchemySmoke.dll, tests/Alchemy.Smoke/AlchemySmoke.json "$runtime/mods/AlchemySmoke" -Force
 
     New-Item -ItemType Directory -Force artifacts/smoke | Out-Null
     $log = Join-Path $root "artifacts/smoke/$Name.log"
