@@ -29,6 +29,13 @@
 - 錬金術師本人は`assets/concepts/alchemist-character-v2.png`（フードと逆さフラスコ型の真鍮の仮面、顔は見えない）に合わせる。
 - 1枚ずつの題材を指定したいときは`assets/art/subjects.json`に`{"fire_spark": "…"}`の形で書く（なければカード名と効果から描かせる）。
 
+## キービジュアル（錬金術師のデザイン）の案づくり
+
+- 参考画像：`python scripts/extract-sts2-refs.py`がゲームの`SlayTheSpire2.pck`から、キャラ選択の肖像5枚（`lineup_small.png`）と選択画面の絵（`characterselect_<名前>.png`。1枚絵はサイレントだけで、他はアニメーションの部品）を`.research/sts2-ref/`へ取り出す。**ゲームの素材なので、MODやリポジトリには入れない**（`.research`はGit管理外）。生成時の参考として渡すだけ。
+- 生成：`python scripts/keyvisual.py [--only flask,beak] [--note "追加の指示"] [--tag v4]`。共通の条件（`BRIEF`）と方向性（`DIRECTIONS`）はスクリプト内。結果は`assets/concepts/keyvisual/kv-<tag>-<案>.png`。
+- 参考画像を渡す理由（ユーザー）：渡さないと、線のはっきりした顔のあるイケメンを描かれた。StS2のキャラは顔を出さず、線は最小限で、大きな色の面で描かれている。
+- 2026-09-29の案（v3）：flask・beak・furnace・homunculus・sigil。比較は前回のv2（`assets/concepts/alchemist-character-v2.png`）と。決定はまだ。
+
 ## 生成：Codex CLIで一括（2026-09-29 確認済み）
 
 - Codex CLI（`npm install -g @openai/codex`、0.158.0）はChatGPTのログインで画像生成（`image_generation`機能）を使える。1枚あたり60〜85秒、3並列でも同程度。

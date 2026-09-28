@@ -17,6 +17,10 @@
 - **カード絵の仕組み**（手順は`docs/art-pipeline.md`）：`CardArt.cs`が`art/cards/<カード名>.png`を読み込む（.pck不要。画像がなければ借り物の絵）。`scripts/art-prompts.py`（プロンプト一覧）→`scripts/generate-art.py`（Codex CLIで並列生成）→`scripts/art-sheet.py`（確認用の一覧画像。Claudeが見て判定）→`scripts/import-art.py`（切り抜き・縮小）→build/update。
 - Codex CLI（0.158.0）はユーザーが導入済み。ChatGPTログイン済みで`codex exec`から画像生成できる（1枚60〜85秒）。試作4枚（火花・岩盤・吸血の刃・賢者の石）を取り込み済み。
 
+### キービジュアルの案（v3）
+- ユーザー指示で5案を生成（`scripts/keyvisual.py`、StS2のキャラ絵を参考画像として渡す。`scripts/extract-sts2-refs.py`でゲームから取り出す）：flask（頭がフラスコ）・beak（くちばし仮面）・furnace（炉を背負う職人）・homunculus（瓶のホムンクルス）・sigil（顔が錬成陣）。`assets/concepts/keyvisual/`。
+- 5案とも顔は隠れたが、v2より描き込みが多い。Claudeのおすすめ：v2の単純なシルエットに、flaskかhomunculusの要素を1つ足す。ユーザーの選択待ち。
+
 ### 次にやること・返答待ち
 1. **キービジュアル（錬金術師のデザイン）が未確定**（ユーザー：「そもそもこれで良いのか疑問」）。今は`assets/concepts/alchemist-character-v2.png`（フードと逆さフラスコ型の真鍮の仮面）に合わせている。**決まるまでカード絵の一括生成はしない**。決まったら`scripts/art-prompts.py`の`STYLE`を直し、試作4枚も作り直す。
 2. 錬金術師本人をカード絵にどれくらい出すか（試作は4枚とも本人が大きく写った）。
