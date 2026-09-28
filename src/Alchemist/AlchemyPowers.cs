@@ -29,20 +29,7 @@ public abstract class AlchemyPower : CustomPowerModel
     }
 }
 
-/// <summary>"End your turn in phase X": rewards holding a phase rather than switching.</summary>
-public abstract class PhaseStancePower(AlchemyPhase phase) : AlchemyPower
-{
-    public AlchemyPhase Phase => phase;
-    protected abstract Task OnStance(PlayerChoiceContext c);
-    public override async Task BeforeSideTurnEndEarly(PlayerChoiceContext c, CombatSide side, IEnumerable<Creature> participants)
-    {
-        if (!participants.Contains(Owner) || CurrentPhase != Phase) return;
-        Flash();
-        await OnStance(c);
-    }
-}
-
-/// <summary>"Whenever you transition": the reference listener shape for reward-pool powers.</summary>
+/// <summary>"Whenever you transition into ...": the shared listener shape for transition powers.</summary>
 public abstract class TransitionListenerPower : AlchemyPower, IPhaseTransitionListener
 {
     protected virtual bool Matches(PhaseTransitionContext t) => true;
@@ -55,46 +42,6 @@ public abstract class TransitionListenerPower : AlchemyPower, IPhaseTransitionLi
     }
 }
 
-public sealed class EarthVeinPower() : PhaseStancePower(AlchemyPhase.Earth)
-{
-    protected override PowerModel IconSource => ModelDb.Power<PlatingPower>();
-    public override List<(string,string)> Localization => new PowerLoc("地脈","ターン終了時、地相ならブロックを得る。","ターン終了時、[gold]地相[/gold]なら{Amount}[gold]ブロック[/gold]を得る。");
-    protected override Task OnStance(PlayerChoiceContext c) => CreatureCmd.GainBlock(Owner, Amount, ValueProp.Unpowered, null);
-}
-public sealed class StillWaterPower() : PhaseStancePower(AlchemyPhase.Water)
-{
-    protected override PowerModel IconSource => ModelDb.Power<RegenPower>();
-    public override List<(string,string)> Localization => new PowerLoc("静水","ターン終了時、水相なら敵全体に脱力を与える。","ターン終了時、[gold]水相[/gold]なら敵全体に[gold]脱力[/gold]{Amount}を与える。");
-    protected override Task OnStance(PlayerChoiceContext c)
-        => PowerCmd.Apply<WeakPower>(c, Owner.CombatState!.HittableEnemies, Amount, Owner, null);
-}
-public sealed class BurningWillPower() : PhaseStancePower(AlchemyPhase.Fire)
-{
-    protected override PowerModel IconSource => ModelDb.Power<InfernoPower>();
-    public override List<(string,string)> Localization => new PowerLoc("燃える意志","ターン終了時、火相なら敵全体にダメージを与える。","ターン終了時、[gold]火相[/gold]なら敵全体に{Amount}ダメージを与える。");
-    protected override Task OnStance(PlayerChoiceContext c) => DamageAllEnemies(c, Amount);
-}
-public sealed class WindReadingPower() : PhaseStancePower(AlchemyPhase.Air)
-{
-    protected override PowerModel IconSource => ModelDb.Power<DrawCardsNextTurnPower>();
-    public override List<(string,string)> Localization => new PowerLoc("風読み","ターン終了時、風相なら次のターンに追加でカードを引く。","ターン終了時、[gold]風相[/gold]なら次のターンにカードを{Amount}枚追加で引く。");
-    protected override Task OnStance(PlayerChoiceContext c)
-        => PowerCmd.Apply<DrawCardsNextTurnPower>(c, Owner, Amount, Owner, null);
-}
-
-public sealed class PhaseResonancePower : TransitionListenerPower
-{
-    protected override PowerModel IconSource => ModelDb.Power<PlatingPower>();
-    public override List<(string,string)> Localization => new PowerLoc("相の共鳴","相転移するたび、ブロックを得る。","相転移するたび、{Amount}[gold]ブロック[/gold]を得る。");
-    protected override Task OnTransition(PhaseTransitionContext t) => CreatureCmd.GainBlock(Owner, Amount, ValueProp.Unpowered, null);
-}
-public sealed class WaterBlessingPower : TransitionListenerPower
-{
-    protected override PowerModel IconSource => ModelDb.Power<NoxiousFumesPower>();
-    public override List<(string,string)> Localization => new PowerLoc("水神の加護","相転移するたび、敵全体に毒を与える。","相転移するたび、敵全体に[gold]毒[/gold]{Amount}を与える。");
-    protected override Task OnTransition(PhaseTransitionContext t)
-        => PowerCmd.Apply<PoisonPower>(t.Choice, Owner.CombatState!.HittableEnemies, Amount, Owner, null);
-}
 public sealed class FlameHeartPower : TransitionListenerPower
 {
     protected override PowerModel IconSource => ModelDb.Power<RagePower>();
@@ -103,18 +50,12 @@ public sealed class FlameHeartPower : TransitionListenerPower
     protected override Task OnTransition(PhaseTransitionContext t)
         => PowerCmd.Apply<StrengthPower>(t.Choice, Owner, Amount, Owner, null);
 }
-public sealed class FireStormPower : TransitionListenerPower
-{
-    protected override PowerModel IconSource => ModelDb.Power<InfernoPower>();
-    public override List<(string,string)> Localization => new PowerLoc("炎の嵐","相転移するたび、敵全体にダメージを与える。","相転移するたび、敵全体に{Amount}ダメージを与える。");
-    protected override Task OnTransition(PhaseTransitionContext t) => DamageAllEnemies(t.Choice, Amount);
-}
 /// <summary>Pays next-turn energy when this turn saw at least Threshold transitions.</summary>
 public sealed class SkyPower : AlchemyPower
 {
     public const int Threshold = 4;
     protected override PowerModel IconSource => ModelDb.Power<MachineLearningPower>();
-    public override List<(string,string)> Localization => new PowerLoc("天空",$"ターン終了時、このターンに相転移が{Threshold}回以上起きていれば、次のターンにエナジーを得る。",$"ターン終了時、このターンに相転移が{Threshold}回以上起きていれば、次のターン、エナジーを{{Amount}}得る。");
+    public override List<(string,string)> Localization => new PowerLoc("オーバードライブ",$"ターン終了時、このターンに相転移が{Threshold}回以上起きていれば、次のターンにエナジーを得る。",$"ターン終了時、このターンに相転移が{Threshold}回以上起きていれば、次のターン、エナジーを{{Amount}}得る。");
     public override async Task BeforeSideTurnEndEarly(PlayerChoiceContext c, CombatSide side, IEnumerable<Creature> participants)
     {
         var phases = Owner.Player?.GetRelic<MaterialBox>()?.Combat?.Phases;
@@ -128,7 +69,7 @@ public sealed class SkyPower : AlchemyPower
 public sealed class WindAfterimagePower : AlchemyPower
 {
     protected override PowerModel IconSource => ModelDb.Power<AfterimagePower>();
-    public override List<(string,string)> Localization => new PowerLoc("風の残像",
+    public override List<(string,string)> Localization => new PowerLoc("残風の刃",
         "ターン終了時、このターンに起きた相転移1回につき、ランダムな敵にダメージを与える。",
         "ターン終了時、このターンに起きた[gold]相転移[/gold]1回につき、ランダムな敵に{Amount}ダメージを与える。");
     public override async Task BeforeSideTurnEndEarly(PlayerChoiceContext c, CombatSide side, IEnumerable<Creature> participants)
@@ -178,7 +119,7 @@ public sealed class PreparationPower : AlchemyPower, IPhaseTransitionModifier, I
 public sealed class SynergyPower : AlchemyPower, IPhaseTransitionModifier, IPhaseTransitionListener
 {
     protected override PowerModel IconSource => ModelDb.Power<EchoFormPower>();
-    public override List<(string,string)> Localization => new PowerLoc("相乗","次の相転移の効果が追加で発動する。","次の相転移の効果が、追加で{Amount}回発動する。");
+    public override List<(string,string)> Localization => new PowerLoc("ダブルシフト","次の相転移の効果が追加で発動する。","次の相転移の効果が、追加で{Amount}回発動する。");
     public void ModifyPhaseTransition(PhaseTransitionContext t) { if (!t.IsEcho && t.Owner.Creature == Owner) t.Repeats += Amount; }
     public Task AfterPhaseTransition(PhaseTransitionContext t) => t.Owner.Creature == Owner ? PowerCmd.Remove(this) : Task.CompletedTask;
 }

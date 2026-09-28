@@ -157,7 +157,7 @@ public sealed class Drizzle() : DualElementCard(1, CardType.Skill, TargetType.An
 {
     protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<LifeDrainPower>(4), new CardsVar(1)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<LifeDrainPower>()];
-    protected override string CardTitle => "毒霧雨";
+    protected override string CardTitle => "ドレインミスト";
     protected override string EffectText => "[gold]ドレイン[/gold]{LifeDrainPower:diff()}を与える。カードを{Cards:diff()}枚引く。";
     protected override async Task Effect(PlayerChoiceContext c, CardPlay p) { await ApplyTo<LifeDrainPower>(c, p.Target!, DynamicVars["LifeDrainPower"].BaseValue); await Draw(c, DynamicVars.Cards.BaseValue); }
     protected override void OnUpgrade() => DynamicVars["LifeDrainPower"].UpgradeValueBy(3);
@@ -250,7 +250,7 @@ public sealed class CraftFusion() : CraftedCard(2, CardType.Attack, TargetType.A
     public override AlchemyPhase Element => AlchemyPhase.Fire;
     protected override IEnumerable<DynamicVar> CanonicalVars => [new DamageVar(30, ValueProp.Move), new DynamicVar("Spend", 10)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<HomunculusPower>()];
-    protected override string CardTitle => "融合";
+    protected override string CardTitle => "器の融合";
     protected override string CardText => "[gold]ホムンクルスHP[/gold]を{Spend}消費できれば、{Damage:diff()}ダメージを与える。\n[gold]火相[/gold]";
     protected override async Task OnPlay(PlayerChoiceContext c, CardPlay p)
     {
@@ -287,24 +287,25 @@ public sealed class CraftGateOfTruth() : CraftedCard(3, CardType.Power, TargetTy
     protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }
 /// <summary>
-/// Five materials. Enters earth, then fire, then MaterialBox enters air: up to three transitions from one
-/// play, in a fixed order with no element repeated back to back (design-axes 7.1).
+/// Five materials. Enters earth, then air, then MaterialBox enters fire: up to three transitions from one
+/// play, in a fixed order with no element repeated back to back (design-axes 7.1). v0.23.1 (ユーザー判断): named
+/// EW&amp;F after Earth, Wind &amp; Fire, and the order changed to match (was earth, fire, air).
 /// </summary>
 public sealed class CraftThreePhaseTorrent() : CraftedCard(1, CardType.Attack, TargetType.AnyEnemy)
 {
-    public override AlchemyPhase Element => AlchemyPhase.Air;
+    public override AlchemyPhase Element => AlchemyPhase.Fire;
     public override bool GainsBlock => true;
     protected override IEnumerable<DynamicVar> CanonicalVars => [new DamageVar(8, ValueProp.Move), new BlockVar(5, ValueProp.Move)];
-    protected override string CardTitle => "三相の奔流";
+    protected override string CardTitle => "EW&F";
     // v0.23 (ユーザーレビュー): no "up to three transitions" line; the phase line already says it.
-    protected override string CardText => "{Damage:diff()}ダメージ。{Block:diff()}[gold]ブロック[/gold]を得る。\n[gold]地相→火相→風相[/gold]";
+    protected override string CardText => "{Damage:diff()}ダメージ。{Block:diff()}[gold]ブロック[/gold]を得る。\n[gold]地相→風相→火相[/gold]";
     protected override async Task OnPlay(PlayerChoiceContext c, CardPlay p)
     {
         await Hit(c, p, DynamicVars.Damage.BaseValue);
         await CardBlock(p);
         if (!p.IsFirstInSeries) return;
         await PhaseTransitions.Enter(c, Owner, AlchemyPhase.Earth, this, p.Target, p);
-        await PhaseTransitions.Enter(c, Owner, AlchemyPhase.Fire, this, p.Target, p);
+        await PhaseTransitions.Enter(c, Owner, AlchemyPhase.Air, this, p.Target, p);
     }
     protected override void OnUpgrade() { DynamicVars.Damage.UpgradeValueBy(3); DynamicVars.Block.UpgradeValueBy(2); }
 }

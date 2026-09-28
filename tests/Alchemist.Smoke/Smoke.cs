@@ -25,6 +25,7 @@ using MegaCrit.Sts2.Core.Saves;
 using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.Map;
 using MegaCrit.Sts2.Core.Models.PotionPools;
+using MegaCrit.Sts2.Core.Models.CardPools;
 using MegaCrit.Sts2.Core.Models.Acts;
 using MegaCrit.Sts2.Core.Random;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
@@ -114,9 +115,30 @@ public static class Smoke
                         keywords=canonical.Keywords.Select(k=>k.ToString()).ToArray(), text, upgradedText,
                         recipe=recipe?.Materials.Select(m=>Recipes.Name(m)).ToArray()}));
                 }
+                // Pool comparison (scripts/pool-balance.py): every character pool's numbers and text, base and upgraded.
+                foreach(var (poolName,pool) in new (string,CardPoolModel)[]{("Alchemist",ModelDb.CardPool<AlchemyCardPool>()),
+                    ("Ironclad",ModelDb.CardPool<IroncladCardPool>()),("Silent",ModelDb.CardPool<SilentCardPool>()),("Defect",ModelDb.CardPool<DefectCardPool>()),
+                    ("Necrobinder",ModelDb.CardPool<NecrobinderCardPool>()),("Regent",ModelDb.CardPool<RegentCardPool>())})
+                foreach(var canonical in pool.AllCards)
+                {
+                    try
+                    {
+                        var shown=run.CreateCard(canonical,player);
+                        var upgraded=shown.IsUpgradable?run.CreateCard(canonical,player):null;
+                        upgraded?.UpgradeInternal();
+                        GD.Print("ALCHEMIST_POOLDUMP "+System.Text.Json.JsonSerializer.Serialize(new{
+                            pool=poolName, id=canonical.Id.Entry, title=shown.Title, type=canonical.Type.ToString(), rarity=canonical.Rarity.ToString(),
+                            cost=canonical.EnergyCost.Canonical, costsX=canonical.EnergyCost.CostsX,
+                            upgradedCost=upgraded?.EnergyCost.GetWithModifiers(CostModifiers.None),
+                            element=(canonical as AlchemyCard)?.Element.ToString(), target=canonical.TargetType.ToString(),
+                            keywords=canonical.Keywords.Select(k=>k.ToString()).ToArray(),
+                            vars=shown.DynamicVars.ToDictionary(v=>v.Key,v=>v.Value.BaseValue),
+                            upgradedVars=upgraded?.DynamicVars.ToDictionary(v=>v.Key,v=>v.Value.BaseValue),
+                            text=shown.GetDescriptionForPile(PileType.None), upgradedText=upgraded?.GetDescriptionForPile(PileType.None)}));
+                    }
+                    catch(Exception e){GD.Print($"ALCHEMIST_POOLDUMP_SKIP {poolName} {canonical.Id.Entry} {e.GetType().Name}");}
+                }
                 Check(ResourceLoader.Exists(box.PackedIconPath),"relic portrait");
-                var resonance=ModelDb.Power<PhaseResonancePower>();
-                Check(ResourceLoader.Exists(resonance.CustomPackedIconPath!) && ResourceLoader.Exists(resonance.CustomBigIconPath!),"phase resonance power icons exist");
                 Check(new[]{CardType.Attack,CardType.Skill,CardType.Power}.All(t=>ModelDb.CardPool<AlchemyCardPool>().AllCards
                     .Any(c=>c.Type==t && c.Rarity is CardRarity.Common or CardRarity.Uncommon or CardRarity.Rare)),
                     "the pool has an attack, a skill and a power for the merchant");
@@ -438,13 +460,13 @@ public static class Smoke
             Check(box.Combat.Phases.Current==AlchemyPhase.Water && foe.GetPower<WeakPower>()?.Amount==1+PhaseRules.BaseAmount(AlchemyPhase.Water),
                 $"earth to water adds the water transition's weak (weak {foe.GetPower<WeakPower>()?.Amount})");
             int hpBefore=foe.CurrentHp;
-            await Play(cs.CreateCard<FireIncinerate>(player),foe);
-            Check(box.Combat.Phases.Current==AlchemyPhase.Fire && hpBefore-foe.CurrentHp==18+PhaseRules.BaseAmount(AlchemyPhase.Fire),
+            await Play(cs.CreateCard<FlashPowder>(player),null);
+            Check(box.Combat.Phases.Current==AlchemyPhase.Fire && hpBefore-foe.CurrentHp==6+PhaseRules.BaseAmount(AlchemyPhase.Fire),
                 $"water to fire adds the fire transition's damage (dealt {hpBefore-foe.CurrentHp})");
             hpBefore=foe.CurrentHp;
             await Play(cs.CreateCard<FlashPowder>(player),null);
             Check(box.Combat.Phases.TransitionCount==2 && hpBefore-foe.CurrentHp==6,"a same-element card does not transition again");
-            var tailwind=cs.CreateCard<Tailwind>(player);
+            var tailwind=cs.CreateCard<AirBreeze>(player);
             await CardPileCmd.AddGeneratedCardsToCombat([tailwind],PileType.Hand,player);
             // Count the draw pile: an exhausting card can still sit in the hand when AutoPlay returns.
             int drawBefore=player.PlayerCombatState.DrawPile.Cards.Count;
@@ -487,10 +509,7 @@ public static class Smoke
                 "instant alchemy offers only materials the box holds");
             Check(box.Inventory.Counts[(int)Alchemist.Core.Material.Herb]==herbBefore-1 && player.PlayerCombatState.Hand.Cards.OfType<HerbImprovisation>().Count()==1,
                 "instant alchemy spends one run material for a temporary water card");
-            await Play(cs.CreateCard<PhaseResonance>(player),null);
-            int resonanceBefore=player.Creature.Block;
             await Play(cs.CreateCard<SoothingMist>(player),foe);
-            Check(player.Creature.Block-resonanceBefore==2,$"phase resonance reacts to a transition through the listener hook (block {player.Creature.Block-resonanceBefore})");
             var phial=player.Potions.OfType<EarthPhial>().First();
             int phialBlock=player.Creature.Block;
             await phial.OnUseWrapper(new ThrowingPlayerChoiceContext(),player.Creature);
@@ -498,28 +517,28 @@ public static class Smoke
             int turnTransitions=box.Combat.Phases.TransitionsThisTurn;
             foe.SetMaxHpInternal(999);foe.SetCurrentHpInternal(999);
             await Play(cs.CreateCard<AlchChainReaction>(player),foe);
-            Check(turnTransitions>0 && 999-foe.CurrentHp==turnTransitions*10,$"chain reaction deals 10 per transition this turn ({turnTransitions} transitions, {999-foe.CurrentHp} damage)");
+            Check(turnTransitions>2 && 999-foe.CurrentHp==(turnTransitions-2)*20,$"chain reaction deals 20 per transition this turn after the second ({turnTransitions} transitions, {999-foe.CurrentHp} damage)");
             int transitionsBefore=box.Combat.Phases.TransitionCount;
             await Play(cs.CreateCard<LavaShot>(player),foe);
             Check(box.Combat.Phases.TransitionCount==transitionsBefore+2 && box.Combat.Phases.Current==AlchemyPhase.Fire && box.Combat.Phases.Previous==AlchemyPhase.Earth,
                 "a dual-phase card enters its first then its second element, transitioning twice");
             // Cores are per element (design-axes.md 7.2) and the air draw ignores modifiers (原則5).
-            await Play(cs.CreateCard<FireIncinerate>(player),foe);
+            await Play(cs.CreateCard<FlashPowder>(player),null);
             await ApplySelfPower<AirCorePower>(1);
             await ApplySelfPower<PreparationPower>(2);
             // Fixture: room in the hand and enough cards in the draw pile, so only the draw rule decides the count.
             foreach(var held in player.PlayerCombatState.Hand.Cards.ToArray()) await CardCmd.Exhaust(new ThrowingPlayerChoiceContext(),held);
             await CardPileCmd.AddGeneratedCardsToCombat([..Enumerable.Range(0,5).Select(_=>cs.CreateCard<EarthenGuard>(player))],PileType.Draw,player);
             GD.Print($"ALCHEMIST_STAT airFixture hand={player.PlayerCombatState.Hand.Cards.Count} draw={player.PlayerCombatState.DrawPile.Cards.Count} phase={box.Combat.Phases.Current}");
-            var airCard=cs.CreateCard<Tailwind>(player);
+            var airCard=cs.CreateCard<AirBreeze>(player);
             await CardPileCmd.AddGeneratedCardsToCombat([airCard],PileType.Hand,player);
             int airDrawBefore=player.PlayerCombatState.DrawPile.Cards.Count;
             await CardCmd.AutoPlay(new ThrowingPlayerChoiceContext(),airCard,null,skipCardPileVisuals:true);
             Check(airDrawBefore-player.PlayerCombatState.DrawPile.Cards.Count==airCard.DynamicVars.Cards.IntValue+PhaseRules.BaseAmount(AlchemyPhase.Air),
                 $"strengthening does not raise the air transition's draw (drew {airDrawBefore-player.PlayerCombatState.DrawPile.Cards.Count})");
             foe.SetCurrentHpInternal(999);
-            await Play(cs.CreateCard<FireIncinerate>(player),foe);
-            Check(999-foe.CurrentHp==18+PhaseRules.BaseAmount(AlchemyPhase.Fire)+1,$"the air core charges the next transition out of air (dealt {999-foe.CurrentHp})");
+            await Play(cs.CreateCard<FlashPowder>(player),null);
+            Check(999-foe.CurrentHp==6+PhaseRules.BaseAmount(AlchemyPhase.Fire)+1,$"the air core charges the next transition out of air (dealt {999-foe.CurrentHp})");
             await ApplySelfPower<WaterCorePower>(1);
             int vulnerableBefore=foe.GetPower<VulnerablePower>()?.Amount ?? 0;
             await Play(cs.CreateCard<SoothingMist>(player),foe);
@@ -642,8 +661,8 @@ public static class Smoke
             int transitionsBeforeTorrent=box.Combat.Phases.TransitionCount;
             var phaseBeforeTorrent=box.Combat.Phases.Current;
             await Play(cs.CreateCard<CraftThreePhaseTorrent>(player),foe);
-            Check(box.Combat.Phases.Current==AlchemyPhase.Air && box.Combat.Phases.TransitionCount-transitionsBeforeTorrent==(phaseBeforeTorrent==AlchemyPhase.Earth?2:3),
-                $"the five-material card passes earth, fire and air, up to three transitions ({box.Combat.Phases.TransitionCount-transitionsBeforeTorrent} from {phaseBeforeTorrent})");
+            Check(box.Combat.Phases.Current==AlchemyPhase.Fire && box.Combat.Phases.TransitionCount-transitionsBeforeTorrent==(phaseBeforeTorrent==AlchemyPhase.Earth?2:3),
+                $"EW&F passes earth, air and fire, up to three transitions ({box.Combat.Phases.TransitionCount-transitionsBeforeTorrent} from {phaseBeforeTorrent})");
             // v0.22 (design-axes 4.2): spending a material turns コペルニクスシフト into a swap of listed debuffs.
             foreach(var own in player.Creature.Powers.Where(x=>x.TypeForCurrentAmount==PowerType.Debuff).ToArray()) await PowerCmd.Remove(own);
             await ApplySelfPower<WeakPower>(2);
@@ -700,7 +719,7 @@ public static class Smoke
             await ApplySelfPower<PhaseWheelPower>(1);
             await Play(cs.CreateCard<EarthenGuard>(player),null);
             Check(box.Combat.Phases.Current==AlchemyPhase.Water,"a same-element card lets the wheel step earth to water");
-            await Play(cs.CreateCard<FireIncinerate>(player),foe);
+            await Play(cs.CreateCard<FlashPowder>(player),null);
             Check(box.Combat.Phases.Current==AlchemyPhase.Fire,"a card that transitions itself does not step the wheel");
             await PowerCmd.Remove(player.Creature.GetPower<PhaseWheelPower>()!);
             // v0.23 (card review).
@@ -759,7 +778,7 @@ public static class Smoke
             using(CardSelectCmd.UseSelector(firstPick))
             foreach(var canonical in ModelDb.CardPool<AlchemyCardPool>().AllCards.Where(c=>c.Rarity is CardRarity.Common or CardRarity.Uncommon or CardRarity.Rare))
             {
-                foreach(var enemy in sweepState.Enemies.Where(e=>!e.IsDead)) { enemy.SetMaxHpInternal(999); enemy.SetCurrentHpInternal(999); }
+                foreach(var enemy in sweepState.Enemies.Where(e=>!e.IsDead)) { enemy.SetMaxHpInternal(99999); enemy.SetCurrentHpInternal(99999); } // 連鎖反応 late in a long turn can pass 999
                 if(box.Inventory.Counts.Sum()<2) box.Inventory.Counts=[2,2,2,2];
                 var played=sweepState.CreateCard(canonical,player);
                 var target=played.TargetType==TargetType.AnyEnemy ? sweepState.Enemies.First(e=>!e.IsDead) : null;
@@ -780,7 +799,7 @@ public static class Smoke
                 // The sweep leaves the hand full, so these play straight from creation like the sweep does.
                 Task PlayLoose(CardModel card,Creature? target)=>CardCmd.AutoPlay(new ThrowingPlayerChoiceContext(),card,target,skipCardPileVisuals:true);
                 var foe0=sweepState.Enemies.First(e=>!e.IsDead);
-                foreach(var enemy in sweepState.Enemies.Where(e=>!e.IsDead)) { enemy.SetMaxHpInternal(999); enemy.SetCurrentHpInternal(999); }
+                foreach(var enemy in sweepState.Enemies.Where(e=>!e.IsDead)) { enemy.SetMaxHpInternal(99999); enemy.SetCurrentHpInternal(99999); } // 連鎖反応 late in a long turn can pass 999
                 box.Inventory.Counts=[0,1,1,0];
                 // Relative to the no-powder hit: strength and multipliers left over from the sweep scale both.
                 int Health()=>foe0.CurrentHp+foe0.Block;

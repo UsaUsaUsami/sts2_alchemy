@@ -12,16 +12,8 @@ using MegaCrit.Sts2.Core.ValueProps;
 
 namespace Alchemist;
 
-// Air reward cards: draw, energy and hand shaping. Tailwind and Slipstream live in ElementalCards.cs.
+// Air reward cards: draw, energy and hand shaping.
 
-// v0.21: 報酬60枚への縮小で報酬プールから外した（旧セーブ読込用に定義だけ残す）。
-public sealed class AirGust() : ElementCard(1,CardType.Attack,CardRarity.Event,TargetType.AnyEnemy,AlchemyPhase.Air)
-{
-    protected override IEnumerable<DynamicVar> CanonicalVars=>[new DamageVar(6,ValueProp.Move),new CardsVar(1)];
-    public override List<(string,string)> Localization=>new CardLoc("疾風","{Damage:diff()}ダメージ。カードを{Cards:diff()}枚引く。\n[gold]風相[/gold]");
-    protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p){await Hit(c,p,DynamicVars.Damage.BaseValue);await Draw(c,DynamicVars.Cards.BaseValue);}
-    protected override void OnUpgrade()=>DynamicVars.Damage.UpgradeValueBy(3);
-}
 public sealed class AirSickle() : ElementCard(1,CardType.Attack,CardRarity.Common,TargetType.AnyEnemy,AlchemyPhase.Air)
 {
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new DamageVar(4,ValueProp.Move),new DynamicVar("Hits",2)];
@@ -49,7 +41,7 @@ public sealed class AirWindBlade() : ElementCard(0,CardType.Attack,CardRarity.Un
 public sealed class AirMomentum() : ElementCard(1,CardType.Skill,CardRarity.Uncommon,TargetType.Self,AlchemyPhase.Air)
 {
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new CardsVar(2),new PowerVar<EnergyNextTurnPower>(1)];
-    public override List<(string,string)> Localization=>new CardLoc("勢い","カードを{Cards:diff()}枚引く。このカードで[gold]相転移[/gold]が起きるなら、次のターン、エナジーを{EnergyNextTurnPower:diff()}得る。\n[gold]風相[/gold]");
+    public override List<(string,string)> Localization=>new CardLoc("追い風","カードを{Cards:diff()}枚引く。このカードで[gold]相転移[/gold]が起きるなら、次のターン、エナジーを{EnergyNextTurnPower:diff()}得る。\n[gold]風相[/gold]");
     protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p){bool shift=WillTransition;await Draw(c,DynamicVars.Cards.BaseValue);if(shift)await ApplySelf<EnergyNextTurnPower>(c,DynamicVars["EnergyNextTurnPower"].BaseValue);}
     protected override void OnUpgrade()=>DynamicVars.Cards.UpgradeValueBy(1);
 }
@@ -63,7 +55,7 @@ public sealed class AirCurrent() : ElementCard(0,CardType.Skill,CardRarity.Uncom
 public sealed class AirRefine() : ElementCard(1,CardType.Skill,CardRarity.Uncommon,TargetType.Self,AlchemyPhase.Air)
 {
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new CardsVar(2)];
-    public override List<(string,string)> Localization=>new CardLoc("風選","カードを{Cards:diff()}枚引く。その後、手札1枚を[gold]廃棄[/gold]する。\n[gold]風相[/gold]");
+    public override List<(string,string)> Localization=>new CardLoc("風の知らせ","カードを{Cards:diff()}枚引く。その後、手札1枚を[gold]廃棄[/gold]する。\n[gold]風相[/gold]");
     protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p)
     {
         await Draw(c,DynamicVars.Cards.BaseValue);
@@ -71,15 +63,6 @@ public sealed class AirRefine() : ElementCard(1,CardType.Skill,CardRarity.Uncomm
         if(card is not null) await CardCmd.Exhaust(c,card);
     }
     protected override void OnUpgrade()=>DynamicVars.Cards.UpgradeValueBy(1);
-}
-// v0.21: 報酬60枚への縮小で報酬プールから外した（旧セーブ読込用に定義だけ残す）。
-public sealed class AirWindReading() : ElementCard(1,CardType.Power,CardRarity.Event,TargetType.Self,AlchemyPhase.Air)
-{
-    protected override IEnumerable<DynamicVar> CanonicalVars=>[new PowerVar<WindReadingPower>(1)];
-    protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<WindReadingPower>()];
-    public override List<(string,string)> Localization=>new CardLoc("風読み","ターン終了時、[gold]風相[/gold]なら次のターンにカードを{WindReadingPower:diff()}枚追加で引く。\n[gold]風相[/gold]");
-    protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>ApplySelf<WindReadingPower>(c,DynamicVars["WindReadingPower"].BaseValue);
-    protected override void OnUpgrade()=>EnergyCost.UpgradeBy(-1);
 }
 /// <summary>v0.23 (ユーザーレビュー): 鎮静の霧 left the reward pool for the starter; a cheap air card in its slot.</summary>
 public sealed class AirBreeze() : ElementCard(1,CardType.Skill,CardRarity.Common,TargetType.Self,AlchemyPhase.Air)
@@ -102,43 +85,19 @@ public sealed class AirAfterimage() : ElementCard(1,CardType.Power,CardRarity.Un
 {
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new PowerVar<WindAfterimagePower>(3)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<WindAfterimagePower>()];
-    public override List<(string,string)> Localization=>new CardLoc("風の残像","ターン終了時、このターンに起きた[gold]相転移[/gold]1回につき、ランダムな敵に{WindAfterimagePower:diff()}ダメージを与える。\n[gold]風相[/gold]");
+    public override List<(string,string)> Localization=>new CardLoc("残風の刃","ターン終了時、このターンに起きた[gold]相転移[/gold]1回につき、ランダムな敵に{WindAfterimagePower:diff()}ダメージを与える。\n[gold]風相[/gold]");
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>ApplySelf<WindAfterimagePower>(c,DynamicVars["WindAfterimagePower"].BaseValue);
     protected override void OnUpgrade()=>DynamicVars["WindAfterimagePower"].UpgradeValueBy(1);
 }
 // v0.23 (ユーザーレビュー「強すぎ。業火の意味がない」): counts only transitions into air, with a bigger hit.
+// v0.23.1 (ユーザー判断): 8 → 6 (upgrade 8). It still grew in decks that never aimed for transitions; 6 keeps it with
+// the base game's combat-long scalers (docs/pool-balance.md).
 public sealed class AirStormBlade() : ElementCard(1,CardType.Attack,CardRarity.Rare,TargetType.AnyEnemy,AlchemyPhase.Air)
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars=>[new PreviewCountVar("HitCount",c=>Math.Max(1,c.TransitionsInto(AlchemyPhase.Air))),new DamageVar(8,ValueProp.Move)];
-    public override List<(string,string)> Localization=>new CardLoc("嵐刃","{Damage:diff()}ダメージを、この戦闘で[gold]風相[/gold]へ[gold]相転移[/gold]した回数だけ与える（最低1回）。{InCombat:\n（{HitCount:diff()}回）|}\n[gold]風相[/gold]");
+    protected override IEnumerable<DynamicVar> CanonicalVars=>[new PreviewCountVar("HitCount",c=>Math.Max(1,c.TransitionsInto(AlchemyPhase.Air))),new DamageVar(6,ValueProp.Move)];
+    public override List<(string,string)> Localization=>new CardLoc("ソードストリーム","{Damage:diff()}ダメージを、この戦闘で[gold]風相[/gold]へ[gold]相転移[/gold]した回数だけ与える（最低1回）。{InCombat:\n（{HitCount:diff()}回）|}\n[gold]風相[/gold]");
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>Hit(c,p,DynamicVars.Damage.BaseValue,Math.Max(1,TransitionsInto(AlchemyPhase.Air)));
     protected override void OnUpgrade()=>DynamicVars.Damage.UpgradeValueBy(2);
-}
-// v0.21: 報酬60枚への縮小で報酬プールから外した（旧セーブ読込用に定義だけ残す）。
-public sealed class AirGift() : ElementCard(0,CardType.Skill,CardRarity.Event,TargetType.Self,AlchemyPhase.Air)
-{
-    public override IEnumerable<CardKeyword> CanonicalKeywords=>[CardKeyword.Exhaust];
-    protected override IEnumerable<DynamicVar> CanonicalVars=>[new DynamicVar("Energy",2)];
-    public override List<(string,string)> Localization=>new CardLoc("風の贈り物","エナジーを{Energy:diff()}得る。\n[gold]風相[/gold]");
-    protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>Energy(DynamicVars["Energy"].BaseValue);
-    protected override void OnUpgrade()=>DynamicVars["Energy"].UpgradeValueBy(1);
-}
-// v0.21: 報酬60枚への縮小で報酬プールから外した（旧セーブ読込用に定義だけ残す）。
-public sealed class AirRevelation() : ElementCard(1,CardType.Skill,CardRarity.Event,TargetType.Self,AlchemyPhase.Air)
-{
-    public override IEnumerable<CardKeyword> CanonicalKeywords=>[CardKeyword.Exhaust];
-    protected override IEnumerable<DynamicVar> CanonicalVars=>[new CardsVar(3),new DynamicVar("Energy",1)];
-    public override List<(string,string)> Localization=>new CardLoc("天啓","カードを{Cards:diff()}枚引き、エナジーを{Energy:diff()}得る。\n[gold]風相[/gold]");
-    protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p){await Draw(c,DynamicVars.Cards.BaseValue);await Energy(DynamicVars["Energy"].BaseValue);}
-    protected override void OnUpgrade()=>DynamicVars.Cards.UpgradeValueBy(1);
-}
-// v0.20: 生命軸の追加で報酬プールから外した（旧セーブ読込用に定義だけ残す）。
-public sealed class AirFavor() : ElementCard(1,CardType.Skill,CardRarity.Event,TargetType.Self,AlchemyPhase.Air)
-{
-    protected override IEnumerable<DynamicVar> CanonicalVars=>[new PowerVar<EnergyNextTurnPower>(2)];
-    public override List<(string,string)> Localization=>new CardLoc("順風","次のターン、エナジーを{EnergyNextTurnPower:diff()}得る。\n[gold]風相[/gold]");
-    protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>ApplySelf<EnergyNextTurnPower>(c,DynamicVars["EnergyNextTurnPower"].BaseValue);
-    protected override void OnUpgrade()=>DynamicVars["EnergyNextTurnPower"].UpgradeValueBy(1);
 }
 // v0.19: "draw whenever you transition" broke 原則5 and looped (原則4). Now a reward for many transitions
 // in one turn (原則7), paid next turn so it cannot feed the turn that earned it.
@@ -146,7 +105,7 @@ public sealed class AirSky() : ElementCard(2,CardType.Power,CardRarity.Rare,Targ
 {
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new PowerVar<SkyPower>(2),new DynamicVar("Threshold",SkyPower.Threshold)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<SkyPower>()];
-    public override List<(string,string)> Localization=>new CardLoc("天空","ターン終了時、このターンに[gold]相転移[/gold]が{Threshold}回以上起きていれば、次のターン、エナジーを{SkyPower:diff()}得る。\n[gold]風相[/gold]");
+    public override List<(string,string)> Localization=>new CardLoc("オーバードライブ","ターン終了時、このターンに[gold]相転移[/gold]が{Threshold}回以上起きていれば、次のターン、エナジーを{SkyPower:diff()}得る。\n[gold]風相[/gold]");
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>ApplySelf<SkyPower>(c,DynamicVars["SkyPower"].BaseValue);
     protected override void OnUpgrade()=>EnergyCost.UpgradeBy(-1);
 }

@@ -27,19 +27,6 @@ public sealed class LifeVampireBlade() : ElementCard(1,CardType.Attack,CardRarit
     protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p){await Hit(c,p,DynamicVars.Damage.BaseValue);await ApplyTo<LifeDrainPower>(c,p.Target!,DynamicVars["Drain"].BaseValue);}
     protected override void OnUpgrade(){DynamicVars.Damage.UpgradeValueBy(3);DynamicVars["Drain"].UpgradeValueBy(1);}
 }
-// v0.21: 報酬60枚への縮小で報酬プールから外した（旧セーブ読込用に定義だけ残す）。
-public sealed class LifeMiasmaNeedle() : ElementCard(1,CardType.Skill,CardRarity.Event,TargetType.AllEnemies,AlchemyPhase.Water)
-{
-    protected override IEnumerable<DynamicVar> CanonicalVars=>[new DynamicVar("Drain",1),new DynamicVar("Homunculus",4)];
-    protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<LifeDrainPower>(),HoverTipFactory.FromPower<HomunculusPower>()];
-    public override List<(string,string)> Localization=>new CardLoc("瘴気の針","敵全体に[gold]ドレイン[/gold]{Drain:diff()}を与える。[gold]ホムンクルスHP[/gold]を{Homunculus:diff()}得る。\n[gold]水相[/gold]");
-    protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p)
-    {
-        await ApplyAll<LifeDrainPower>(c,DynamicVars["Drain"].BaseValue);
-        await LifeAxis.GainHomunculus(c,Owner,DynamicVars["Homunculus"].IntValue);
-    }
-    protected override void OnUpgrade(){DynamicVars["Drain"].UpgradeValueBy(1);DynamicVars["Homunculus"].UpgradeValueBy(2);}
-}
 /// <summary>肉の壁. Fewer points than 土壁's block because the homunculus keeps them across turns.</summary>
 public sealed class LifeFleshWall() : ElementCard(1,CardType.Skill,CardRarity.Common,TargetType.Self,AlchemyPhase.Earth)
 {
@@ -106,7 +93,7 @@ public sealed class LifeTorrent() : ElementCard(2,CardType.Attack,CardRarity.Rar
 {
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new PreviewDamageVar((c,_)=>c.HomunculusHp)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<HomunculusPower>()];
-    public override List<(string,string)> Localization=>new CardLoc("生命の奔流","[gold]ホムンクルスHP[/gold]をすべて消費し、その量のダメージを敵全体に与える。{InCombat:\n（{Total:diff()}ダメージ）|}\n[gold]火相[/gold]");
+    public override List<(string,string)> Localization=>new CardLoc("道連れ","[gold]ホムンクルスHP[/gold]をすべて消費し、その量のダメージを敵全体に与える。{InCombat:\n（{Total:diff()}ダメージ）|}\n[gold]火相[/gold]");
     protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p)
     {
         int spent=await LifeAxis.SpendAllHomunculus(c,Owner);

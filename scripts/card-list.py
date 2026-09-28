@@ -85,7 +85,6 @@ pool = [r for r in rows if r["rarity"] in ("Common", "Uncommon", "Rare")]
 crafted = [r for r in rows if r["recipe"]]
 ancient = [r for r in rows if r["rarity"] == "Ancient"]
 tokens = [r for r in rows if r["rarity"] == "Token"]
-old = [r for r in rows if r["rarity"] == "Event" and not r["recipe"] and not r["cls"].endswith("MaterialCard")]
 
 md = [f"# 錬金術師 カード一覧（v{version}）", "",
       "バランス調整の検討用。`scripts/card-list.py`がゲーム内の定義（戦闘外で表示される説明文）から生成したもの。手で編集せず、カードを変えたら作り直す。",
@@ -101,7 +100,7 @@ md += ["## 概要", "",
        f"アタック{types['Attack']}・スキル{types['Skill']}・パワー{types['Power']}／"
        + "・".join(f"{p if p != '無' else '無相'}{phases[p]}" for p in ["地", "水", "火", "風", "無"] if phases[p]) + "）",
        f"- 工房の錬成：**{len(crafted)}種**", f"- エンシェント：{len(ancient)}枚、トークン・一時カード：{len(tokens)}枚",
-       f"- 報酬から外した旧カード：{len(old)}枚（旧セーブ読込用。新しく手に入らない）", "",
+       "",
        "## 初期デッキ", "",
        "ストライク×3、ディフェンド×3（アイアンクラッドの基本カードを流用）と、以下の3枚。", "",
        table(sorted([r for r in rows if r["cls"] in STARTER], key=order), show_rarity=True), ""]
@@ -112,10 +111,7 @@ md += ["## 工房の錬成（{}種）".format(len(crafted)), "",
        "素材の組み合わせ（順不同）で決まる。報酬・商人には出ない。", "",
        table(sorted(crafted, key=lambda r: (len(r["recipe"]), order(r))), show_recipe=True), "",
        "## エンシェント", "", table(ancient), "",
-       "## トークン・一時カード", "", table(sorted(tokens, key=order)), "",
-       "## 報酬から外した旧カード（{}枚）".format(len(old)), "",
-       "過去の版で報酬・商人から外したカード。旧セーブのデッキにあれば使える。報酬に戻す候補の検討用。", "",
-       table(sorted(old, key=order)), ""]
+       "## トークン・一時カード", "", table(sorted(tokens, key=order)), ""]
 
 (ROOT / "docs/card-list.md").write_text("\n".join(md), encoding="utf-8")
-print(f"docs/card-list.md: {len(rows)} cards (pool {len(pool)}, crafted {len(crafted)}, old {len(old)})")
+print(f"docs/card-list.md: {len(rows)} cards (pool {len(pool)}, crafted {len(crafted)})")

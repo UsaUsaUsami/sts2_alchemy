@@ -50,7 +50,7 @@ public sealed class LifeGreatWork() : ElementCard(5,CardType.Attack,CardRarity.U
     public const int HomunculusPerCost = 10;
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new DamageVar(50,ValueProp.Move),new DynamicVar("Step",HomunculusPerCost)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<HomunculusPower>()];
-    public override List<(string,string)> Localization=>new CardLoc("大いなる業","{Damage:diff()}ダメージ。[gold]ホムンクルスHP[/gold]{Step}ごとに、コストが1下がる。\n[gold]火相[/gold]");
+    public override List<(string,string)> Localization=>new CardLoc("大錬成","{Damage:diff()}ダメージ。[gold]ホムンクルスHP[/gold]{Step}ごとに、コストが1下がる。\n[gold]火相[/gold]");
     public override bool TryModifyEnergyCostInCombat(CardModel card,decimal originalCost,out decimal modifiedCost)
     {
         modifiedCost=originalCost;

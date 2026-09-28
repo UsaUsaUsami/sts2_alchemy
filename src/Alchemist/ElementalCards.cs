@@ -29,15 +29,6 @@ public sealed class EarthenGuard() : ElementCard(1,CardType.Skill,CardRarity.Bas
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>CreatureCmd.GainBlock(Owner.Creature,DynamicVars.Block,p);
     protected override void OnUpgrade()=>DynamicVars.Block.UpgradeValueBy(3);
 }
-// v0.21: 報酬60枚への縮小で報酬プールから外した（旧セーブ読込用に定義だけ残す）。
-public sealed class StoneEdge() : ElementCard(1,CardType.Attack,CardRarity.Event,TargetType.AnyEnemy,AlchemyPhase.Earth)
-{
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new DamageVar(7,ValueProp.Move),new BlockVar(3,ValueProp.Move)];
-    public override bool GainsBlock=>true;
-    public override List<(string,string)> Localization => new CardLoc("石刃","{Damage:diff()}ダメージ。{Block:diff()}[gold]ブロック[/gold]を得る。\n[gold]地相[/gold]");
-    protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p){await DamageCmd.Attack(DynamicVars.Damage.BaseValue).FromCard(this,p).Targeting(p.Target!).Execute(c);await CreatureCmd.GainBlock(Owner.Creature,DynamicVars.Block,p);}
-    protected override void OnUpgrade()=>DynamicVars.Damage.UpgradeValueBy(3);
-}
 // v0.23: starter-only (Basic). そよ風 took its reward slot.
 public sealed class SoothingMist() : ElementCard(1,CardType.Skill,CardRarity.Basic,TargetType.AnyEnemy,AlchemyPhase.Water)
 {
@@ -47,14 +38,6 @@ public sealed class SoothingMist() : ElementCard(1,CardType.Skill,CardRarity.Bas
     public override List<(string,string)> Localization => new CardLoc("鎮静の霧","[gold]脱力[/gold]{WeakPower:diff()}を与える。\n[gold]水相[/gold]");
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>PowerCmd.Apply<WeakPower>(c,p.Target!,DynamicVars.Weak.BaseValue,Owner.Creature,this);
     protected override void OnUpgrade()=>DynamicVars.Weak.UpgradeValueBy(1);
-}
-// v0.21: 報酬60枚への縮小で報酬プールから外した（旧セーブ読込用に定義だけ残す）。
-public sealed class TidalGuard() : ElementCard(1,CardType.Skill,CardRarity.Event,TargetType.Self,AlchemyPhase.Water)
-{
-    protected override IEnumerable<DynamicVar> CanonicalVars=>[new BlockVar(6,ValueProp.Move),new CardsVar(1)];
-    public override List<(string,string)> Localization=>new CardLoc("潮の守り","{Block:diff()}[gold]ブロック[/gold]を得る。カードを{Cards}枚引く。\n[gold]水相[/gold]");
-    protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p){await CreatureCmd.GainBlock(Owner.Creature,DynamicVars.Block,p);await CardPileCmd.Draw(c,DynamicVars.Cards.BaseValue,Owner);}
-    protected override void OnUpgrade()=>DynamicVars.Block.UpgradeValueBy(3);
 }
 // v0.23 (ユーザーレビュー「面白みがない」): Vulnerable first, so its own hit already lands on it.
 public sealed class Ignition() : ElementCard(1,CardType.Attack,CardRarity.Common,TargetType.AnyEnemy,AlchemyPhase.Fire)
@@ -77,23 +60,6 @@ public sealed class FlashPowder() : ElementCard(1,CardType.Attack,CardRarity.Unc
     public override List<(string,string)> Localization=>new CardLoc("閃光火薬","敵全体に{Damage:diff()}ダメージ。\n[gold]火相[/gold]");
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>DamageCmd.Attack(DynamicVars.Damage.BaseValue).FromCard(this,p).TargetingAllOpponents(CombatState!).Execute(c);
     protected override void OnUpgrade()=>DynamicVars.Damage.UpgradeValueBy(3);
-}
-// v0.21: 報酬60枚への縮小で報酬プールから外した（旧セーブ読込用に定義だけ残す）。
-public sealed class Tailwind() : ElementCard(0,CardType.Skill,CardRarity.Event,TargetType.Self,AlchemyPhase.Air)
-{
-    public override IEnumerable<CardKeyword> CanonicalKeywords=>[CardKeyword.Exhaust];
-    protected override IEnumerable<DynamicVar> CanonicalVars=>[new CardsVar(1)];
-    public override List<(string,string)> Localization=>new CardLoc("追い風","カードを{Cards:diff()}枚引く。\n[gold]風相[/gold]");
-    protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>CardPileCmd.Draw(c,DynamicVars.Cards.BaseValue,Owner);
-    protected override void OnUpgrade()=>DynamicVars.Cards.UpgradeValueBy(1);
-}
-// v0.21: 報酬60枚への縮小で報酬プールから外した（旧セーブ読込用に定義だけ残す）。
-public sealed class Slipstream() : ElementCard(1,CardType.Skill,CardRarity.Event,TargetType.Self,AlchemyPhase.Air)
-{
-    protected override IEnumerable<DynamicVar> CanonicalVars=>[new BlockVar(5,ValueProp.Move),new CardsVar(1)];
-    public override List<(string,string)> Localization=>new CardLoc("風路","{Block:diff()}[gold]ブロック[/gold]を得る。カードを{Cards}枚引く。\n[gold]風相[/gold]");
-    protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p){await CreatureCmd.GainBlock(Owner.Creature,DynamicVars.Block,p);await CardPileCmd.Draw(c,DynamicVars.Cards.BaseValue,Owner);}
-    protected override void OnUpgrade()=>DynamicVars.Block.UpgradeValueBy(3);
 }
 
 // v0.23: starter-only (Basic). 風の衣 took its reward slot.
@@ -130,15 +96,3 @@ public sealed class PowderImprovisation():ImprovisationCard(AlchemyPhase.Fire)
 public sealed class EtherImprovisation():ImprovisationCard(AlchemyPhase.Air)
 { protected override IEnumerable<DynamicVar> CanonicalVars=>[new CardsVar(2)];public override List<(string,string)> Localization=>new CardLoc("即席の霊風","カードを{Cards}枚引く。\n[gold]風相[/gold]");protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>CardPileCmd.Draw(c,DynamicVars.Cards.BaseValue,Owner);protected override void OnUpgrade(){} }
 
-// The pool needs at least one Power: the merchant stocks one character card of each type and fails to
-// populate without it. This one is also the reference use of the transition-listener hook.
-// v0.21: 報酬60枚への縮小で報酬プールから外した（旧セーブ読込用に定義だけ残す）。
-public sealed class PhaseResonance() : AlchemyCard(1,CardType.Power,CardRarity.Event,TargetType.Self)
-{
-    protected override CardModel Artwork=>ModelDb.Card<Inflame>();
-    protected override IEnumerable<DynamicVar> CanonicalVars=>[new PowerVar<PhaseResonancePower>(2)];
-    protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<PhaseResonancePower>()];
-    public override List<(string,string)> Localization=>new CardLoc("相の共鳴","[gold]相転移[/gold]するたび、{PhaseResonancePower:diff()}[gold]ブロック[/gold]を得る。");
-    protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>PowerCmd.Apply<PhaseResonancePower>(c,Owner.Creature,DynamicVars["PhaseResonancePower"].BaseValue,Owner.Creature,this);
-    protected override void OnUpgrade()=>DynamicVars["PhaseResonancePower"].UpgradeValueBy(1);
-}

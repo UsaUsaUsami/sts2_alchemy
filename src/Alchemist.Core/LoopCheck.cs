@@ -168,21 +168,16 @@ public static class LoopProfiles
         El("PowderImprovisation", 0, F, exhaust: true), El("EtherImprovisation", 0, A, draw: 2, exhaust: true),
         new("FurnaceActivation", 0, Exhaust: true),
         // Earth, water, fire
-        El("TidalGuard", 1, W, draw: 1),
         El("EarthBulwarkBash", 1, E), El("EarthBulwarkBash+", 0, E),
-        El("WaterCatalyst", 1, W), El("WaterCatalyst+", 0, W),
         // v0.23: 腐食の抱擁, 自己培養, 風の残像, 分裂 and 疾風の心核 no longer reach 0 cost, so they are not fuel.
         El("FireSpark", 0, F), El("FireSpark+", 0, F),
         // Air
-        El("Tailwind", 0, A, draw: 1, exhaust: true), El("Tailwind+", 0, A, draw: 2, exhaust: true),
-        El("Slipstream", 1, A, draw: 1), El("AirGust", 1, A, draw: 1), El("AirGale", 1, A, draw: 1),
+        El("AirGale", 1, A, draw: 1),
         El("AirBreeze", 1, A, draw: 1), El("AirBreeze+", 1, A, draw: 2),
         El("AirWindBlade", 0, A), El("AirWindBlade+", 0, A),
         El("AirMomentum", 1, A, draw: 2), El("AirMomentum+", 1, A, draw: 3),
         El("AirCurrent", 0, A), El("AirCurrent+", 0, A),
         El("AirRefine", 1, A, draw: 2), El("AirRefine+", 1, A, draw: 3),
-        El("AirGift", 0, A, energy: 2, exhaust: true), El("AirGift+", 0, A, energy: 3, exhaust: true),
-        El("AirRevelation", 1, A, draw: 3, energy: 1, exhaust: true), El("AirRevelation+", 1, A, draw: 4, energy: 1, exhaust: true),
         // Phase-less
         new("AlchInfusion", 0, LoopPhaseMove.Any, Energy: 1, SpendsMaterial: true),
         new("AlchInfusion+", 0, LoopPhaseMove.Any, Energy: 2, SpendsMaterial: true),
@@ -201,8 +196,7 @@ public static class LoopProfiles
         // Life axis
         El("LifeGreatWork", 5, F), El("LifeGreatWork@0", 0, F), // 手本C once the homunculus has paid its cost down
         // Powers (0 cost once upgraded). None of them draws or gains energy within the turn any more.
-        new("AirSky", 2, IsPower: true), new("AirWindReading", 1, IsPower: true),
-        new("WaterStill", 1, IsPower: true),
+        new("AirSky", 2, IsPower: true),
         new("CraftPhilosophersBlood", 1, IsPower: true),
         El("CraftEtherCatalyst", 0, A, draw: 2, energy: 1, exhaust: true), El("CraftEtherCatalyst+", 0, A, draw: 3, energy: 1, exhaust: true),
         new("EarthCore", 1, IsPower: true), new("WaterCore", 1, IsPower: true), new("FireCore", 1, IsPower: true)];
