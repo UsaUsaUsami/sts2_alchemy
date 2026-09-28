@@ -1,0 +1,1570 @@
+[
+ {
+  "file": "air_afterimage.png",
+  "slug": "air_afterimage",
+  "title": "残風の刃",
+  "kind": "アンコモン",
+  "type": "Power",
+  "element": "Air",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "ターン終了時、このターンに起きた相転移1回につき、ランダムな敵に3ダメージを与える。 風相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「残風の刃」 (Power). a lasting aura, sigil or transformation, emblem-like. Colours: air phase: pale cyan and white, swirling wind, light and fast.\nWhat the card does (Japanese, for mood only, do not write it): ターン終了時、このターンに起きた相転移1回につき、ランダムな敵に3ダメージを与える。 風相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "air_breeze.png",
+  "slug": "air_breeze",
+  "title": "そよ風",
+  "kind": "コモン",
+  "type": "Skill",
+  "element": "Air",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "カードを1枚引く。 風相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「そよ風」 (Skill). a technique or alchemical action, defensive or utility. Colours: air phase: pale cyan and white, swirling wind, light and fast.\nWhat the card does (Japanese, for mood only, do not write it): カードを1枚引く。 風相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "air_core.png",
+  "slug": "air_core",
+  "title": "疾風の心核",
+  "kind": "工房の錬成",
+  "type": "Power",
+  "element": "Air",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "風相へ転移したとき、次の相転移の効果を1強化する。 風相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「疾風の心核」 (Power). a lasting aura, sigil or transformation, emblem-like. Colours: air phase: pale cyan and white, swirling wind, light and fast.\nWhat the card does (Japanese, for mood only, do not write it): 風相へ転移したとき、次の相転移の効果を1強化する。 風相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "air_current.png",
+  "slug": "air_current",
+  "title": "気流",
+  "kind": "アンコモン",
+  "type": "Skill",
+  "element": "Air",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "次のターン、エナジーを1得て、カードを1枚追加で引く。 風相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「気流」 (Skill). a technique or alchemical action, defensive or utility. Colours: air phase: pale cyan and white, swirling wind, light and fast.\nWhat the card does (Japanese, for mood only, do not write it): 次のターン、エナジーを1得て、カードを1枚追加で引く。 風相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "air_element_blade.png",
+  "slug": "air_element_blade",
+  "title": "四元の刃",
+  "kind": "アンコモン",
+  "type": "Attack",
+  "element": "Air",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "18ダメージ。所持している通常素材の種類数だけコストが下がる。希少素材を持っていれば、さらに1下がる。 風相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「四元の刃」 (Attack). an attack in motion, aimed at an unseen enemy. Colours: air phase: pale cyan and white, swirling wind, light and fast.\nWhat the card does (Japanese, for mood only, do not write it): 18ダメージ。所持している通常素材の種類数だけコストが下がる。希少素材を持っていれば、さらに1下がる。 風相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "air_gale.png",
+  "slug": "air_gale",
+  "title": "突風",
+  "kind": "アンコモン",
+  "type": "Attack",
+  "element": "Air",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "敵全体に5ダメージ。カードを1枚引く。 風相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「突風」 (Attack). an attack in motion, aimed at an unseen enemy. Colours: air phase: pale cyan and white, swirling wind, light and fast.\nWhat the card does (Japanese, for mood only, do not write it): 敵全体に5ダメージ。カードを1枚引く。 風相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "air_momentum.png",
+  "slug": "air_momentum",
+  "title": "追い風",
+  "kind": "アンコモン",
+  "type": "Skill",
+  "element": "Air",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "カードを2枚引く。このカードで相転移が起きるなら、次のターン、エナジーを1得る。 風相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「追い風」 (Skill). a technique or alchemical action, defensive or utility. Colours: air phase: pale cyan and white, swirling wind, light and fast.\nWhat the card does (Japanese, for mood only, do not write it): カードを2枚引く。このカードで相転移が起きるなら、次のターン、エナジーを1得る。 風相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "air_refine.png",
+  "slug": "air_refine",
+  "title": "風の知らせ",
+  "kind": "アンコモン",
+  "type": "Skill",
+  "element": "Air",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "カードを2枚引く。その後、手札1枚を廃棄する。 風相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「風の知らせ」 (Skill). a technique or alchemical action, defensive or utility. Colours: air phase: pale cyan and white, swirling wind, light and fast.\nWhat the card does (Japanese, for mood only, do not write it): カードを2枚引く。その後、手札1枚を廃棄する。 風相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "air_sickle.png",
+  "slug": "air_sickle",
+  "title": "かまいたち",
+  "kind": "コモン",
+  "type": "Attack",
+  "element": "Air",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "4ダメージを2回与える。 風相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「かまいたち」 (Attack). an attack in motion, aimed at an unseen enemy. Colours: air phase: pale cyan and white, swirling wind, light and fast.\nWhat the card does (Japanese, for mood only, do not write it): 4ダメージを2回与える。 風相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "air_sky.png",
+  "slug": "air_sky",
+  "title": "オーバードライブ",
+  "kind": "レア",
+  "type": "Power",
+  "element": "Air",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "ターン終了時、このターンに相転移が4回以上起きていれば、次のターン、エナジーを2得る。 風相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「オーバードライブ」 (Power). a lasting aura, sigil or transformation, emblem-like. Colours: air phase: pale cyan and white, swirling wind, light and fast.\nWhat the card does (Japanese, for mood only, do not write it): ターン終了時、このターンに相転移が4回以上起きていれば、次のターン、エナジーを2得る。 風相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "air_storm_blade.png",
+  "slug": "air_storm_blade",
+  "title": "ソードストリーム",
+  "kind": "レア",
+  "type": "Attack",
+  "element": "Air",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "6ダメージを、この戦闘で風相へ相転移した回数だけ与える（最低1回）。 風相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「ソードストリーム」 (Attack). an attack in motion, aimed at an unseen enemy. Colours: air phase: pale cyan and white, swirling wind, light and fast.\nWhat the card does (Japanese, for mood only, do not write it): 6ダメージを、この戦闘で風相へ相転移した回数だけ与える（最低1回）。 風相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "air_wind_blade.png",
+  "slug": "air_wind_blade",
+  "title": "風の刃",
+  "kind": "アンコモン",
+  "type": "Attack",
+  "element": "Air",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "4ダメージ。このカードで相転移が起きるなら、3ブロックを得る。 風相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「風の刃」 (Attack). an attack in motion, aimed at an unseen enemy. Colours: air phase: pale cyan and white, swirling wind, light and fast.\nWhat the card does (Japanese, for mood only, do not write it): 4ダメージ。このカードで相転移が起きるなら、3ブロックを得る。 風相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "air_wind_veil.png",
+  "slug": "air_wind_veil",
+  "title": "風の衣",
+  "kind": "コモン",
+  "type": "Skill",
+  "element": "Air",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "6ブロックを得る。 風相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「風の衣」 (Skill). a technique or alchemical action, defensive or utility. Colours: air phase: pale cyan and white, swirling wind, light and fast.\nWhat the card does (Japanese, for mood only, do not write it): 6ブロックを得る。 風相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "alch_alkahest.png",
+  "slug": "alch_alkahest",
+  "title": "アルカヘスト",
+  "kind": "レア",
+  "type": "Attack",
+  "element": "Fire",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "通常素材を1〜10個選んで消費する。消費した素材の数×3×消費した素材の種類数のダメージを与える。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「アルカヘスト」 (Attack). an attack in motion, aimed at an unseen enemy. Colours: fire phase: crimson, orange and ember gold, explosive.\nWhat the card does (Japanese, for mood only, do not write it): 通常素材を1〜10個選んで消費する。消費した素材の数×3×消費した素材の種類数のダメージを与える。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "alch_catalysis.png",
+  "slug": "alch_catalysis",
+  "title": "触媒反応",
+  "kind": "アンコモン",
+  "type": "Skill",
+  "element": "None",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "エーテルを1個消費し、カードを2枚引いてエナジーを1得る。エーテルがなければ使えない。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「触媒反応」 (Skill). a technique or alchemical action, defensive or utility. Colours: neutral alchemy: brass, glass flasks, violet arcane light.\nWhat the card does (Japanese, for mood only, do not write it): エーテルを1個消費し、カードを2枚引いてエナジーを1得る。エーテルがなければ使えない。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "alch_chain_reaction.png",
+  "slug": "alch_chain_reaction",
+  "title": "連鎖反応",
+  "kind": "レア",
+  "type": "Attack",
+  "element": "None",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "このターンの3回目以降の相転移1回につき20ダメージを与える。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「連鎖反応」 (Attack). an attack in motion, aimed at an unseen enemy. Colours: neutral alchemy: brass, glass flasks, violet arcane light.\nWhat the card does (Japanese, for mood only, do not write it): このターンの3回目以降の相転移1回につき20ダメージを与える。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "alch_echo_strike.png",
+  "slug": "alch_echo_strike",
+  "title": "エコーストライク",
+  "kind": "コモン",
+  "type": "Attack",
+  "element": "None",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "6ダメージ。現在相の相転移効果をもう一度発動する（相は変わらない）。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「エコーストライク」 (Attack). an attack in motion, aimed at an unseen enemy. Colours: neutral alchemy: brass, glass flasks, violet arcane light.\nWhat the card does (Japanese, for mood only, do not write it): 6ダメージ。現在相の相転移効果をもう一度発動する（相は変わらない）。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "alch_flux.png",
+  "slug": "alch_flux",
+  "title": "万象流転",
+  "kind": "レア",
+  "type": "Skill",
+  "element": "None",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "保留。 好きな相へ移る（素材は消費しない。鉄＝地、薬草＝水、火薬＝火、エーテル＝風）。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「万象流転」 (Skill). a technique or alchemical action, defensive or utility. Colours: neutral alchemy: brass, glass flasks, violet arcane light.\nWhat the card does (Japanese, for mood only, do not write it): 保留。 好きな相へ移る（素材は消費しない。鉄＝地、薬草＝水、火薬＝火、エーテル＝風）。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "alch_infusion.png",
+  "slug": "alch_infusion",
+  "title": "素材投入",
+  "kind": "コモン",
+  "type": "Skill",
+  "element": "None",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "通常素材を1個選んで消費する。エナジーを1得て、その素材の相へ移る。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「素材投入」 (Skill). a technique or alchemical action, defensive or utility. Colours: neutral alchemy: brass, glass flasks, violet arcane light.\nWhat the card does (Japanese, for mood only, do not write it): 通常素材を1個選んで消費する。エナジーを1得て、その素材の相へ移る。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "alch_material_bomb.png",
+  "slug": "alch_material_bomb",
+  "title": "素材爆弾",
+  "kind": "アンコモン",
+  "type": "Attack",
+  "element": "None",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "敵全体に5ダメージ。火薬を1個消費できれば、代わりに敵全体に16ダメージ。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「素材爆弾」 (Attack). an attack in motion, aimed at an unseen enemy. Colours: neutral alchemy: brass, glass flasks, violet arcane light.\nWhat the card does (Japanese, for mood only, do not write it): 敵全体に5ダメージ。火薬を1個消費できれば、代わりに敵全体に16ダメージ。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "alch_phase_wheel.png",
+  "slug": "alch_phase_wheel",
+  "title": "四相輪転",
+  "kind": "レア",
+  "type": "Power",
+  "element": "None",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "カードを使うたび、そのカードで相転移が起きなかったなら、次の相へ進む（地→水→火→風→地）。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「四相輪転」 (Power). a lasting aura, sigil or transformation, emblem-like. Colours: neutral alchemy: brass, glass flasks, violet arcane light.\nWhat the card does (Japanese, for mood only, do not write it): カードを使うたび、そのカードで相転移が起きなかったなら、次の相へ進む（地→水→火→風→地）。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "alch_preparation.png",
+  "slug": "alch_preparation",
+  "title": "チャージアップ",
+  "kind": "コモン",
+  "type": "Skill",
+  "element": "None",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "5ブロックを得る。次の相転移の効果を2強化する。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「チャージアップ」 (Skill). a technique or alchemical action, defensive or utility. Colours: neutral alchemy: brass, glass flasks, violet arcane light.\nWhat the card does (Japanese, for mood only, do not write it): 5ブロックを得る。次の相転移の効果を2強化する。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "alch_reversal.png",
+  "slug": "alch_reversal",
+  "title": "逆相",
+  "kind": "アンコモン",
+  "type": "Skill",
+  "element": "None",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "6ブロックを得る。ひとつ前の相へ戻る。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「逆相」 (Skill). a technique or alchemical action, defensive or utility. Colours: neutral alchemy: brass, glass flasks, violet arcane light.\nWhat the card does (Japanese, for mood only, do not write it): 6ブロックを得る。ひとつ前の相へ戻る。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "alch_synergy.png",
+  "slug": "alch_synergy",
+  "title": "ダブルシフト",
+  "kind": "アンコモン",
+  "type": "Skill",
+  "element": "None",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "カードを1枚引く。次の相転移の効果が、追加で1回発動する。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「ダブルシフト」 (Skill). a technique or alchemical action, defensive or utility. Colours: neutral alchemy: brass, glass flasks, violet arcane light.\nWhat the card does (Japanese, for mood only, do not write it): カードを1枚引く。次の相転移の効果が、追加で1回発動する。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "craft_culture_vat.png",
+  "slug": "craft_culture_vat",
+  "title": "培養槽",
+  "kind": "工房の錬成",
+  "type": "Power",
+  "element": "Water",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "自分のターン開始時、ホムンクルスHPを3得る。 水相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「培養槽」 (Power). a lasting aura, sigil or transformation, emblem-like. Colours: water phase: deep teal and aqua, flowing, misty.\nWhat the card does (Japanese, for mood only, do not write it): 自分のターン開始時、ホムンクルスHPを3得る。 水相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "craft_ether_catalyst.png",
+  "slug": "craft_ether_catalyst",
+  "title": "精霊の触媒",
+  "kind": "工房の錬成",
+  "type": "Skill",
+  "element": "Air",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "カードを2枚引き、エナジーを1得る。 風相 廃棄。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「精霊の触媒」 (Skill). a technique or alchemical action, defensive or utility. Colours: air phase: pale cyan and white, swirling wind, light and fast.\nWhat the card does (Japanese, for mood only, do not write it): カードを2枚引き、エナジーを1得る。 風相 廃棄。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "craft_flesh_armor.png",
+  "slug": "craft_flesh_armor",
+  "title": "血肉の鎧",
+  "kind": "工房の錬成",
+  "type": "Skill",
+  "element": "Earth",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "ホムンクルスHPの50%のブロックを得る。 地相 廃棄。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「血肉の鎧」 (Skill). a technique or alchemical action, defensive or utility. Colours: earth phase: ochre, moss green and stone grey, heavy and solid.\nWhat the card does (Japanese, for mood only, do not write it): ホムンクルスHPの50%のブロックを得る。 地相 廃棄。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "craft_fusion.png",
+  "slug": "craft_fusion",
+  "title": "器の融合",
+  "kind": "工房の錬成",
+  "type": "Attack",
+  "element": "Fire",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "ホムンクルスHPを10消費できれば、30ダメージを与える。 火相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「器の融合」 (Attack). an attack in motion, aimed at an unseen enemy. Colours: fire phase: crimson, orange and ember gold, explosive.\nWhat the card does (Japanese, for mood only, do not write it): ホムンクルスHPを10消費できれば、30ダメージを与える。 火相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "craft_gate_of_truth.png",
+  "slug": "craft_gate_of_truth",
+  "title": "真理の扉",
+  "kind": "工房の錬成",
+  "type": "Power",
+  "element": "Fire",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "自分のターン開始時、ホムンクルスHPが20以上なら、敵全体に8ダメージを与える。 火相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「真理の扉」 (Power). a lasting aura, sigil or transformation, emblem-like. Colours: fire phase: crimson, orange and ember gold, explosive.\nWhat the card does (Japanese, for mood only, do not write it): 自分のターン開始時、ホムンクルスHPが20以上なら、敵全体に8ダメージを与える。 火相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "craft_iron_bastion.png",
+  "slug": "craft_iron_bastion",
+  "title": "鋼の砦",
+  "kind": "工房の錬成",
+  "type": "Skill",
+  "element": "Earth",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "12ブロックを得る。次のターン開始時、6ブロックを得る。 地相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「鋼の砦」 (Skill). a technique or alchemical action, defensive or utility. Colours: earth phase: ochre, moss green and stone grey, heavy and solid.\nWhat the card does (Japanese, for mood only, do not write it): 12ブロックを得る。次のターン開始時、6ブロックを得る。 地相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "craft_mitosis.png",
+  "slug": "craft_mitosis",
+  "title": "分裂",
+  "kind": "工房の錬成",
+  "type": "Skill",
+  "element": "Air",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "ホムンクルスHPを2倍にする。 風相 廃棄。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「分裂」 (Skill). a technique or alchemical action, defensive or utility. Colours: air phase: pale cyan and white, swirling wind, light and fast.\nWhat the card does (Japanese, for mood only, do not write it): ホムンクルスHPを2倍にする。 風相 廃棄。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "craft_philosophers_blood.png",
+  "slug": "craft_philosophers_blood",
+  "title": "賢者の血",
+  "kind": "工房の錬成",
+  "type": "Power",
+  "element": "Water",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "ホムンクルスが攻撃を肩代わりするたび、攻撃した敵にドレイン2を与える。 水相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「賢者の血」 (Power). a lasting aura, sigil or transformation, emblem-like. Colours: water phase: deep teal and aqua, flowing, misty.\nWhat the card does (Japanese, for mood only, do not write it): ホムンクルスが攻撃を肩代わりするたび、攻撃した敵にドレイン2を与える。 水相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "craft_powder_flask.png",
+  "slug": "craft_powder_flask",
+  "title": "爆裂フラスコ",
+  "kind": "工房の錬成",
+  "type": "Attack",
+  "element": "Fire",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "敵全体に12ダメージを与える。 火相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「爆裂フラスコ」 (Attack). an attack in motion, aimed at an unseen enemy. Colours: fire phase: crimson, orange and ember gold, explosive.\nWhat the card does (Japanese, for mood only, do not write it): 敵全体に12ダメージを与える。 火相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "craft_three_phase_torrent.png",
+  "slug": "craft_three_phase_torrent",
+  "title": "EW&F",
+  "kind": "工房の錬成",
+  "type": "Attack",
+  "element": "Fire",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "8ダメージ。5ブロックを得る。 地相→風相→火相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「EW&F」 (Attack). an attack in motion, aimed at an unseen enemy. Colours: fire phase: crimson, orange and ember gold, explosive.\nWhat the card does (Japanese, for mood only, do not write it): 8ダメージ。5ブロックを得る。 地相→風相→火相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "darv_crucible_card.png",
+  "slug": "darv_crucible_card",
+  "title": "ダーヴの坩堝",
+  "kind": "エンシェント",
+  "type": "Power",
+  "element": "None",
+  "size": [
+   250,
+   351
+  ],
+  "effect": "自分のターン開始時、現在相に対応する素材を1個得る。素材ボックスが満杯なら得ない。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「ダーヴの坩堝」 (Power). a lasting aura, sigil or transformation, emblem-like. Colours: neutral alchemy: brass, glass flasks, violet arcane light.\nWhat the card does (Japanese, for mood only, do not write it): 自分のターン開始時、現在相に対応する素材を1個得る。素材ボックスが満杯なら得ない。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:351 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "debuff_transfer_card.png",
+  "slug": "debuff_transfer_card",
+  "title": "コペルニクスシフト",
+  "kind": "レア",
+  "type": "Skill",
+  "element": "Air",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "通常素材を1個消費してもよい。消費したなら、自分と敵1体の対象デバフを入れ替える。消費しなければ、自分の対象デバフを敵1体にコピーする。 （対象：脱力・弱体・虚弱・筋力低下・敏捷性低下・毒・死亡・ドレイン） 風相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「コペルニクスシフト」 (Skill). a technique or alchemical action, defensive or utility. Colours: air phase: pale cyan and white, swirling wind, light and fast.\nWhat the card does (Japanese, for mood only, do not write it): 通常素材を1個消費してもよい。消費したなら、自分と敵1体の対象デバフを入れ替える。消費しなければ、自分の対象デバフを敵1体にコピーする。 （対象：脱力・弱体・虚弱・筋力低下・敏捷性低下・毒・死亡・ドレイン） 風相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "defend_alchemist.png",
+  "slug": "defend_alchemist",
+  "title": "ディフェンド",
+  "kind": "初期デッキ",
+  "type": "Skill",
+  "element": "None",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "5ブロックを得る。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「ディフェンド」 (Skill). a technique or alchemical action, defensive or utility. Colours: neutral alchemy: brass, glass flasks, violet arcane light.\nWhat the card does (Japanese, for mood only, do not write it): 5ブロックを得る。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "drizzle.png",
+  "slug": "drizzle",
+  "title": "ドレインミスト",
+  "kind": "工房の錬成",
+  "type": "Skill",
+  "element": "Air",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "ドレイン4を与える。カードを1枚引く。 水相→風相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「ドレインミスト」 (Skill). a technique or alchemical action, defensive or utility. Colours: air phase: pale cyan and white, swirling wind, light and fast.\nWhat the card does (Japanese, for mood only, do not write it): ドレイン4を与える。カードを1枚引く。 水相→風相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "earth_blessing.png",
+  "slug": "earth_blessing",
+  "title": "大地の加護",
+  "kind": "アンコモン",
+  "type": "Skill",
+  "element": "Earth",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "このターンに起きた相転移1回につきプレート1を得る。 地相 廃棄。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「大地の加護」 (Skill). a technique or alchemical action, defensive or utility. Colours: earth phase: ochre, moss green and stone grey, heavy and solid.\nWhat the card does (Japanese, for mood only, do not write it): このターンに起きた相転移1回につきプレート1を得る。 地相 廃棄。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "earth_bulwark_bash.png",
+  "slug": "earth_bulwark_bash",
+  "title": "城塞打ち",
+  "kind": "アンコモン",
+  "type": "Attack",
+  "element": "Earth",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "現在のブロックと同じダメージを与える。 地相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「城塞打ち」 (Attack). an attack in motion, aimed at an unseen enemy. Colours: earth phase: ochre, moss green and stone grey, heavy and solid.\nWhat the card does (Japanese, for mood only, do not write it): 現在のブロックと同じダメージを与える。 地相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "earth_core.png",
+  "slug": "earth_core",
+  "title": "大地の心核",
+  "kind": "工房の錬成",
+  "type": "Power",
+  "element": "Earth",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "地相への相転移の効果を3強化する。 地相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「大地の心核」 (Power). a lasting aura, sigil or transformation, emblem-like. Colours: earth phase: ochre, moss green and stone grey, heavy and solid.\nWhat the card does (Japanese, for mood only, do not write it): 地相への相転移の効果を3強化する。 地相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "earth_fortify.png",
+  "slug": "earth_fortify",
+  "title": "補強",
+  "kind": "アンコモン",
+  "type": "Skill",
+  "element": "Earth",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "4ブロックを得る。次のターン開始時、8ブロックを得る。 地相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「補強」 (Skill). a technique or alchemical action, defensive or utility. Colours: earth phase: ochre, moss green and stone grey, heavy and solid.\nWhat the card does (Japanese, for mood only, do not write it): 4ブロックを得る。次のターン開始時、8ブロックを得る。 地相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "earth_iron_bulwark.png",
+  "slug": "earth_iron_bulwark",
+  "title": "鉄壁錬成",
+  "kind": "コモン",
+  "type": "Skill",
+  "element": "Earth",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "5ブロックを得る。鉄を1個消費できれば、代わりに13ブロックを得る。 地相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「鉄壁錬成」 (Skill). a technique or alchemical action, defensive or utility. Colours: earth phase: ochre, moss green and stone grey, heavy and solid.\nWhat the card does (Japanese, for mood only, do not write it): 5ブロックを得る。鉄を1個消費できれば、代わりに13ブロックを得る。 地相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "earth_king.png",
+  "slug": "earth_king",
+  "title": "大地の王",
+  "kind": "レア",
+  "type": "Power",
+  "element": "Earth",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "ターン開始時、ブロックがすべて失われる代わりに、20だけ失われる。 地相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「大地の王」 (Power). a lasting aura, sigil or transformation, emblem-like. Colours: earth phase: ochre, moss green and stone grey, heavy and solid.\nWhat the card does (Japanese, for mood only, do not write it): ターン開始時、ブロックがすべて失われる代わりに、20だけ失われる。 地相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "earth_memory.png",
+  "slug": "earth_memory",
+  "title": "大地の記憶",
+  "kind": "レア",
+  "type": "Skill",
+  "element": "Earth",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "この戦闘で起きた相転移1回につき2ブロックを得る。 地相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「大地の記憶」 (Skill). a technique or alchemical action, defensive or utility. Colours: earth phase: ochre, moss green and stone grey, heavy and solid.\nWhat the card does (Japanese, for mood only, do not write it): この戦闘で起きた相転移1回につき2ブロックを得る。 地相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "earth_thorn_shell.png",
+  "slug": "earth_thorn_shell",
+  "title": "棘の外殻",
+  "kind": "アンコモン",
+  "type": "Power",
+  "element": "Earth",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "トゲ3を得る。 地相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「棘の外殻」 (Power). a lasting aura, sigil or transformation, emblem-like. Colours: earth phase: ochre, moss green and stone grey, heavy and solid.\nWhat the card does (Japanese, for mood only, do not write it): トゲ3を得る。 地相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "earth_tremor.png",
+  "slug": "earth_tremor",
+  "title": "地鳴り",
+  "kind": "アンコモン",
+  "type": "Attack",
+  "element": "Earth",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "敵全体に5ダメージ。4ブロックを得る。 地相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「地鳴り」 (Attack). an attack in motion, aimed at an unseen enemy. Colours: earth phase: ochre, moss green and stone grey, heavy and solid.\nWhat the card does (Japanese, for mood only, do not write it): 敵全体に5ダメージ。4ブロックを得る。 地相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "earthen_guard.png",
+  "slug": "earthen_guard",
+  "title": "土壁",
+  "kind": "初期デッキ",
+  "type": "Skill",
+  "element": "Earth",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "8ブロックを得る。 地相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「土壁」 (Skill). a technique or alchemical action, defensive or utility. Colours: earth phase: ochre, moss green and stone grey, heavy and solid.\nWhat the card does (Japanese, for mood only, do not write it): 8ブロックを得る。 地相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "ether_improvisation.png",
+  "slug": "ether_improvisation",
+  "title": "即席の霊風",
+  "kind": "トークン",
+  "type": "Skill",
+  "element": "Air",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "カードを2枚引く。 風相 廃棄。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「即席の霊風」 (Skill). a technique or alchemical action, defensive or utility. Colours: air phase: pale cyan and white, swirling wind, light and fast.\nWhat the card does (Japanese, for mood only, do not write it): カードを2枚引く。 風相 廃棄。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "ether_material_card.png",
+  "slug": "ether_material_card",
+  "title": "エーテル",
+  "kind": "素材（選択画面の表示用）",
+  "type": "Skill",
+  "element": "None",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "ドロー・循環を形作る基本素材。工房でカードへ錬成する。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「エーテル」 (Skill). a technique or alchemical action, defensive or utility. Colours: neutral alchemy: brass, glass flasks, violet arcane light.\nWhat the card does (Japanese, for mood only, do not write it): ドロー・循環を形作る基本素材。工房でカードへ錬成する。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "fire_brand.png",
+  "slug": "fire_brand",
+  "title": "炎の烙印",
+  "kind": "レア",
+  "type": "Attack",
+  "element": "Fire",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "敵全体に10ダメージと弱体2を与える。 火相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「炎の烙印」 (Attack). an attack in motion, aimed at an unseen enemy. Colours: fire phase: crimson, orange and ember gold, explosive.\nWhat the card does (Japanese, for mood only, do not write it): 敵全体に10ダメージと弱体2を与える。 火相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "fire_core.png",
+  "slug": "fire_core",
+  "title": "劫火の心核",
+  "kind": "工房の錬成",
+  "type": "Power",
+  "element": "Fire",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "火相への相転移の効果を3強化する。 火相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「劫火の心核」 (Power). a lasting aura, sigil or transformation, emblem-like. Colours: fire phase: crimson, orange and ember gold, explosive.\nWhat the card does (Japanese, for mood only, do not write it): 火相への相転移の効果を3強化する。 火相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "fire_explosion.png",
+  "slug": "fire_explosion",
+  "title": "爆縮",
+  "kind": "レア",
+  "type": "Attack",
+  "element": "Fire",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "35ダメージ。対象をスタンさせる。 火相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「爆縮」 (Attack). an attack in motion, aimed at an unseen enemy. Colours: fire phase: crimson, orange and ember gold, explosive.\nWhat the card does (Japanese, for mood only, do not write it): 35ダメージ。対象をスタンさせる。 火相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "fire_heart.png",
+  "slug": "fire_heart",
+  "title": "焔の心",
+  "kind": "レア",
+  "type": "Power",
+  "element": "Fire",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "火相へ転移するたび、筋力1を得る。 火相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「焔の心」 (Power). a lasting aura, sigil or transformation, emblem-like. Colours: fire phase: crimson, orange and ember gold, explosive.\nWhat the card does (Japanese, for mood only, do not write it): 火相へ転移するたび、筋力1を得る。 火相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "fire_heat.png",
+  "slug": "fire_heat",
+  "title": "ヒートアップ",
+  "kind": "アンコモン",
+  "type": "Skill",
+  "element": "Fire",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "活力6を得る。 火相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「ヒートアップ」 (Skill). a technique or alchemical action, defensive or utility. Colours: fire phase: crimson, orange and ember gold, explosive.\nWhat the card does (Japanese, for mood only, do not write it): 活力6を得る。 火相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "fire_hellfire.png",
+  "slug": "fire_hellfire",
+  "title": "業火",
+  "kind": "レア",
+  "type": "Attack",
+  "element": "Fire",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "6ダメージ。この戦闘で起きた相転移1回につき、さらに2ダメージ。 火相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「業火」 (Attack). an attack in motion, aimed at an unseen enemy. Colours: fire phase: crimson, orange and ember gold, explosive.\nWhat the card does (Japanese, for mood only, do not write it): 6ダメージ。この戦闘で起きた相転移1回につき、さらに2ダメージ。 火相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "fire_scorch.png",
+  "slug": "fire_scorch",
+  "title": "灼熱",
+  "kind": "アンコモン",
+  "type": "Attack",
+  "element": "Fire",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "7ダメージ。弱体2を与える。 火相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「灼熱」 (Attack). an attack in motion, aimed at an unseen enemy. Colours: fire phase: crimson, orange and ember gold, explosive.\nWhat the card does (Japanese, for mood only, do not write it): 7ダメージ。弱体2を与える。 火相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "fire_whirl.png",
+  "slug": "fire_whirl",
+  "title": "火炎旋風",
+  "kind": "工房の錬成",
+  "type": "Attack",
+  "element": "Air",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "敵全体に4ダメージを2回与える。 火相→風相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「火炎旋風」 (Attack). an attack in motion, aimed at an unseen enemy. Colours: air phase: pale cyan and white, swirling wind, light and fast.\nWhat the card does (Japanese, for mood only, do not write it): 敵全体に4ダメージを2回与える。 火相→風相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "flash_powder.png",
+  "slug": "flash_powder",
+  "title": "閃光火薬",
+  "kind": "アンコモン",
+  "type": "Attack",
+  "element": "Fire",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "敵全体に6ダメージ。 火相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「閃光火薬」 (Attack). an attack in motion, aimed at an unseen enemy. Colours: fire phase: crimson, orange and ember gold, explosive.\nWhat the card does (Japanese, for mood only, do not write it): 敵全体に6ダメージ。 火相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "furnace_activation.png",
+  "slug": "furnace_activation",
+  "title": "炉の起動",
+  "kind": "トークン",
+  "type": "Skill",
+  "element": "None",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "保留。 手札1枚を廃棄し、現在相に対応する素材を2個得る。無相では使用できない。 地：鉄、水：薬草、火：火薬、風：エーテル。戦闘全体で2回まで（精錬された素材ボックスでは3回）。 廃棄。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「炉の起動」 (Skill). a technique or alchemical action, defensive or utility. Colours: neutral alchemy: brass, glass flasks, violet arcane light.\nWhat the card does (Japanese, for mood only, do not write it): 保留。 手札1枚を廃棄し、現在相に対応する素材を2個得る。無相では使用できない。 地：鉄、水：薬草、火：火薬、風：エーテル。戦闘全体で2回まで（精錬された素材ボックスでは3回）。 廃棄。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "herb_improvisation.png",
+  "slug": "herb_improvisation",
+  "title": "即席の鎮静薬",
+  "kind": "トークン",
+  "type": "Skill",
+  "element": "Water",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "脱力1を与える。 水相 廃棄。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「即席の鎮静薬」 (Skill). a technique or alchemical action, defensive or utility. Colours: water phase: deep teal and aqua, flowing, misty.\nWhat the card does (Japanese, for mood only, do not write it): 脱力1を与える。 水相 廃棄。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "herb_material_card.png",
+  "slug": "herb_material_card",
+  "title": "薬草",
+  "kind": "素材（選択画面の表示用）",
+  "type": "Skill",
+  "element": "None",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "毒・弱体を形作る基本素材。工房でカードへ錬成する。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「薬草」 (Skill). a technique or alchemical action, defensive or utility. Colours: neutral alchemy: brass, glass flasks, violet arcane light.\nWhat the card does (Japanese, for mood only, do not write it): 毒・弱体を形作る基本素材。工房でカードへ錬成する。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "human_transmutation.png",
+  "slug": "human_transmutation",
+  "title": "人体錬成",
+  "kind": "レア",
+  "type": "Attack",
+  "element": "Fire",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "敵1体にホムンクルスHP×3のダメージを与える。自分に死亡を付与する。 火相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「人体錬成」 (Attack). an attack in motion, aimed at an unseen enemy. Colours: fire phase: crimson, orange and ember gold, explosive.\nWhat the card does (Japanese, for mood only, do not write it): 敵1体にホムンクルスHP×3のダメージを与える。自分に死亡を付与する。 火相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "ignition.png",
+  "slug": "ignition",
+  "title": "点火",
+  "kind": "コモン",
+  "type": "Attack",
+  "element": "Fire",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "弱体1を与え、6ダメージ。 火相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「点火」 (Attack). an attack in motion, aimed at an unseen enemy. Colours: fire phase: crimson, orange and ember gold, explosive.\nWhat the card does (Japanese, for mood only, do not write it): 弱体1を与え、6ダメージ。 火相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "instant_alchemy.png",
+  "slug": "instant_alchemy",
+  "title": "即席錬成",
+  "kind": "初期デッキ",
+  "type": "Skill",
+  "element": "None",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "通常素材を1個選んで消費する。対応する0コストの一時カードを手札に加える。 廃棄。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「即席錬成」 (Skill). a technique or alchemical action, defensive or utility. Colours: neutral alchemy: brass, glass flasks, violet arcane light.\nWhat the card does (Japanese, for mood only, do not write it): 通常素材を1個選んで消費する。対応する0コストの一時カードを手札に加える。 廃棄。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "iron_improvisation.png",
+  "slug": "iron_improvisation",
+  "title": "即席の鉄壁",
+  "kind": "トークン",
+  "type": "Skill",
+  "element": "Earth",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "7ブロックを得る。 地相 廃棄。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「即席の鉄壁」 (Skill). a technique or alchemical action, defensive or utility. Colours: earth phase: ochre, moss green and stone grey, heavy and solid.\nWhat the card does (Japanese, for mood only, do not write it): 7ブロックを得る。 地相 廃棄。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "iron_material_card.png",
+  "slug": "iron_material_card",
+  "title": "鉄",
+  "kind": "素材（選択画面の表示用）",
+  "type": "Skill",
+  "element": "None",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "物理攻撃・防御を形作る基本素材。工房でカードへ錬成する。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「鉄」 (Skill). a technique or alchemical action, defensive or utility. Colours: neutral alchemy: brass, glass flasks, violet arcane light.\nWhat the card does (Japanese, for mood only, do not write it): 物理攻撃・防御を形作る基本素材。工房でカードへ錬成する。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "lava_shot.png",
+  "slug": "lava_shot",
+  "title": "溶岩弾",
+  "kind": "工房の錬成",
+  "type": "Attack",
+  "element": "Fire",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "9ダメージ。4ブロックを得る。 地相→火相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「溶岩弾」 (Attack). an attack in motion, aimed at an unseen enemy. Colours: fire phase: crimson, orange and ember gold, explosive.\nWhat the card does (Japanese, for mood only, do not write it): 9ダメージ。4ブロックを得る。 地相→火相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "life_awakened_vessel.png",
+  "slug": "life_awakened_vessel",
+  "title": "目覚めた器",
+  "kind": "レア",
+  "type": "Power",
+  "element": "Air",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "自分のターン開始時、ホムンクルスHPを5消費して、ランダムな敵に12ダメージを与える。 風相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「目覚めた器」 (Power). a lasting aura, sigil or transformation, emblem-like. Colours: air phase: pale cyan and white, swirling wind, light and fast.\nWhat the card does (Japanese, for mood only, do not write it): 自分のターン開始時、ホムンクルスHPを5消費して、ランダムな敵に12ダメージを与える。 風相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "life_bullet.png",
+  "slug": "life_bullet",
+  "title": "命の弾丸",
+  "kind": "コモン",
+  "type": "Attack",
+  "element": "Fire",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "7ダメージ。ホムンクルスHPを5消費できれば、代わりに15ダメージ。 火相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「命の弾丸」 (Attack). an attack in motion, aimed at an unseen enemy. Colours: fire phase: crimson, orange and ember gold, explosive.\nWhat the card does (Japanese, for mood only, do not write it): 7ダメージ。ホムンクルスHPを5消費できれば、代わりに15ダメージ。 火相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "life_corrosive_embrace.png",
+  "slug": "life_corrosive_embrace",
+  "title": "腐食の抱擁",
+  "kind": "レア",
+  "type": "Skill",
+  "element": "Water",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "対象のドレインを50%増やす（端数切り捨て）。 水相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「腐食の抱擁」 (Skill). a technique or alchemical action, defensive or utility. Colours: water phase: deep teal and aqua, flowing, misty.\nWhat the card does (Japanese, for mood only, do not write it): 対象のドレインを50%増やす（端数切り捨て）。 水相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "life_drain_miasma.png",
+  "slug": "life_drain_miasma",
+  "title": "吸精の瘴気",
+  "kind": "アンコモン",
+  "type": "Power",
+  "element": "Water",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "自分のターン開始時、敵全体にドレイン1を与える。 水相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「吸精の瘴気」 (Power). a lasting aura, sigil or transformation, emblem-like. Colours: water phase: deep teal and aqua, flowing, misty.\nWhat the card does (Japanese, for mood only, do not write it): 自分のターン開始時、敵全体にドレイン1を与える。 水相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "life_flesh_wall.png",
+  "slug": "life_flesh_wall",
+  "title": "肉の壁",
+  "kind": "コモン",
+  "type": "Skill",
+  "element": "Earth",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "ホムンクルスHPを6得る。 地相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「肉の壁」 (Skill). a technique or alchemical action, defensive or utility. Colours: earth phase: ochre, moss green and stone grey, heavy and solid.\nWhat the card does (Japanese, for mood only, do not write it): ホムンクルスHPを6得る。 地相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "life_great_work.png",
+  "slug": "life_great_work",
+  "title": "大錬成",
+  "kind": "アンコモン",
+  "type": "Attack",
+  "element": "Fire",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "50ダメージ。ホムンクルスHP10ごとに、コストが1下がる。 火相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「大錬成」 (Attack). an attack in motion, aimed at an unseen enemy. Colours: fire phase: crimson, orange and ember gold, explosive.\nWhat the card does (Japanese, for mood only, do not write it): 50ダメージ。ホムンクルスHP10ごとに、コストが1下がる。 火相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "life_harvest.png",
+  "slug": "life_harvest",
+  "title": "生命の収穫",
+  "kind": "レア",
+  "type": "Skill",
+  "element": "Water",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "すべての敵のドレインを即座に3回発動させる。発動ごとに通常どおり減る。 水相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「生命の収穫」 (Skill). a technique or alchemical action, defensive or utility. Colours: water phase: deep teal and aqua, flowing, misty.\nWhat the card does (Japanese, for mood only, do not write it): すべての敵のドレインを即座に3回発動させる。発動ごとに通常どおり減る。 水相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "life_nourish.png",
+  "slug": "life_nourish",
+  "title": "養分",
+  "kind": "アンコモン",
+  "type": "Power",
+  "element": "Water",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "ドレインが発動するたび、ホムンクルスHPを追加で1得る。 水相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「養分」 (Power). a lasting aura, sigil or transformation, emblem-like. Colours: water phase: deep teal and aqua, flowing, misty.\nWhat the card does (Japanese, for mood only, do not write it): ドレインが発動するたび、ホムンクルスHPを追加で1得る。 水相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "life_offering.png",
+  "slug": "life_offering",
+  "title": "生命の供物",
+  "kind": "コモン",
+  "type": "Skill",
+  "element": "Water",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "HPを5失う。ホムンクルスHPを10得る。 水相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「生命の供物」 (Skill). a technique or alchemical action, defensive or utility. Colours: water phase: deep teal and aqua, flowing, misty.\nWhat the card does (Japanese, for mood only, do not write it): HPを5失う。ホムンクルスHPを10得る。 水相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "life_reclaim.png",
+  "slug": "life_reclaim",
+  "title": "還元",
+  "kind": "レア",
+  "type": "Skill",
+  "element": "Earth",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "ホムンクルスHPをすべて消費し、その半分だけHPを回復する。 地相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「還元」 (Skill). a technique or alchemical action, defensive or utility. Colours: earth phase: ochre, moss green and stone grey, heavy and solid.\nWhat the card does (Japanese, for mood only, do not write it): ホムンクルスHPをすべて消費し、その半分だけHPを回復する。 地相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "life_self_cultivation.png",
+  "slug": "life_self_cultivation",
+  "title": "自己培養",
+  "kind": "レア",
+  "type": "Power",
+  "element": "Water",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "自分のターン開始時、自分にドレイン2を付与する。自分に付いたドレインで得るホムンクルスHPは2倍になる。 水相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「自己培養」 (Power). a lasting aura, sigil or transformation, emblem-like. Colours: water phase: deep teal and aqua, flowing, misty.\nWhat the card does (Japanese, for mood only, do not write it): 自分のターン開始時、自分にドレイン2を付与する。自分に付いたドレインで得るホムンクルスHPは2倍になる。 水相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "life_symbiosis.png",
+  "slug": "life_symbiosis",
+  "title": "共生",
+  "kind": "アンコモン",
+  "type": "Power",
+  "element": "Earth",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "ターン終了時、ホムンクルスが場にいれば4ブロックを得る。 地相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「共生」 (Power). a lasting aura, sigil or transformation, emblem-like. Colours: earth phase: ochre, moss green and stone grey, heavy and solid.\nWhat the card does (Japanese, for mood only, do not write it): ターン終了時、ホムンクルスが場にいれば4ブロックを得る。 地相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "life_torrent.png",
+  "slug": "life_torrent",
+  "title": "道連れ",
+  "kind": "レア",
+  "type": "Attack",
+  "element": "Fire",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "ホムンクルスHPをすべて消費し、その量のダメージを敵全体に与える。 火相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「道連れ」 (Attack). an attack in motion, aimed at an unseen enemy. Colours: fire phase: crimson, orange and ember gold, explosive.\nWhat the card does (Japanese, for mood only, do not write it): ホムンクルスHPをすべて消費し、その量のダメージを敵全体に与える。 火相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "life_vein_strike.png",
+  "slug": "life_vein_strike",
+  "title": "命脈の一撃",
+  "kind": "アンコモン",
+  "type": "Attack",
+  "element": "Fire",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "10ダメージ。ホムンクルスHPが20以上なら、2回与える。 火相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「命脈の一撃」 (Attack). an attack in motion, aimed at an unseen enemy. Colours: fire phase: crimson, orange and ember gold, explosive.\nWhat the card does (Japanese, for mood only, do not write it): 10ダメージ。ホムンクルスHPが20以上なら、2回与える。 火相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "mercury_material_card.png",
+  "slug": "mercury_material_card",
+  "title": "水銀",
+  "kind": "素材（選択画面の表示用）",
+  "type": "Skill",
+  "element": "None",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "保留を刻む希少素材。工房で錬成カードへ恒久加工する。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「水銀」 (Skill). a technique or alchemical action, defensive or utility. Colours: neutral alchemy: brass, glass flasks, violet arcane light.\nWhat the card does (Japanese, for mood only, do not write it): 保留を刻む希少素材。工房で錬成カードへ恒久加工する。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "mud_rampart.png",
+  "slug": "mud_rampart",
+  "title": "泥の城壁",
+  "kind": "工房の錬成",
+  "type": "Skill",
+  "element": "Water",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "7ブロックを得る。脱力1を与える。 地相→水相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「泥の城壁」 (Skill). a technique or alchemical action, defensive or utility. Colours: water phase: deep teal and aqua, flowing, misty.\nWhat the card does (Japanese, for mood only, do not write it): 7ブロックを得る。脱力1を与える。 地相→水相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "powder_improvisation.png",
+  "slug": "powder_improvisation",
+  "title": "即席の炸薬",
+  "kind": "トークン",
+  "type": "Skill",
+  "element": "Fire",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "8ダメージ。 火相 廃棄。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「即席の炸薬」 (Skill). a technique or alchemical action, defensive or utility. Colours: fire phase: crimson, orange and ember gold, explosive.\nWhat the card does (Japanese, for mood only, do not write it): 8ダメージ。 火相 廃棄。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "powder_material_card.png",
+  "slug": "powder_material_card",
+  "title": "火薬",
+  "kind": "素材（選択画面の表示用）",
+  "type": "Skill",
+  "element": "None",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "高火力・全体攻撃を形作る基本素材。工房でカードへ錬成する。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「火薬」 (Skill). a technique or alchemical action, defensive or utility. Colours: neutral alchemy: brass, glass flasks, violet arcane light.\nWhat the card does (Japanese, for mood only, do not write it): 高火力・全体攻撃を形作る基本素材。工房でカードへ錬成する。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "sandstorm.png",
+  "slug": "sandstorm",
+  "title": "砂嵐",
+  "kind": "工房の錬成",
+  "type": "Skill",
+  "element": "Air",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "6ブロックを得る。カードを1枚引く。 地相→風相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「砂嵐」 (Skill). a technique or alchemical action, defensive or utility. Colours: air phase: pale cyan and white, swirling wind, light and fast.\nWhat the card does (Japanese, for mood only, do not write it): 6ブロックを得る。カードを1枚引く。 地相→風相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "soothing_mist.png",
+  "slug": "soothing_mist",
+  "title": "鎮静の霧",
+  "kind": "初期デッキ",
+  "type": "Skill",
+  "element": "Water",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "脱力1を与える。 水相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「鎮静の霧」 (Skill). a technique or alchemical action, defensive or utility. Colours: water phase: deep teal and aqua, flowing, misty.\nWhat the card does (Japanese, for mood only, do not write it): 脱力1を与える。 水相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "stardust_material_card.png",
+  "slug": "stardust_material_card",
+  "title": "星砂",
+  "kind": "素材（選択画面の表示用）",
+  "type": "Skill",
+  "element": "None",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "リプレイとコスト+1を刻む希少素材。工房で錬成カードへ恒久加工する。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「星砂」 (Skill). a technique or alchemical action, defensive or utility. Colours: neutral alchemy: brass, glass flasks, violet arcane light.\nWhat the card does (Japanese, for mood only, do not write it): リプレイとコスト+1を刻む希少素材。工房で錬成カードへ恒久加工する。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "steam_burst.png",
+  "slug": "steam_burst",
+  "title": "蒸気爆発",
+  "kind": "工房の錬成",
+  "type": "Attack",
+  "element": "Fire",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "敵全体に6ダメージと脱力1を与える。 水相→火相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「蒸気爆発」 (Attack). an attack in motion, aimed at an unseen enemy. Colours: fire phase: crimson, orange and ember gold, explosive.\nWhat the card does (Japanese, for mood only, do not write it): 敵全体に6ダメージと脱力1を与える。 水相→火相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "strike_alchemist.png",
+  "slug": "strike_alchemist",
+  "title": "ストライク",
+  "kind": "初期デッキ",
+  "type": "Attack",
+  "element": "None",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "6ダメージを与える。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「ストライク」 (Attack). an attack in motion, aimed at an unseen enemy. Colours: neutral alchemy: brass, glass flasks, violet arcane light.\nWhat the card does (Japanese, for mood only, do not write it): 6ダメージを与える。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "void_crystal_material_card.png",
+  "slug": "void_crystal_material_card",
+  "title": "虚無結晶",
+  "kind": "素材（選択画面の表示用）",
+  "type": "Skill",
+  "element": "None",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "コスト減少と廃棄を刻む希少素材。工房で錬成カードへ恒久加工する。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「虚無結晶」 (Skill). a technique or alchemical action, defensive or utility. Colours: neutral alchemy: brass, glass flasks, violet arcane light.\nWhat the card does (Japanese, for mood only, do not write it): コスト減少と廃棄を刻む希少素材。工房で錬成カードへ恒久加工する。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "water_clear_stream.png",
+  "slug": "water_clear_stream",
+  "title": "ライフストリーム",
+  "kind": "レア",
+  "type": "Skill",
+  "element": "Water",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "ドレイン2を与える。さらに、この戦闘で起きた相転移1回につきドレイン1を与える。 水相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「ライフストリーム」 (Skill). a technique or alchemical action, defensive or utility. Colours: water phase: deep teal and aqua, flowing, misty.\nWhat the card does (Japanese, for mood only, do not write it): ドレイン2を与える。さらに、この戦闘で起きた相転移1回につきドレイン1を与える。 水相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "water_core.png",
+  "slug": "water_core",
+  "title": "流水の心核",
+  "kind": "工房の錬成",
+  "type": "Power",
+  "element": "Water",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "水相へ転移するたび、脱力に加えて弱体1を与える。 水相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「流水の心核」 (Power). a lasting aura, sigil or transformation, emblem-like. Colours: water phase: deep teal and aqua, flowing, misty.\nWhat the card does (Japanese, for mood only, do not write it): 水相へ転移するたび、脱力に加えて弱体1を与える。 水相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "water_erosion.png",
+  "slug": "water_erosion",
+  "title": "浸食",
+  "kind": "アンコモン",
+  "type": "Attack",
+  "element": "Water",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "8ダメージ。対象が脱力状態なら、さらに6ダメージ。 水相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「浸食」 (Attack). an attack in motion, aimed at an unseen enemy. Colours: water phase: deep teal and aqua, flowing, misty.\nWhat the card does (Japanese, for mood only, do not write it): 8ダメージ。対象が脱力状態なら、さらに6ダメージ。 水相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "water_herb_drip.png",
+  "slug": "water_herb_drip",
+  "title": "薬草のしずく",
+  "kind": "コモン",
+  "type": "Skill",
+  "element": "Water",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "ドレイン1を与える。薬草を1個消費できれば、代わりにドレイン4を与える。 水相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「薬草のしずく」 (Skill). a technique or alchemical action, defensive or utility. Colours: water phase: deep teal and aqua, flowing, misty.\nWhat the card does (Japanese, for mood only, do not write it): ドレイン1を与える。薬草を1個消費できれば、代わりにドレイン4を与える。 水相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "water_requiem.png",
+  "slug": "water_requiem",
+  "title": "鎮魂",
+  "kind": "レア",
+  "type": "Skill",
+  "element": "Water",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "対象の筋力を3下げる。 水相 廃棄。",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「鎮魂」 (Skill). a technique or alchemical action, defensive or utility. Colours: water phase: deep teal and aqua, flowing, misty.\nWhat the card does (Japanese, for mood only, do not write it): 対象の筋力を3下げる。 水相 廃棄。\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ },
+ {
+  "file": "water_torrent.png",
+  "slug": "water_torrent",
+  "title": "激流",
+  "kind": "アンコモン",
+  "type": "Attack",
+  "element": "Water",
+  "size": [
+   250,
+   190
+  ],
+  "effect": "敵全体に4ダメージと脱力1を与える。 水相",
+  "subject": "",
+  "prompt": "Card illustration for a fantasy deck-building game in the style of Slay the Spire 2: hand-painted digital painting, bold readable shapes, strong silhouette, dramatic lighting, rich but limited palette, simple background, centered subject that still reads at small size. No text, no letters, no card frame, no border, no UI. The character is a travelling alchemist who fights by shifting between four elemental phases (earth, water, fire, air) and grows a homunculus. When the alchemist appears, draw them as in assets/concepts/alchemist-character-v2.png: faceless, deep charcoal hood, an inverted-flask brass mask with one cyan glass slit, worn grey cloak, leather gloves, a small brass furnace and reagent vessels (green herb, orange powder, cyan ether) at the belt. Show hands, tools and effects more often than the full figure.\n\nCard: 「激流」 (Attack). an attack in motion, aimed at an unseen enemy. Colours: water phase: deep teal and aqua, flowing, misty.\nWhat the card does (Japanese, for mood only, do not write it): 敵全体に4ダメージと脱力1を与える。 水相\nSubject: illustrate the card's name and effect as one clear scene or object.\nAspect ratio 250:190 (landscape), keep the subject inside the centre.",
+  "has_art": false
+ }
+]

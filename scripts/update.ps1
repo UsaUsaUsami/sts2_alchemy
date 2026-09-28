@@ -51,5 +51,9 @@ try {
     foreach ($file in $files) { Copy-Item -LiteralPath (Join-Path $backup $file) -Destination (Join-Path $destination $file) -Force }
     throw
 }
-Write-Output "更新完了: Alchemy $($manifest.version) / $destination"
+# Card art: replaced as a whole folder (the old one is kept in the backup).
+$art = Join-Path $destination 'art'
+if (Test-Path -LiteralPath $art) { Copy-Item -LiteralPath $art -Destination $backup -Recurse; Remove-Item -LiteralPath $art -Recurse -Force }
+if (Test-Path -LiteralPath (Join-Path $source 'art')) { Copy-Item -LiteralPath (Join-Path $source 'art') -Destination $art -Recurse }
+Write-Output "更新完了: Alchemy $($manifest.version) / $destination（カード絵 $(@(Get-ChildItem -LiteralPath (Join-Path $art 'cards') -Filter *.png -ErrorAction SilentlyContinue).Count)枚）"
 Write-Output "旧版バックアップ: $backup"

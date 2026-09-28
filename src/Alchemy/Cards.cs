@@ -68,6 +68,8 @@ public abstract class AlchemyCard(int cost, CardType type, CardRarity rarity, Ta
     public override string PortraitPath => Artwork.PortraitPath;
     public override string? CustomPortraitPath => Artwork.PortraitPath;
     public override string BetaPortraitPath => Artwork.BetaPortraitPath;
+    /// Our own art when art/cards has a file for this card (CardArt); otherwise BaseLib falls back to the path above.
+    public override Godot.Texture2D? CustomPortrait => CardArt.For(this);
 
     // Shared vocabulary for card effects, so individual cards stay declarative.
     // Internal rather than protected so the static preview calculations (PreviewDamageVar) can read them too.

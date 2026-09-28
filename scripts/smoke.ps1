@@ -12,6 +12,12 @@ try {
     }
     Copy-Item src/Alchemy/bin/Release/net9.0/Alchemy.dll, src/Alchemy/Alchemy.json "$runtime/mods/Alchemy" -Force
     Copy-Item tests/Alchemy.Smoke/bin/Release/net9.0/AlchemySmoke.dll, tests/Alchemy.Smoke/AlchemySmoke.json "$runtime/mods/AlchemySmoke" -Force
+    # Card art (CardArt.cs): the shipped PNGs, then a fixture the smoke test checks for.
+    $art = "$runtime/mods/Alchemy/art/cards"
+    if (Test-Path $art) { Remove-Item $art -Recurse -Force }
+    New-Item -ItemType Directory -Force $art | Out-Null
+    if (Test-Path assets/art/cards) { Copy-Item assets/art/cards/*.png $art -Force -ErrorAction SilentlyContinue }
+    Copy-Item tests/Alchemy.Smoke/fixtures/art/cards/*.png $art -Force
 
     New-Item -ItemType Directory -Force artifacts/smoke | Out-Null
     $log = Join-Path $root "artifacts/smoke/$Name.log"

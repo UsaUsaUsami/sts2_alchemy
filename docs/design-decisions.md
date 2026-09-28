@@ -488,6 +488,14 @@ design-axes.md 11章5の「相転移とドローの無限ループ検出テス�
 - ユーザー報告：ホムンクルスのHPを確認できない。原因は`NCombatRoom.AddCreature`で、オスティ以外のペットは`ToggleIsInteractable(false)`になり、HPバー（`_stateDisplay`）も隠れること。`HomunculusPetNodePatch`（Postfix）でホムンクルスだけ操作可能に戻し、オスティと同じくプレイヤーの右（`Osty.MinOffset`）に置く。戦闘中のランチャー表示にもホムンクルスHPを追加した。
 - ユーザー判断：スターター《鎮静の霧》の脱力はカードからは1でよい（相転移の脱力があるため）。2→1、強化で2。
 
+## 2026-09-29: カード絵の取り込みの仕組み（ユーザー指示「先にMOD側の仕組みを作って」）
+
+- 画像生成はMODの外（ChatGPT・Codexなど）で行う前提で、MOD側に「何を描くか」の一覧と取り込み・読み込みを作った。手順は`docs/art-pipeline.md`。
+- 読み込み：`CardArt.cs`がDLLの隣の`art/cards/<カード名>.png`を実行時に読み、BaseLibの`CustomPortrait`で絵にする。Godotの.pckは作らない（BaseLibのテンプレートは.pckを書き出すが、Godotエディタの用意が要る）。カードの表示（`NCard`）は`Model.Portrait`を使うので、テクスチャの差し替えで足りる。画像がないカードは今の借り物の絵のまま。
+- カード名はIDから接頭辞を除いた小文字。サイズはバニラに合わせて250×190（エンシェント250×351。隔離実機で計測）。バニラは拡大表示でも同じ絵を使う。
+- `scripts/art-prompts.py`（プロンプト一覧。画風は`STYLE`、錬金術師の姿は`assets/concepts/alchemist-character-v2.png`に合わせる）、`scripts/import-art.py`（名前の照合・中央切り抜き・縮小）。build.ps1・update.ps1・smoke.ps1が`art/`フォルダを運ぶ。
+- 以前のコンセプト画像はCodexの画像生成で作っていた（`assets/README.md`）。生成の担当は未決。
+
 ## 2026-09-29: v0.24.0 MOD名の変更・専用の基本カード・大地の加護の廃棄
 
 - ユーザー指示：MOD名をAlchemyへ（design-axes 11の決定を実施。プールがほぼ固まったため）。`src/Alchemist`→`src/Alchemy`、`Alchemist.Core`→`Alchemy.Core`、テストの2プロジェクト、マニフェスト（id `Alchemy`、テスト用は`AlchemySmoke`）、DLL名、名前空間、Harmonyのid・ログの接頭辞を変更。クラス名の`Alchemist…`（`AlchemistCharacter`、`[SavedProperty]`の`AlchemistState`・`AlchemistRareModifier`など）とカードプールの内部タイトルは、キャラクター名なので残した。

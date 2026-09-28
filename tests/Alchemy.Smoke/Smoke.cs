@@ -143,6 +143,15 @@ public static class Smoke
                     }
                     catch(Exception e){GD.Print($"ALCHEMIST_POOLDUMP_SKIP {poolName} {canonical.Id.Entry} {e.GetType().Name}");}
                 }
+                // v0.24: card art from art/cards (CardArt). scripts/smoke.ps1 copies a fixture PNG for the furnace card.
+                foreach(var sample in new CardModel[]{ModelDb.Card<StrikeIronclad>(),ModelDb.Card<DefendIronclad>(),ModelDb.Card<Inflame>(),ModelDb.Card<Whistle>()})
+                    GD.Print($"ALCHEMIST_STAT portraitSize {sample.Id.Entry} {sample.Rarity} {sample.Portrait?.GetSize()}");
+                var arted=ModelDb.Card<FurnaceActivation>();
+                Check(CardArt.For(arted) is { } artTexture && arted.Portrait==artTexture,
+                    $"a PNG in art/cards replaces the borrowed portrait ({CardArt.ArtDirectory})");
+                var unarted=ModelDb.CardPool<AlchemyCardPool>().AllCards.FirstOrDefault(c=>!File.Exists(Path.Combine(CardArt.ArtDirectory,CardArt.Slug(c)+".png")));
+                Check(unarted is null || (CardArt.For(unarted) is null && unarted.Portrait is not null && ResourceLoader.Exists(unarted.PortraitPath)),
+                    $"a card without a PNG keeps its borrowed portrait ({unarted?.Id.Entry})");
                 Check(ResourceLoader.Exists(box.PackedIconPath),"relic portrait");
                 Check(new[]{CardType.Attack,CardType.Skill,CardType.Power}.All(t=>ModelDb.CardPool<AlchemyCardPool>().AllCards
                     .Any(c=>c.Type==t && c.Rarity is CardRarity.Common or CardRarity.Uncommon or CardRarity.Rare)),
