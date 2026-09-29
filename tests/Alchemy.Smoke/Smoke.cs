@@ -652,6 +652,15 @@ public static class Smoke
             Check(character.CharacterSelectIcon is { } selectIcon && selectIcon.GetWidth()==132 && selectIcon.GetHeight()==195
                 && character.MapMarker is { } mapMarker && mapMarker.GetWidth()==49 && mapMarker==CharacterArt.MapMarker,
                 $"the character select portrait and the map marker load from the mod's .ctex files ({character.CharacterSelectIcon?.GetSize()}, {character.MapMarker?.GetSize()})");
+            var bgContainer=new Control();
+            bgContainer.AddChild(new Control{Name=character.Id.Entry+"_bg"});
+            AlchemistSelectBg.Swap(bgContainer,character,retry:false);
+            var bgChildren=bgContainer.GetChildren().ToArray();
+            var selectPatched=Harmony.GetPatchInfo(AccessTools.Method(typeof(MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect.NCharacterSelectScreen),"SelectCharacter"));
+            Check(bgChildren.Length==1 && bgChildren[0] is TextureRect { Texture: { } bgTex } && bgTex.GetWidth()==1920
+                && selectPatched?.Postfixes.Any(x=>x.PatchMethod.DeclaringType==typeof(AlchemistSelectBgPatch))==true,
+                $"the character select background is swapped for the alchemist's own picture ({bgChildren.Length} children, {bgChildren.FirstOrDefault()?.GetType().Name})");
+            bgContainer.Free();
             player.Creature.LoseBlockInternal(player.Creature.Block); // 盛り土 is earth: its transition gave block
             var overflowResults=(await CreatureCmd.Damage(new ThrowingPlayerChoiceContext(),player.Creature,10,ValueProp.Move,null,null)).ToArray();
             Check(pet.IsDead && player.Creature.CurrentHp==ownHpBeforeHit-4-4,"damage past the homunculus's HP goes through to the alchemist");

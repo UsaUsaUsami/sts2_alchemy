@@ -9,6 +9,7 @@ using MegaCrit.Sts2.Core.Models.CardPools;
 using MegaCrit.Sts2.Core.Models.PotionPools;
 using MegaCrit.Sts2.Core.Models.RelicPools;
 using MegaCrit.Sts2.Core.Nodes.Combat;
+using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
 
 namespace Alchemy;
 
@@ -27,8 +28,7 @@ public sealed class AlchemistCharacter : PlaceholderCharacterModel
         ModelDb.Card<DefendAlchemist>(),
         ModelDb.Card<EarthenGuard>(), ModelDb.Card<SoothingMist>(), ModelDb.Card<InstantAlchemy>()];
     public override IReadOnlyList<RelicModel> StartingRelics => [ModelDb.Relic<MaterialBox>()];
-    // 2026-09-30: the alchemist's own look (CharacterArt). Rest site, merchant and character select background
-    // still borrow the Ironclad's.
+    // 2026-09-30: the alchemist's own look (CharacterArt). Rest site and merchant still borrow the Ironclad's.
     public override NCreatureVisuals? CreateCustomVisuals()
         => CharacterArt.Body is { } body ? NodeFactory<NCreatureVisuals>.CreateFromResource(body) : null;
     // Same shape as the base game's scenes/ui/character_icons/*_icon.tscn: a full-rect TextureRect.
@@ -101,5 +101,60 @@ public static class AlchemistMapMarkerPatch
     public static void Postfix(CharacterModel __instance, ref CompressedTexture2D __result)
     {
         if (__instance is AlchemistCharacter && CharacterArt.MapMarker is { } marker) __result = marker;
+    }
+}
+
+/// <summary>
+/// The character select background. The game preloads every character's background scene by path, so the path stays
+/// the Ironclad's and the instance it adds for the alchemist is swapped for one full-screen picture right after
+/// (CharacterArt.SelectBg, 2026-09-30).
+/// </summary>
+public static class AlchemistSelectBg
+{
+    public static void Swap(Control? container, CharacterModel? character, bool retry = true)
+    {
+        if (container is null || character is not AlchemistCharacter || CharacterArt.SelectBg is not { } picture) return;
+        string name = character.Id.Entry + "_bg";
+        var olds = container.GetChildren().OfType<Control>().Where(c => c.Name == name).ToList();
+        foreach (var old in olds)
+        {
+            container.RemoveChild(old);
+            old.QueueFree();
+        }
+        // AddChildSafely defers when the container is busy; then the borrowed one arrives next frame.
+        if (olds.Count == 0 && retry) Callable.From(() => Swap(container, character, false)).CallDeferred();
+        container.AddChild(new TextureRect
+        {
+            Name = name, Texture = picture, AnchorRight = 1, AnchorBottom = 1, MouseFilter = Control.MouseFilterEnum.Ignore,
+            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
+        });
+    }
+
+    public static Control? Container(object screen) => Traverse.Create(screen).Field("_bgContainer").GetValue<Control>();
+}
+
+[HarmonyPatch(typeof(NCharacterSelectScreen), nameof(NCharacterSelectScreen.SelectCharacter))]
+public static class AlchemistSelectBgPatch
+{
+    public static void Postfix(NCharacterSelectScreen __instance, CharacterModel characterModel)
+        => AlchemistSelectBg.Swap(AlchemistSelectBg.Container(__instance), characterModel);
+}
+
+[HarmonyPatch(typeof(NCharacterSelectScreen), "OnLocalCharacterChangedForRandom")]
+public static class AlchemistRandomSelectBgPatch
+{
+    public static void Postfix(NCharacterSelectScreen __instance, CharacterModel characterModel)
+        => AlchemistSelectBg.Swap(AlchemistSelectBg.Container(__instance), characterModel);
+}
+
+[HarmonyPatch(typeof(NMultiplayerLoadGameScreen), "AfterMultiplayerStarted")]
+public static class AlchemistLoadSelectBgPatch
+{
+    public static void Postfix(NMultiplayerLoadGameScreen __instance)
+    {
+        var container = AlchemistSelectBg.Container(__instance);
+        if (container is null) return;
+        foreach (var character in ModelDb.AllCharacters.OfType<AlchemistCharacter>())
+            AlchemistSelectBg.Swap(container, character);
     }
 }

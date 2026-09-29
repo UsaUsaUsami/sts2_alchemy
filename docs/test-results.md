@@ -1,5 +1,10 @@
 ﻿# テスト結果記録
 
+## 隔離実機スモーク（2026-09-30、キャラ選択画面の背景）
+
+- ルール検証211件PASS。`scripts/smoke.ps1 -Name select-bg`：**379件PASS・FAIL 0**。背景の入れ物に置かれた`<ID>_bg`が自前の1枚絵（TextureRect、1920幅）に差し替わること、`NCharacterSelectScreen.SelectCharacter`に後置きが当たっていることを確認。
+- `scripts/update.ps1`で反映（旧版`artifacts/backups/20260930-013408-426`）。未確認（実画面）：キャラ選択での見え方、ランダム選択、マルチの続きから画面。
+
 ## 隔離実機スモーク（2026-09-29〜30、カード絵102枚・ゴーレム・錬金術師の見た目）
 
 - ルール検証211件PASS（`scripts/build.ps1`内）。
