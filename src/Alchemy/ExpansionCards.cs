@@ -134,7 +134,7 @@ public sealed class PhaseWheelPower : AlchemyPower
 public sealed class DarvCrucibleCard() : AlchemyCard(2,CardType.Power,CardRarity.Ancient,TargetType.Self), ITomeCard
 {
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<CruciblePower>()];
-    public override List<(string,string)> Localization=>new CardLoc("ダーヴの坩堝","自分のターン開始時、現在相に対応する素材を1個得る。素材ボックスが満杯なら得ない。");
+    public override List<(string,string)> Localization=>new CardLoc("エレメント・リローデッド","自分のターン開始時、現在相に対応する素材を1個得る。素材ボックスが満杯なら得ない。");
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>ApplySelf<CruciblePower>(c,1);
     protected override void OnUpgrade()=>EnergyCost.UpgradeBy(-1);
 }
@@ -143,7 +143,7 @@ public sealed class CruciblePower : AlchemyPower
 {
     public override PowerStackType StackType => PowerStackType.Single;
     protected override PowerModel IconSource => ModelDb.Power<RegenPower>();
-    public override List<(string,string)> Localization => new PowerLoc("ダーヴの坩堝",
+    public override List<(string,string)> Localization => new PowerLoc("エレメント・リローデッド",
         "自分のターン開始時、現在相に対応する素材を1個得る。素材ボックスが満杯なら得ない。",
         "自分のターン開始時、現在相に対応する素材を1個得る。素材ボックスが満杯なら得ない。");
     public override Task AfterSideTurnStart(CombatSide side, IReadOnlyList<Creature> participants, ICombatState combatState)
