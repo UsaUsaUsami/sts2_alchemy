@@ -212,7 +212,7 @@ public sealed class CraftPhilosophersBlood() : CraftedCard(1, CardType.Power, Ta
     protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<PhilosophersBloodPower>(2)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<HomunculusPower>(), HoverTipFactory.FromPower<LifeDrainPower>()];
     protected override string CardTitle => "賢者の血";
-    protected override string CardText => "ホムンクルスが攻撃を肩代わりするたび、攻撃した敵に[gold]ドレイン[/gold]{PhilosophersBloodPower:diff()}を与える。\n[gold]水相[/gold]";
+    protected override string CardText => "ゴーレムが攻撃を肩代わりするたび、攻撃した敵に[gold]ドレイン[/gold]{PhilosophersBloodPower:diff()}を与える。\n[gold]水相[/gold]";
     protected override Task OnPlay(PlayerChoiceContext c, CardPlay p) => ApplySelf<PhilosophersBloodPower>(c, DynamicVars["PhilosophersBloodPower"].BaseValue);
     protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }
@@ -222,8 +222,8 @@ public sealed class CraftCultureVat() : CraftedCard(2, CardType.Power, TargetTyp
     public override AlchemyPhase Element => AlchemyPhase.Water;
     protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<CultureVatPower>(3)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<HomunculusPower>()];
-    protected override string CardTitle => "培養槽";
-    protected override string CardText => "自分のターン開始時、[gold]ホムンクルスHP[/gold]を{CultureVatPower:diff()}得る。\n[gold]水相[/gold]";
+    protected override string CardTitle => "自己修復";
+    protected override string CardText => "自分のターン開始時、[gold]ゴーレムHP[/gold]を{CultureVatPower:diff()}得る。\n[gold]水相[/gold]";
     protected override Task OnPlay(PlayerChoiceContext c, CardPlay p) => ApplySelf<CultureVatPower>(c, DynamicVars["CultureVatPower"].BaseValue);
     protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }
@@ -235,8 +235,8 @@ public sealed class CraftFleshArmor() : CraftedCard(1, CardType.Skill, TargetTyp
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Percent", 50)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<HomunculusPower>()];
-    protected override string CardTitle => "血肉の鎧";
-    protected override string CardText => "[gold]ホムンクルスHP[/gold]の{Percent:diff()}%の[gold]ブロック[/gold]を得る。\n[gold]地相[/gold]";
+    protected override string CardTitle => "岩肌の鎧";
+    protected override string CardText => "[gold]ゴーレムHP[/gold]の{Percent:diff()}%の[gold]ブロック[/gold]を得る。\n[gold]地相[/gold]";
     protected override Task OnPlay(PlayerChoiceContext c, CardPlay p)
     {
         int amount = (LifeAxis.State(Owner)?.HomunculusHp ?? 0) * DynamicVars["Percent"].IntValue / 100;
@@ -250,8 +250,8 @@ public sealed class CraftFusion() : CraftedCard(2, CardType.Attack, TargetType.A
     public override AlchemyPhase Element => AlchemyPhase.Fire;
     protected override IEnumerable<DynamicVar> CanonicalVars => [new DamageVar(30, ValueProp.Move), new DynamicVar("Spend", 10)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<HomunculusPower>()];
-    protected override string CardTitle => "器の融合";
-    protected override string CardText => "[gold]ホムンクルスHP[/gold]を{Spend}消費できれば、{Damage:diff()}ダメージを与える。\n[gold]火相[/gold]";
+    protected override string CardTitle => "ゴーレムパンチ";
+    protected override string CardText => "[gold]ゴーレムHP[/gold]を{Spend}消費できれば、{Damage:diff()}ダメージを与える。\n[gold]火相[/gold]";
     protected override async Task OnPlay(PlayerChoiceContext c, CardPlay p)
     {
         if (await LifeAxis.TrySpendHomunculus(c, Owner, DynamicVars["Spend"].IntValue)) await Hit(c, p, DynamicVars.Damage.BaseValue);
@@ -265,8 +265,8 @@ public sealed class CraftMitosis() : CraftedCard(2, CardType.Skill, TargetType.S
     public override AlchemyPhase Element => AlchemyPhase.Air;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
     protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<HomunculusPower>()];
-    protected override string CardTitle => "分裂";
-    protected override string CardText => "[gold]ホムンクルスHP[/gold]を2倍にする。\n[gold]風相[/gold]";
+    protected override string CardTitle => "巨大化";
+    protected override string CardText => "[gold]ゴーレムHP[/gold]を2倍にする。\n[gold]風相[/gold]";
     protected override Task OnPlay(PlayerChoiceContext c, CardPlay p)
         => LifeAxis.GainHomunculus(c, Owner, LifeAxis.State(Owner)?.HomunculusHp ?? 0);
     protected override void OnUpgrade() => AddKeyword(CardKeyword.Retain);
@@ -282,7 +282,7 @@ public sealed class CraftGateOfTruth() : CraftedCard(3, CardType.Power, TargetTy
     protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<GateOfTruthPower>(8), new DynamicVar("Threshold", GateOfTruthPower.Threshold)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<GateOfTruthPower>(), HoverTipFactory.FromPower<HomunculusPower>()];
     protected override string CardTitle => "真理の扉";
-    protected override string CardText => "自分のターン開始時、[gold]ホムンクルスHP[/gold]が{Threshold}以上なら、敵全体に{GateOfTruthPower:diff()}ダメージを与える。\n[gold]火相[/gold]";
+    protected override string CardText => "自分のターン開始時、[gold]ゴーレムHP[/gold]が{Threshold}以上なら、敵全体に{GateOfTruthPower:diff()}ダメージを与える。\n[gold]火相[/gold]";
     protected override Task OnPlay(PlayerChoiceContext c, CardPlay p) => ApplySelf<GateOfTruthPower>(c, DynamicVars["GateOfTruthPower"].BaseValue);
     protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }

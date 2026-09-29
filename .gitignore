@@ -6,3 +6,4 @@ dist/
 artifacts/
 *.user
 assets/art/incoming/
+__pycache__/

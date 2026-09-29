@@ -26,7 +26,7 @@
 ## 画風
 
 - 共通の画風は`scripts/art-prompts.py`の`STYLE`（全プロンプトの先頭に入る）。相ごとの色は`PALETTE`、カードの種類ごとの構図は`TYPE_HINT`。
-- 錬金術師本人は`assets/concepts/alchemist-character-v2.png`（フードと逆さフラスコ型の真鍮の仮面、顔は見えない）に合わせる。
+- 錬金術師本人は**`assets/concepts/alchemist-character-v3.png`（決定版・2026-09-29）**に合わせる：金縁の炭色のフードとローブ、顔は金色に光る錬成陣（二重の輪・三角・内円・放射線）、前に四相（地の三角・水のしずく・火の炎・風の渦）の縦帯、腰に小瓶2本。炉は持たせない。`generate-art.py`はこの画像を参考画像として毎回渡す。旧v2は破棄。
 - 1枚ずつの題材を指定したいときは`assets/art/subjects.json`に`{"fire_spark": "…"}`の形で書く（なければカード名と効果から描かせる）。
 
 ## キービジュアル（錬金術師のデザイン）の案づくり
@@ -34,7 +34,7 @@
 - 参考画像：`python scripts/extract-sts2-refs.py`がゲームの`SlayTheSpire2.pck`から、キャラ選択の肖像5枚（`lineup_small.png`）と選択画面の絵（`characterselect_<名前>.png`。1枚絵はサイレントだけで、他はアニメーションの部品）を`.research/sts2-ref/`へ取り出す。**ゲームの素材なので、MODやリポジトリには入れない**（`.research`はGit管理外）。生成時の参考として渡すだけ。
 - 生成：`python scripts/keyvisual.py [--only flask,beak] [--note "追加の指示"] [--tag v4]`。共通の条件（`BRIEF`）と方向性（`DIRECTIONS`）はスクリプト内。結果は`assets/concepts/keyvisual/kv-<tag>-<案>.png`。
 - 参考画像を渡す理由（ユーザー）：渡さないと、線のはっきりした顔のあるイケメンを描かれた。StS2のキャラは顔を出さず、線は最小限で、大きな色の面で描かれている。
-- 2026-09-29の案（v3）：flask・beak・furnace・homunculus・sigil。比較は前回のv2（`assets/concepts/alchemist-character-v2.png`）と。決定はまだ。
+- 2026-09-29の案（v3）：flask・beak・furnace・homunculus・sigil → ユーザーがsigilを選び「線をシンプルに」（v4：a・b・c）→ bを選び「炉なし、ローブの柄と顔の魔法陣に線を足す」（v5：b2・b3・b4）→ **b2に決定**（`kv-v5-sigil-b2.png`＝`alchemist-character-v3.png`）。
 
 ## 生成：Codex CLIで一括（2026-09-29 確認済み）
 
@@ -42,3 +42,11 @@
 - `python scripts/generate-art.py [--only a,b] [--kind レア] [--limit 10] [--jobs 3] [--note "追加の指示"] [--force]`：絵のないカードを1枚ずつ`codex exec`で生成し、`assets/art/incoming/<カード名>.png`に保存する。ログは`artifacts/art-gen/<カード名>.log`。
 - `python scripts/art-sheet.py incoming --cols 4`：生成した画像をラベル付きで1枚に並べた`artifacts/art-gen/sheet.png`を作る。Claude（司令塔）はこれを見て、ダメなものを`--only`・`--note`で作り直させてから取り込む。
 - 手作業でもよい：`docs/art-prompts.md`のプロンプトをChatGPTのアプリに貼り、ファイル名どおりに保存する。
+
+## 生成：4枚まとめて（2026-09-29〜、使用量の節約）
+
+- `python scripts/generate-art-grid.py [--only a,b,c,d | --limit 4] [--reasoning low]`：4枚を**1回の画像生成**で2×2のシートに描かせ、切り分けて`assets/art/incoming/<カード名>.png`に保存する。シートは`artifacts/art-gen/grid-<先頭のカード名>.png`。Codexの推論は`model_reasoning_effort="low"`。
+- 理由：ユーザーのChatGPT使用量が、1枚1回の生成（`generate-art.py`）と案出しのやり直しで半分近く減った。カード絵は250×190なので、1536×1024のシートの4分の1（768×512）で足りる。
+- 試作（岩盤ほか）は1枚1回、この方式の最初の4枚（地鳴り・激流・爆縮・突風）は73秒で1回。従来は同じ枚数で約4回・各60〜85秒。使用量の減り方はユーザーの画面で確認する。
+- 使用量：4枚1回で「5時間枠の4%」（ユーザー確認）。日付が変わるたびに数回ずつ進めればよい。
+- 傾向：最初の4枚は錬金術師が左に大きく写り、構図が似た。対策として、1枚のシートで人物を出してよいのは1コマだけ（手か後ろ姿、小さく）、他は人物なし、コマごとに構図（引き・接写・俯瞰・左右対称・斜め）を割り当てる。`STYLE`にも「錬金術師は毎回は出ない」を追加。効果を確認済み（灼熱・浸食・補強・風の衣：人物は補強の小さな後ろ姿だけ、構図は引き・接写・エンブレムでばらけた）。

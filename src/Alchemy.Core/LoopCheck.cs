@@ -169,7 +169,7 @@ public static class LoopProfiles
         new("FurnaceActivation", 0, Exhaust: true),
         // Earth, water, fire
         El("EarthBulwarkBash", 1, E), El("EarthBulwarkBash+", 0, E),
-        // v0.23: 腐食の抱擁, 自己培養, 風の残像, 分裂 and 疾風の心核 no longer reach 0 cost, so they are not fuel.
+        // v0.23: 腐食の抱擁, 自らを糧に, 風の残像, 巨大化 and 疾風の心核 no longer reach 0 cost, so they are not fuel.
         El("FireSpark", 0, F), El("FireSpark+", 0, F),
         // Air
         El("AirGale", 1, A, draw: 1),

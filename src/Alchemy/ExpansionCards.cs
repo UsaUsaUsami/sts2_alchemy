@@ -19,12 +19,12 @@ namespace Alchemy;
 
 // v0.22 cards from the 2026-09-26 follow-up (design-axes.md 4.3). Names are tentative; numbers are prototype values.
 
-/// <summary>F-1（仮名：自己培養）. One of the three forbidden cards that put a status on yourself (3.4).</summary>
+/// <summary>F-1（仮名：自らを糧に）. One of the three forbidden cards that put a status on yourself (3.4).</summary>
 public sealed class LifeSelfCultivation() : ElementCard(1,CardType.Power,CardRarity.Rare,TargetType.Self,AlchemyPhase.Water)
 {
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new PowerVar<SelfCultivationPower>(2)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<SelfCultivationPower>(),HoverTipFactory.FromPower<LifeDrainPower>()];
-    public override List<(string,string)> Localization=>new CardLoc("自己培養","自分のターン開始時、自分に[gold]ドレイン[/gold]{SelfCultivationPower:diff()}を付与する。自分に付いた[gold]ドレイン[/gold]で得る[gold]ホムンクルスHP[/gold]は2倍になる。\n[gold]水相[/gold]");
+    public override List<(string,string)> Localization=>new CardLoc("自らを糧に","自分のターン開始時、自分に[gold]ドレイン[/gold]{SelfCultivationPower:diff()}を付与する。自分に付いた[gold]ドレイン[/gold]で得る[gold]ゴーレムHP[/gold]は2倍になる。\n[gold]水相[/gold]");
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>ApplySelf<SelfCultivationPower>(c,DynamicVars["SelfCultivationPower"].BaseValue);
     // v0.23 (ユーザーレビュー): drain 1 halved straight back to 0 (v0.22.4), worth 1 HP for 2 homunculus HP a turn.
     // 2 (upgrade 3) settles at 3 HP for 6 (5 for 10); halving keeps the stack from piling up, so the upgrade
@@ -37,9 +37,9 @@ public sealed class SelfCultivationPower : AlchemyPower
     public const int SelfDrainMultiplier = 2;
     protected override PowerModel IconSource => ModelDb.Power<RegenPower>();
     protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<LifeDrainPower>()];
-    public override List<(string,string)> Localization => new PowerLoc("自己培養",
-        "自分のターン開始時、自分にドレインを付与する。自分に付いたドレインで得るホムンクルスHPは2倍になる。",
-        "自分のターン開始時、自分に[gold]ドレイン[/gold]{Amount}を付与する。自分に付いた[gold]ドレイン[/gold]で得る[gold]ホムンクルスHP[/gold]は2倍になる。");
+    public override List<(string,string)> Localization => new PowerLoc("自らを糧に",
+        "自分のターン開始時、自分にドレインを付与する。自分に付いたドレインで得るゴーレムHPは2倍になる。",
+        "自分のターン開始時、自分に[gold]ドレイン[/gold]{Amount}を付与する。自分に付いた[gold]ドレイン[/gold]で得る[gold]ゴーレムHP[/gold]は2倍になる。");
     public override async Task AfterSideTurnStart(CombatSide side, IReadOnlyList<Creature> participants, ICombatState combatState)
     {
         if (!participants.Contains(Owner)) return;

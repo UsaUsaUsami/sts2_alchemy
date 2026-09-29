@@ -17,6 +17,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 INCOMING = ROOT / "assets/art/incoming"
 LOGS = ROOT / "artifacts/art-gen"
+KEY_VISUAL = ROOT / "assets/concepts/alchemist-character-v3.png"
 
 
 def arg(name, default=None):
@@ -64,7 +65,9 @@ def run(e):
     started = time.time()
     with open(LOGS / f"{e['slug']}.log", "w", encoding="utf-8") as log:
         try:
-            subprocess.run([codex, "exec", "-s", "workspace-write", "-C", str(ROOT), "-"], input=task, text=True,
+            # The key visual is attached so the alchemist looks the same in every card.
+            subprocess.run([codex, "exec", "-s", "workspace-write", "-C", str(ROOT), "-i", str(KEY_VISUAL), "-"],
+                           input=task, text=True,
                            encoding="utf-8", stdout=log, stderr=subprocess.STDOUT, timeout=900, cwd=ROOT)
         except subprocess.TimeoutExpired:
             log.write("\nTIMEOUT\n")

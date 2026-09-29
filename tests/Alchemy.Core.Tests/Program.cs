@@ -314,7 +314,7 @@ Check(transferred.Select(x=>(x.PowerId,x.Amount)).SequenceEqual([("WEAK",2),("DE
 var swapped=DebuffTransfer.Swap([new("WEAK",2,true),new("DRAIN",3,true)],[new("VULNERABLE",1,true),new("HUNTER_MARK",2,true),new("STRENGTH",5,false)],Movable);
 Check(swapped.ToEnemy.Select(x=>x.PowerId).SequenceEqual(["WEAK","DRAIN"]) && swapped.ToPlayer.Select(x=>(x.PowerId,x.Amount)).SequenceEqual([("VULNERABLE",1)]),
     "the swap sends your listed debuffs over and brings back only listed debuffs, never the enemy's gimmick or buffs");
-// design-axes 3.1: a drain on yourself feeds your homunculus, doubled by 自己培養, and is not enemy HP drained.
+// design-axes 3.1: a drain on yourself feeds your homunculus, doubled by 自らを糧に, and is not enemy HP drained.
 var selfLife=new LifeState();
 selfLife.RecordSelfDrain(3); selfLife.RecordSelfDrain(2,2);
 Check(selfLife.HomunculusHp==7 && selfLife.HpDrainedThisCombat==0,"self drain feeds the homunculus (x2 with the power) without counting as enemy HP drained");

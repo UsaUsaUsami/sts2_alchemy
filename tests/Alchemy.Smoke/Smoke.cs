@@ -638,12 +638,11 @@ public static class Smoke
             var strikeTips=ModelDb.Card<EarthenGuard>().HoverTips.OfType<MegaCrit.Sts2.Core.HoverTips.HoverTip>().ToArray();
             Check(sparkTips.Any(t=>t.Title=="相転移" && t.Description.Contains("ブロック") && t.Description.Contains("違う相")) && strikeTips.All(t=>t.Title!="相転移"),
                 $"a card that mentions 相転移 explains it, one that does not stays clean ({string.Join(" / ",sparkTips.Select(t=>t.Title+":"+t.Description))})");
-            // v0.22.4: without a "Revive" trigger the revived pet stayed on the last frame of its death animation.
-            var petAnimator=NCombatRoom.Instance?.GetCreatureNode(pet) is { } revivedNode
-                ? Traverse.Create(revivedNode).Field("_spineAnimator").GetValue<MegaCrit.Sts2.Core.Animation.CreatureAnimator>() : null;
-            Check(petAnimator is not null && petAnimator.HasTrigger("Revive") && petAnimator.HasTrigger("Dead"),
-                $"the homunculus's animator can play revive after it falls (node {(NCombatRoom.Instance?.GetCreatureNode(pet) is null ? "missing" : "found")}, animator {(petAnimator is null ? "missing" : "found")})");
-            player.Creature.LoseBlockInternal(player.Creature.Block); // 肉の壁 is earth: its transition gave block
+            // 2026-09-29: the pet is shown as a golem, one still sprite (art/pets/golem.png) that GolemMotion animates.
+            var golemBody=NCombatRoom.Instance?.GetCreatureNode(pet) is { } revivedNode ? revivedNode.Visuals.Body : null;
+            Check(golemBody is Sprite2D { Texture: { } golemTex } && golemTex.GetHeight()==PetArt.GolemHeight && pet.Name=="ゴーレム",
+                $"the homunculus is shown as the golem sprite and named ゴーレム (body {golemBody?.GetType().Name ?? "missing"}, name {pet.Name})");
+            player.Creature.LoseBlockInternal(player.Creature.Block); // 盛り土 is earth: its transition gave block
             var overflowResults=(await CreatureCmd.Damage(new ThrowingPlayerChoiceContext(),player.Creature,10,ValueProp.Move,null,null)).ToArray();
             Check(pet.IsDead && player.Creature.CurrentHp==ownHpBeforeHit-4-4,"damage past the homunculus's HP goes through to the alchemist");
             // ユーザー報告: the homunculus showed the whole hit, and the alchemist the overflow again.

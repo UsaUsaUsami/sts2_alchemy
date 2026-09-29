@@ -15,5 +15,7 @@ try {
     New-Item -ItemType Directory -Force dist/Alchemy/art/cards | Out-Null
     if (Test-Path assets/art/cards) { Copy-Item assets/art/cards/*.png dist/Alchemy/art/cards -ErrorAction SilentlyContinue }
     Write-Output "カード絵: $(@(Get-ChildItem dist/Alchemy/art/cards -Filter *.png).Count)枚"
+    # The golem pet sprite (PetArt in CardArt.cs).
+    if (Test-Path assets/art/pets) { New-Item -ItemType Directory -Force dist/Alchemy/art/pets | Out-Null; Copy-Item assets/art/pets/*.png dist/Alchemy/art/pets }
     Write-Output "配布ファイル: $root\dist\Alchemy"
 } finally { Pop-Location }

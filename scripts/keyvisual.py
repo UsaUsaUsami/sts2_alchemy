@@ -49,6 +49,40 @@ DIRECTIONS = {
     "sigil": "Direction: a robed figure whose face is replaced by a softly glowing alchemical sigil (a circle with a "
              "triangle and an ouroboros) floating inside the hood; the robe is patterned with faint transmutation "
              "circles in the four element colours. Dominant colour: charcoal with gold.",
+    # v4: user picked sigil and asked for simpler line work (2026-09-29).
+    "sigil-a": "Direction: a robed figure in a plain deep hood; the face is a single softly glowing gold sigil (one "
+               "circle with one triangle inside, nothing else). Smooth, clean, unpatterned charcoal robe with a "
+               "smooth hem (no tattering, no fraying), one thin gold trim line, plain gloves and boots. No props at "
+               "all except one small brass furnace hanging at the belt. Very few folds; the silhouette is a simple "
+               "tall bell shape. Dominant colour: charcoal with gold.",
+    "sigil-b": "Direction: same idea, simplified: a smooth hooded robe with a single glowing gold circle-and-triangle "
+               "sigil as the face. The robe has only four small, flat element marks (earth, water, fire, air) in a "
+               "vertical row on the front, no other patterns. Clean edges, no tears. One belt with two plain vials. "
+               "No backpack, no scarf, no hanging charms. Dominant colour: charcoal with gold.",
+    "sigil-c": "Direction: same idea, simplified: a smooth hooded robe with a single glowing gold circle-and-triangle "
+               "sigil as the face, holding one small glass jar in one hand (a tiny homunculus silhouette inside). "
+               "Plain robe, clean edges, no patterns, no tears, no belt clutter, no backpack. Only two or three "
+               "large flat colour shapes on the whole figure. Dominant colour: charcoal with gold.",
+    # v5: user liked sigil-b; wants no furnace, more robe pattern/lines, a richer face sigil (2026-09-29).
+    "sigil-b2": "Direction: a smooth hooded robe; the face is a glowing gold alchemical sigil with more line work than "
+                "a plain circle: an outer double ring, a triangle, an inner circle, small tick marks and a few thin "
+                "rays, still flat and graphic. No furnace, no jar in hand (hands empty or relaxed). The robe carries "
+                "a graphic pattern of thin gold lines: a long vertical band down the front with the four element "
+                "marks (earth triangle, water drop, fire flame, air swirl) connected by a thin line, plus thin "
+                "border lines at the hem and sleeves. Belt with two plain vials. Clean edges. Dominant colour: "
+                "charcoal with gold.",
+    "sigil-b3": "Direction: a smooth hooded robe; the face is a glowing gold alchemical sigil with more line work: a "
+                "double ring, a triangle, an inner circle and thin radiating lines. No furnace, no jar; hands "
+                "empty. The robe has a repeating, geometric all-over pattern of thin lines in muted gold (a "
+                "transmutation-circle lattice: circles joined by straight lines), stronger near the hem and "
+                "sleeves, fading toward the shoulders; four small element marks in colour on the chest band. Belt "
+                "with two plain vials. Dominant colour: charcoal with gold.",
+    "sigil-b4": "Direction: a smooth hooded robe; the face is a glowing gold alchemical sigil with more line work: "
+                "concentric rings, a triangle within a hexagram-like frame, thin rays. No furnace, no jar; hands "
+                "empty. The robe is decorated with bold, sparse line ornaments in the four element colours: a wide "
+                "diagonal sash of thin parallel lines across the chest, and four thin vertical stripes (ochre, "
+                "teal, orange, pale cyan) running down the skirt from the belt to the hem, each ending in a small "
+                "element mark. Belt with two plain vials. Dominant colour: charcoal with gold.",
 }
 
 

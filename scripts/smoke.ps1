@@ -18,6 +18,10 @@ try {
     New-Item -ItemType Directory -Force $art | Out-Null
     if (Test-Path assets/art/cards) { Copy-Item assets/art/cards/*.png $art -Force -ErrorAction SilentlyContinue }
     Copy-Item tests/Alchemy.Smoke/fixtures/art/cards/*.png $art -Force
+    $pets = "$runtime/mods/Alchemy/art/pets"
+    if (Test-Path $pets) { Remove-Item $pets -Recurse -Force }
+    New-Item -ItemType Directory -Force $pets | Out-Null
+    Copy-Item assets/art/pets/*.png $pets -Force
 
     New-Item -ItemType Directory -Force artifacts/smoke | Out-Null
     $log = Join-Path $root "artifacts/smoke/$Name.log"

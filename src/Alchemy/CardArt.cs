@@ -41,3 +41,39 @@ public static class CardArt
         return texture;
     }
 }
+
+/// <summary>
+/// The homunculus pet's sprite (2026-09-29: a stone golem, assets/concepts/homunculus-v1.png), a transparent PNG at
+/// art/pets/golem.png made by scripts/import-pet.py. Without the file the pet keeps Osty's borrowed visuals.
+/// </summary>
+public static class PetArt
+{
+    /// On-screen height in pixels. A trial value: the alchemist is roughly 280 tall.
+    public const int GolemHeight = 190;
+    private static Texture2D? _golem;
+    private static bool _loaded;
+
+    public static string GolemPath
+        => Path.Combine(Path.GetDirectoryName(typeof(PetArt).Assembly.Location) ?? "", "art", "pets", "golem.png");
+
+    public static bool HasGolem => File.Exists(GolemPath);
+
+    public static Texture2D? Golem
+    {
+        get
+        {
+            if (_loaded) return _golem;
+            _loaded = true;
+            try
+            {
+                if (HasGolem && Image.LoadFromFile(GolemPath) is { } image && !image.IsEmpty())
+                {
+                    image.Resize(image.GetWidth() * GolemHeight / image.GetHeight(), GolemHeight, Image.Interpolation.Lanczos);
+                    _golem = ImageTexture.CreateFromImage(image);
+                }
+            }
+            catch (Exception ex) { GD.PushWarning($"[Alchemy] pet art {GolemPath} skipped: {ex.Message}"); }
+            return _golem;
+        }
+    }
+}

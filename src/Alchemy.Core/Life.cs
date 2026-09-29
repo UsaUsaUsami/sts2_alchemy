@@ -41,8 +41,8 @@ public sealed class LifeState
         return spent;
     }
 
-    /// A drain on the alchemist themself (design-axes 3.1, from コペルニクスシフト or 自己培養) took hpLost from
-    /// them. The homunculus gains that times `multiplier` (2 with 自己培養). It is not HP an enemy lost, so cards
+    /// A drain on the alchemist themself (design-axes 3.1, from コペルニクスシフト or 自らを糧に) took hpLost from
+    /// them. The homunculus gains that times `multiplier` (2 with 自らを糧に). It is not HP an enemy lost, so cards
     /// that scale with drained enemy HP do not count it.
     public void RecordSelfDrain(int hpLost, int multiplier = 1)
     {

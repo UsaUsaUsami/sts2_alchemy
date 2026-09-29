@@ -21,7 +21,7 @@ public sealed class LifeOffering() : ElementCard(1,CardType.Skill,CardRarity.Com
 {
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new HpLossVar(5),new DynamicVar("Homunculus",10)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<HomunculusPower>()];
-    public override List<(string,string)> Localization=>new CardLoc("生命の供物","HPを{HpLoss:diff()}失う。[gold]ホムンクルスHP[/gold]を{Homunculus:diff()}得る。\n[gold]水相[/gold]");
+    public override List<(string,string)> Localization=>new CardLoc("生命の供物","HPを{HpLoss:diff()}失う。[gold]ゴーレムHP[/gold]を{Homunculus:diff()}得る。\n[gold]水相[/gold]");
     protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p)
     {
         await CreatureCmd.Damage(c,Owner.Creature,DynamicVars.HpLoss.BaseValue,ValueProp.Unblockable|ValueProp.Unpowered|ValueProp.Move,this,p);
@@ -50,7 +50,7 @@ public sealed class LifeGreatWork() : ElementCard(5,CardType.Attack,CardRarity.U
     public const int HomunculusPerCost = 10;
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new DamageVar(50,ValueProp.Move),new DynamicVar("Step",HomunculusPerCost)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<HomunculusPower>()];
-    public override List<(string,string)> Localization=>new CardLoc("大錬成","{Damage:diff()}ダメージ。[gold]ホムンクルスHP[/gold]{Step}ごとに、コストが1下がる。\n[gold]火相[/gold]");
+    public override List<(string,string)> Localization=>new CardLoc("大錬成","{Damage:diff()}ダメージ。[gold]ゴーレムHP[/gold]{Step}ごとに、コストが1下がる。\n[gold]火相[/gold]");
     public override bool TryModifyEnergyCostInCombat(CardModel card,decimal originalCost,out decimal modifiedCost)
     {
         modifiedCost=originalCost;
@@ -67,7 +67,7 @@ public sealed class HumanTransmutation() : ElementCard(3,CardType.Attack,CardRar
 {
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new PreviewDamageVar((c,_)=>c.HomunculusHp*c.DynamicVars["Multiplier"].BaseValue),new DynamicVar("Multiplier",3)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<HomunculusPower>(),HoverTipFactory.FromPower<DeathMarkPower>()];
-    public override List<(string,string)> Localization=>new CardLoc("人体錬成","敵1体に[gold]ホムンクルスHP[/gold]×{Multiplier:diff()}のダメージを与える。自分に[gold]死亡[/gold]を付与する。{InCombat:\n（{Total:diff()}ダメージ）|}\n[gold]火相[/gold]");
+    public override List<(string,string)> Localization=>new CardLoc("人体錬成","敵1体に[gold]ゴーレムHP[/gold]×{Multiplier:diff()}のダメージを与える。自分に[gold]死亡[/gold]を付与する。{InCombat:\n（{Total:diff()}ダメージ）|}\n[gold]火相[/gold]");
     protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p)
     {
         int homunculus=LifeAxis.State(Owner)?.HomunculusHp ?? 0;
@@ -141,7 +141,7 @@ public sealed class DebuffTransferCard() : ElementCard(2,CardType.Skill,CardRari
 public sealed class LifeReclaim() : ElementCard(2,CardType.Skill,CardRarity.Rare,TargetType.Self,AlchemyPhase.Earth)
 {
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<HomunculusPower>()];
-    public override List<(string,string)> Localization=>new CardLoc("還元","[gold]ホムンクルスHP[/gold]をすべて消費し、その半分だけHPを回復する。\n[gold]地相[/gold]");
+    public override List<(string,string)> Localization=>new CardLoc("還元","[gold]ゴーレムHP[/gold]をすべて消費し、その半分だけHPを回復する。\n[gold]地相[/gold]");
     protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p)
     {
         int heal=(await LifeAxis.SpendAllHomunculus(c,Owner))/2;

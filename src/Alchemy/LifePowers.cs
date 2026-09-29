@@ -1,6 +1,7 @@
 ﻿using Alchemy.Core;
 using BaseLib.Abstracts;
 using BaseLib.Utils;
+using BaseLib.Utils.NodeFactories;
 using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Animation;
@@ -101,7 +102,7 @@ public static class LifeAxis
         int lost = results.Sum(r => DrainRules.HpLost(r.UnblockedDamage, r.OverkillDamage));
         if (DrainOwner(drain) is { } alchemist && State(alchemist) is { } life)
         {
-            // design-axes 3.1: a drain on the alchemist themself feeds their own homunculus; 自己培養 doubles it.
+            // design-axes 3.1: a drain on the alchemist themself feeds their own homunculus; 自らを糧に doubles it.
             if (owner == alchemist.Creature)
                 life.RecordSelfDrain(lost, alchemist.Creature.GetPower<SelfCultivationPower>() is null ? 1 : SelfCultivationPower.SelfDrainMultiplier);
             else life.RecordDrain(lost);
@@ -115,21 +116,24 @@ public static class LifeAxis
 }
 
 /// <summary>
-/// The homunculus on the field. It borrows Osty's visuals until the mod has its own art, and never acts.
+/// The homunculus on the field, shown as the ゴーレム (2026-09-29, user). It never acts. Its look is one still
+/// sprite (PetArt) that GolemMotion animates; without the file it falls back to Osty's borrowed visuals.
 /// </summary>
 public sealed class HomunculusPet() : CustomPetModel(visibleHp: true), ILocalizationProvider
 {
     private static string BorrowedVisuals => SceneHelper.GetScenePath("creature_visuals/osty");
     public override int MinInitialHp => 1;
     public override int MaxInitialHp => 1;
-    public override IEnumerable<string> AssetPaths => [BorrowedVisuals];
+    public override IEnumerable<string> AssetPaths => PetArt.HasGolem ? [] : [BorrowedVisuals];
     public override NCreatureVisuals? CreateCustomVisuals()
-        => PreloadManager.Cache.GetScene(BorrowedVisuals).Instantiate<NCreatureVisuals>(PackedScene.GenEditState.Disabled);
+        => PetArt.Golem is { } golem
+            ? NodeFactory<NCreatureVisuals>.CreateFromResource(golem)
+            : PreloadManager.Cache.GetScene(BorrowedVisuals).Instantiate<NCreatureVisuals>(PackedScene.GenEditState.Disabled);
     // Osty's own state machine: BaseLib's SetupAnimationState has no "Revive" trigger, so a pet that fell and
     // then regained HP stayed frozen on the last frame of "die". Osty's adds revive and dead_loop.
     public override CreatureAnimator? SetupCustomAnimationStates(MegaSprite controller)
         => ModelDb.Monster<Osty>().GenerateAnimator(controller);
-    public List<(string, string)> Localization => [("name", "ホムンクルス")];
+    public List<(string, string)> Localization => [("name", "ゴーレム")];
 }
 
 /// <summary>ドレイン（仮称）: like poison, but what it takes goes to the homunculus.</summary>
@@ -138,8 +142,8 @@ public sealed class LifeDrainPower : AlchemyPower
     public override PowerType Type => PowerType.Debuff;
     protected override PowerModel IconSource => ModelDb.Power<PoisonPower>();
     public override List<(string,string)> Localization => new PowerLoc("ドレイン",
-        "ターン開始時、この数値分のHPを失う。失ったHPは錬金術師のホムンクルスHPになる。その後半分になる（端数切り捨て）。",
-        "ターン開始時、{Amount}のHPを失い、同じ量を[gold]ホムンクルスHP[/gold]として奪われる。その後半分になる（端数切り捨て）。");
+        "ターン開始時、この数値分のHPを失う。失ったHPは錬金術師のゴーレムHPになる。その後半分になる（端数切り捨て）。",
+        "ターン開始時、{Amount}のHPを失い、同じ量を[gold]ゴーレムHP[/gold]として奪われる。その後半分になる（端数切り捨て）。");
     // Same hook and participant check as the base game's PoisonPower.
     public override async Task AfterSideTurnStart(CombatSide side, IReadOnlyList<Creature> participants, ICombatState combatState)
     {
@@ -155,9 +159,9 @@ public sealed class HomunculusPower : AlchemyPower
 {
     public override PowerStackType StackType => PowerStackType.Single;
     protected override PowerModel IconSource => ModelDb.Power<RegenPower>();
-    public override List<(string,string)> Localization => new PowerLoc("ホムンクルス",
-        "錬金術師への攻撃のうち、ブロックを超えた分を代わりに受ける。HPはドレインと、ホムンクルスHPを得ると書かれたカードでだけ増える。0になると倒れ、HPを得ると復活する。戦闘終了で消える。",
-        "錬金術師への攻撃のうち、[gold]ブロック[/gold]を超えた分を代わりに受ける。[gold]ホムンクルスHP[/gold]は[gold]ドレイン[/gold]と、ホムンクルスHPを得ると書かれたカードでだけ増える。0になると倒れ、HPを得ると復活する。戦闘終了で消える。");
+    public override List<(string,string)> Localization => new PowerLoc("ゴーレム",
+        "錬金術師への攻撃のうち、ブロックを超えた分を代わりに受ける。HPはドレインと、ゴーレムHPを得ると書かれたカードでだけ増える。0になると倒れ、HPを得ると復活する。戦闘終了で消える。",
+        "錬金術師への攻撃のうち、[gold]ブロック[/gold]を超えた分を代わりに受ける。[gold]ゴーレムHP[/gold]は[gold]ドレイン[/gold]と、ゴーレムHPを得ると書かれたカードでだけ増える。0になると倒れ、HPを得ると復活する。戦闘終了で消える。");
     // Same rule as DieForYouPower: only powered attacks, only while alive, overflow goes back to the alchemist.
     public override Creature ModifyUnblockedDamageTarget(Creature target, decimal _, ValueProp props, Creature? __)
         => target == Owner.PetOwner?.Creature && Owner.IsAlive && props.IsPoweredAttack() ? Owner : target;
@@ -218,7 +222,60 @@ public static class HomunculusPetNodePatch
         if (__instance.GetCreatureNode(creature) is not { } node || __instance.GetCreatureNode(owner.Creature) is not { } ownerNode) return;
         node.ToggleIsInteractable(true);
         node.Position = ownerNode.Position + Vector2.Right * ownerNode.Hitbox.Size.X * 0.5f + Osty.MinOffset;
+        GolemMotion.StartIdle(node);
     }
+}
+
+/// <summary>
+/// The golem is a still sprite, and the game only animates Spine bodies: without this it would stand unchanged
+/// when it falls and when it comes back. Idle: a slow bob (on the sprite's offset, so it never fights the other
+/// tweens). Falling: squashed to rubble height, darkened. Reviving: back up.
+/// </summary>
+public static class GolemMotion
+{
+    private static Sprite2D? Sprite(NCreature node)
+        => node.Entity.Monster is HomunculusPet && !node.HasSpineAnimation ? node.Visuals.Body as Sprite2D : null;
+
+    public static void StartIdle(NCreature node)
+    {
+        if (Sprite(node) is not { } sprite) return;
+        var bob = sprite.CreateTween().SetLoops();
+        bob.TweenProperty(sprite, "offset:y", -5f, 1.1).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+        bob.TweenProperty(sprite, "offset:y", 0f, 1.1).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+    }
+
+    public static void Fall(NCreature node)
+    {
+        if (Sprite(node) is not { } sprite) return;
+        float standing = -sprite.Texture.GetHeight() * 0.5f; // where NCreatureVisualsFactory put the sprite
+        const float squash = 0.45f;
+        var tween = sprite.CreateTween().SetParallel();
+        tween.TweenProperty(sprite, "scale", new Vector2(1.15f, squash), 0.35).SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.In);
+        tween.TweenProperty(sprite, "position:y", standing * squash, 0.35).SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.In);
+        tween.TweenProperty(sprite, "modulate", new Color(0.45f, 0.45f, 0.45f, 0.85f), 0.35);
+    }
+
+    public static void Rise(NCreature node)
+    {
+        if (Sprite(node) is not { } sprite) return;
+        float standing = -sprite.Texture.GetHeight() * 0.5f;
+        var tween = sprite.CreateTween().SetParallel();
+        tween.TweenProperty(sprite, "scale", Vector2.One, 0.4).SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
+        tween.TweenProperty(sprite, "position:y", standing, 0.4).SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
+        tween.TweenProperty(sprite, "modulate", Colors.White, 0.3);
+    }
+}
+
+[HarmonyPatch(typeof(NCreature), nameof(NCreature.StartDeathAnim))]
+public static class GolemFallPatch
+{
+    public static void Postfix(NCreature __instance) => GolemMotion.Fall(__instance);
+}
+
+[HarmonyPatch(typeof(NCreature), nameof(NCreature.StartReviveAnim))]
+public static class GolemRisePatch
+{
+    public static void Postfix(NCreature __instance) => GolemMotion.Rise(__instance);
 }
 
 /// <summary>
