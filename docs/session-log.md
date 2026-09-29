@@ -6,7 +6,21 @@
 
 ## 2026-09-29〜30 セッション7（キービジュアル決定・カード絵・ゴーレム・キャラの見た目）— 次のセッションはここから
 
-- **キャラの見た目（2026-09-30、ユーザー依頼の1・2）**：`scripts/import-pet.py --out`でキービジュアルを切り抜き`assets/art/character/alchemist.png`、`scripts/make-character-art.py`で上部アイコン85×85・輪郭・キャラ選択の胸像132×195・マップのコマ49×64を作成。キャラ選択とマップのコマはゲームが`CompressedTexture2D`型で持つため、同じ形式の.ctex（GST2＋WebP）も書き出してC#で`CompressedTexture2D.Load`。`CharacterArt`（CardArt.cs）が読み、`AlchemistCharacter.CreateCustomVisuals`/`CustomIcon`とHarmonyのgetter後置きで差し替え。動きは`SpriteMotion`（旧GolemMotion）で待機の揺れ・攻撃で前へ・スキルで伸び・倒れる・復活（ゴーレムと共通）。表示の高さは試作330px。スモーク378件PASS。**ゲーム起動中のため未反映**（ゲーム終了後に`scripts/build.ps1`→`scripts/update.ps1`）。休憩所・商人・キャラ選択画面の背景はアイアンクラッドのまま（3番目、画像生成あり）。
+### 今の状態
+- ブランチ`feature/art-golem`（mainへのマージ・プッシュは未実施）。版は0.24.0のまま（見た目の変更が中心。リリース時に版を上げる）。すべてゲームへ反映済み。
+- ルール211件・スモーク378件PASS。
+
+### 次にやること・返答待ち
+1. **実画面の確認**（ユーザー）：カード絵、ゴーレムと錬金術師の大きさ・位置・動き、上部アイコン・キャラ選択の絵・マップのコマ。大きさは`PetArt.GolemHeight`（190）・`CharacterArt.BodyHeight`（330）で調整。
+2. 3番目：休憩所・商人の姿、キャラ選択画面の背景（画像生成が必要。Codexの枠と相談）。
+3. ゴーレムの大きさをHPで変える演出（提案のみ、未決）。
+4. レリック・ポーションプールがアイアンクラッドの流用（前セッションからの持ち越し）。
+5. カード名の見直しの続き（漢字が多い）。
+6. mainへのマージ・プッシュ。
+
+### やったこと
+
+- **キャラの見た目（2026-09-30、ユーザー依頼の1・2）**：`scripts/import-pet.py --out`でキービジュアルを切り抜き`assets/art/character/alchemist.png`、`scripts/make-character-art.py`で上部アイコン85×85・輪郭・キャラ選択の胸像132×195・マップのコマ49×64を作成。キャラ選択とマップのコマはゲームが`CompressedTexture2D`型で持つため、同じ形式の.ctex（GST2＋WebP）も書き出してC#で`CompressedTexture2D.Load`。`CharacterArt`（CardArt.cs）が読み、`AlchemistCharacter.CreateCustomVisuals`/`CustomIcon`とHarmonyのgetter後置きで差し替え。動きは`SpriteMotion`（旧GolemMotion）で待機の揺れ・攻撃で前へ・スキルで伸び・倒れる・復活（ゴーレムと共通）。表示の高さは試作330px。スモーク378件PASS。コミットa4c112b。ゲームへ反映済み（旧版`artifacts/backups/20260930-012321-812`。エレメント・リローデッドの改名も同時に反映）。休憩所・商人・キャラ選択画面の背景はアイアンクラッドのまま（3番目、画像生成あり）。
 - バニラのキャラはSpine（部品の絵＋骨格アニメーション）。同じことはSpineエディタと部品分けの絵が必要なので、1枚絵＋補間の動きにした（ユーザー了承）。
 
 - **キービジュアル決定**：sigil案 → 単純化（v4）→ b案に線を足す（v5）→ **b2**を採用。`assets/concepts/alchemist-character-v3.png`。`scripts/art-prompts.py`の`STYLE`を更新、`generate-art.py`は決定版を参考画像に渡す。
