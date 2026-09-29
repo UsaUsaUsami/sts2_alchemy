@@ -652,7 +652,8 @@ public static class Smoke
             Check(character.CharacterSelectIcon is { } selectIcon && selectIcon.GetWidth()==132 && selectIcon.GetHeight()==195
                 && character.MapMarker is { } mapMarker && mapMarker.GetWidth()==49 && mapMarker==CharacterArt.MapMarker,
                 $"the character select portrait and the map marker load from the mod's .ctex files ({character.CharacterSelectIcon?.GetSize()}, {character.MapMarker?.GetSize()})");
-            var bgContainer=new Control();
+            // Shaped like the base game's AnimatedBg at 1920x1080: 2560x1200 at (-388,-80), scaled 1.1 about (1280, 600).
+            var bgContainer=new Control{Position=new Vector2(-388,-80),Size=new Vector2(2560,1200),Scale=new Vector2(1.1f,1.1f),PivotOffset=new Vector2(1280,600)};
             bgContainer.AddChild(new Control{Name=character.Id.Entry+"_bg"});
             AlchemistSelectBg.Swap(bgContainer,character,retry:false);
             var bgChildren=bgContainer.GetChildren().ToArray();
@@ -660,6 +661,13 @@ public static class Smoke
             Check(bgChildren.Length==1 && bgChildren[0] is TextureRect { Texture: { } bgTex } && bgTex.GetWidth()==1920
                 && selectPatched?.Postfixes.Any(x=>x.PatchMethod.DeclaringType==typeof(AlchemistSelectBgPatch))==true,
                 $"the character select background is swapped for the alchemist's own picture ({bgChildren.Length} children, {bgChildren.FirstOrDefault()?.GetType().Name})");
+            // Where the picture lands on screen: the container's own transform applied to the picture's rect.
+            Vector2 OnScreen(Vector2 p)=>bgContainer.Position+bgContainer.PivotOffset+(p-bgContainer.PivotOffset)*1.1f;
+            var picture=bgChildren.FirstOrDefault() as Control;
+            var shownFrom=picture is null ? Vector2.Zero : OnScreen(picture.Position);
+            var shownTo=picture is null ? Vector2.Zero : OnScreen(picture.Position+picture.Size);
+            Check(shownFrom.X<=0 && shownFrom.Y<=0 && shownTo.X>=1920 && shownTo.Y>=1080 && shownTo.X-shownFrom.X<1920*1.1f && shownTo.Y-shownFrom.Y<1080*1.1f,
+                $"the background picture just covers the 1920x1080 screen instead of the oversized container (shown {shownFrom} to {shownTo})");
             bgContainer.Free();
             player.Creature.LoseBlockInternal(player.Creature.Block); // 盛り土 is earth: its transition gave block
             var overflowResults=(await CreatureCmd.Damage(new ThrowingPlayerChoiceContext(),player.Creature,10,ValueProp.Move,null,null)).ToArray();

@@ -20,6 +20,7 @@
 
 ### やったこと
 - **キャラ選択画面の背景**（2026-09-30、ユーザー依頼）：`scripts/select-bg.py`で1回生成（工房に立つ錬金術師とゴーレム、四相の光、左側は暗め）→`assets/art/character/select_bg.png`（1920×1080）。ゲームは全キャラの背景シーンをパスで先読みするため、パスはアイアンクラッドのまま、画面に置かれた直後に全画面の1枚絵へ差し替え（`AlchemistSelectBg`、`SelectCharacter`・ランダム選択・マルチの読み込み画面の後置き）。スモーク379件PASS、ゲームへ反映済み（旧版`artifacts/backups/20260930-013408-426`）。実画面は未確認（バニラの背景にある光の粒子や動きはない）。
+- ユーザー報告「はみ出してる」→ 背景の入れ物（`AnimatedBg`）は画面より大きく（1920×1080で2560×1200、1.1倍、マウスで動く）、入れ物いっぱいに広げた絵が拡大されて錬金術師が右にはみ出していた。入れ物の変形から画面に映る範囲を計算し、4%の余白を付けてそこに置くよう修正（`AlchemistSelectBg.VisibleRect`）。あわせて、TextureRectの大きさを`IgnoreSize`の後に設定（先だと元画像の1920×1080未満に縮まない）。スモーク380件PASS、反映済み（旧版`artifacts/backups/20260930-015142-417`）。実画面は未確認。
 
 - **キャラの見た目（2026-09-30、ユーザー依頼の1・2）**：`scripts/import-pet.py --out`でキービジュアルを切り抜き`assets/art/character/alchemist.png`、`scripts/make-character-art.py`で上部アイコン85×85・輪郭・キャラ選択の胸像132×195・マップのコマ49×64を作成。キャラ選択とマップのコマはゲームが`CompressedTexture2D`型で持つため、同じ形式の.ctex（GST2＋WebP）も書き出してC#で`CompressedTexture2D.Load`。`CharacterArt`（CardArt.cs）が読み、`AlchemistCharacter.CreateCustomVisuals`/`CustomIcon`とHarmonyのgetter後置きで差し替え。動きは`SpriteMotion`（旧GolemMotion）で待機の揺れ・攻撃で前へ・スキルで伸び・倒れる・復活（ゴーレムと共通）。表示の高さは試作330px。スモーク378件PASS。コミットa4c112b。ゲームへ反映済み（旧版`artifacts/backups/20260930-012321-812`。エレメント・リローデッドの改名も同時に反映）。休憩所・商人・キャラ選択画面の背景はアイアンクラッドのまま（3番目、画像生成あり）。
 - バニラのキャラはSpine（部品の絵＋骨格アニメーション）。同じことはSpineエディタと部品分けの絵が必要なので、1枚絵＋補間の動きにした（ユーザー了承）。

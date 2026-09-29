@@ -123,11 +123,33 @@ public static class AlchemistSelectBg
         }
         // AddChildSafely defers when the container is busy; then the borrowed one arrives next frame.
         if (olds.Count == 0 && retry) Callable.From(() => Swap(container, character, false)).CallDeferred();
-        container.AddChild(new TextureRect
+        var (position, size) = VisibleRect(container);
+        var rect = new TextureRect
         {
-            Name = name, Texture = picture, AnchorRight = 1, AnchorBottom = 1, MouseFilter = Control.MouseFilterEnum.Ignore,
+            Name = name, Texture = picture, MouseFilter = Control.MouseFilterEnum.Ignore,
             ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
-        });
+        };
+        // Only after IgnoreSize: before it, the texture's own 1920x1080 is the minimum size and Size cannot go below.
+        rect.Position = position;
+        rect.Size = size;
+        container.AddChild(rect);
+    }
+
+    /// <summary>
+    /// The screen area in the container's own coordinates, plus a small margin. The base game's container
+    /// ("AnimatedBg") is larger than the screen (2560x1200 at 1920x1080), scaled 1.1 about its pivot, and drifts with
+    /// the mouse: its backgrounds are painted for that bigger canvas. A picture stretched over the whole container
+    /// was blown up and pushed the alchemist off the right edge (user report, 2026-09-30).
+    /// </summary>
+    public static (Vector2 Position, Vector2 Size) VisibleRect(Control container, Vector2? screenSize = null)
+    {
+        const float margin = 0.04f; // room for the mouse drift
+        var screen = screenSize ?? (container.IsInsideTree() ? container.GetViewportRect().Size : new Vector2(1920, 1080));
+        var scale = container.Scale.X == 0 ? 1f : container.Scale.X;
+        Vector2 Local(Vector2 point) => container.PivotOffset + (point - container.Position - container.PivotOffset) / scale;
+        var topLeft = Local(Vector2.Zero);
+        var size = Local(screen) - topLeft;
+        return (topLeft - size * margin, size * (1 + 2 * margin));
     }
 
     public static Control? Container(object screen) => Traverse.Create(screen).Field("_bgContainer").GetValue<Control>();
