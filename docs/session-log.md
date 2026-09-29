@@ -4,7 +4,10 @@
 
 ---
 
-## 2026-09-29 セッション7（キービジュアル決定）— 次のセッションはここから
+## 2026-09-29〜30 セッション7（キービジュアル決定・カード絵・ゴーレム・キャラの見た目）— 次のセッションはここから
+
+- **キャラの見た目（2026-09-30、ユーザー依頼の1・2）**：`scripts/import-pet.py --out`でキービジュアルを切り抜き`assets/art/character/alchemist.png`、`scripts/make-character-art.py`で上部アイコン85×85・輪郭・キャラ選択の胸像132×195・マップのコマ49×64を作成。キャラ選択とマップのコマはゲームが`CompressedTexture2D`型で持つため、同じ形式の.ctex（GST2＋WebP）も書き出してC#で`CompressedTexture2D.Load`。`CharacterArt`（CardArt.cs）が読み、`AlchemistCharacter.CreateCustomVisuals`/`CustomIcon`とHarmonyのgetter後置きで差し替え。動きは`SpriteMotion`（旧GolemMotion）で待機の揺れ・攻撃で前へ・スキルで伸び・倒れる・復活（ゴーレムと共通）。表示の高さは試作330px。スモーク378件PASS。**ゲーム起動中のため未反映**（ゲーム終了後に`scripts/build.ps1`→`scripts/update.ps1`）。休憩所・商人・キャラ選択画面の背景はアイアンクラッドのまま（3番目、画像生成あり）。
+- バニラのキャラはSpine（部品の絵＋骨格アニメーション）。同じことはSpineエディタと部品分けの絵が必要なので、1枚絵＋補間の動きにした（ユーザー了承）。
 
 - **キービジュアル決定**：sigil案 → 単純化（v4）→ b案に線を足す（v5）→ **b2**を採用。`assets/concepts/alchemist-character-v3.png`。`scripts/art-prompts.py`の`STYLE`を更新、`generate-art.py`は決定版を参考画像に渡す。
 - 試作4枚（火花・岩盤・吸血の刃・賢者の石）を新デザインで作り直して取り込み済み。4枚とも同じキャラで揃った。

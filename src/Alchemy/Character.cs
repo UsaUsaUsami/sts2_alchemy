@@ -1,4 +1,6 @@
-using BaseLib.Abstracts;
+﻿using BaseLib.Abstracts;
+using BaseLib.Utils.NodeFactories;
+using HarmonyLib;
 using Godot;
 using MegaCrit.Sts2.Core.Entities.Characters;
 using MegaCrit.Sts2.Core.Models;
@@ -6,6 +8,7 @@ using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.CardPools;
 using MegaCrit.Sts2.Core.Models.PotionPools;
 using MegaCrit.Sts2.Core.Models.RelicPools;
+using MegaCrit.Sts2.Core.Nodes.Combat;
 
 namespace Alchemy;
 
@@ -24,6 +27,18 @@ public sealed class AlchemistCharacter : PlaceholderCharacterModel
         ModelDb.Card<DefendAlchemist>(),
         ModelDb.Card<EarthenGuard>(), ModelDb.Card<SoothingMist>(), ModelDb.Card<InstantAlchemy>()];
     public override IReadOnlyList<RelicModel> StartingRelics => [ModelDb.Relic<MaterialBox>()];
+    // 2026-09-30: the alchemist's own look (CharacterArt). Rest site, merchant and character select background
+    // still borrow the Ironclad's.
+    public override NCreatureVisuals? CreateCustomVisuals()
+        => CharacterArt.Body is { } body ? NodeFactory<NCreatureVisuals>.CreateFromResource(body) : null;
+    // Same shape as the base game's scenes/ui/character_icons/*_icon.tscn: a full-rect TextureRect.
+    public override Control? CustomIcon => CharacterArt.Icon is { } icon
+        ? new TextureRect
+        {
+            Texture = icon, AnchorRight = 1, AnchorBottom = 1, MouseFilter = Control.MouseFilterEnum.Ignore,
+            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+        }
+        : null;
     public override List<(string, string)> Localization => new CharacterLoc(
         "錬金術師", "錬金術師", "四元素の相を切り替えて戦い、現在相から素材を採取する。\n工房で錬成・改造・調薬・付与を行う旅人。\n【試作版：外見は仮】",
         "彼ら", "彼ら", "彼らの", "彼らの", "薬草と鉄", "次の相へ。", "炉の火が消えた。", "まだ火は残っている。", "次の工房に備えよう。", "錬金術師のカード", "錬金術師のカードを使う。");
@@ -47,4 +62,44 @@ public sealed class AlchemyRelicPool : CustomRelicPoolModel
     public override Color LabOutlineColor => new("73d6b2");
     public override string EnergyColorName => "ironclad";
     protected override RelicModel[] GenerateAllRelics() => ModelDb.RelicPool<IroncladRelicPool>().AllRelics.ToArray();
+}
+
+/// <summary>
+/// The icon textures are plain getters on CharacterModel that BaseLib only lets a mod redirect by res:// path, and
+/// the mod's art is loose files (CharacterArt). Each postfix swaps in the alchemist's texture when one loaded.
+/// </summary>
+[HarmonyPatch(typeof(CharacterModel), nameof(CharacterModel.IconTexture), MethodType.Getter)]
+public static class AlchemistIconTexturePatch
+{
+    public static void Postfix(CharacterModel __instance, ref Texture2D __result)
+    {
+        if (__instance is AlchemistCharacter && CharacterArt.Icon is { } icon) __result = icon;
+    }
+}
+
+[HarmonyPatch(typeof(CharacterModel), nameof(CharacterModel.IconOutlineTexture), MethodType.Getter)]
+public static class AlchemistIconOutlinePatch
+{
+    public static void Postfix(CharacterModel __instance, ref Texture2D __result)
+    {
+        if (__instance is AlchemistCharacter && CharacterArt.IconOutline is { } outline) __result = outline;
+    }
+}
+
+[HarmonyPatch(typeof(CharacterModel), nameof(CharacterModel.CharacterSelectIcon), MethodType.Getter)]
+public static class AlchemistCharacterSelectIconPatch
+{
+    public static void Postfix(CharacterModel __instance, ref CompressedTexture2D __result)
+    {
+        if (__instance is AlchemistCharacter && CharacterArt.CharacterSelect is { } portrait) __result = portrait;
+    }
+}
+
+[HarmonyPatch(typeof(CharacterModel), nameof(CharacterModel.MapMarker), MethodType.Getter)]
+public static class AlchemistMapMarkerPatch
+{
+    public static void Postfix(CharacterModel __instance, ref CompressedTexture2D __result)
+    {
+        if (__instance is AlchemistCharacter && CharacterArt.MapMarker is { } marker) __result = marker;
+    }
 }

@@ -1,7 +1,7 @@
 """Turn a pet concept (a figure on a plain grey background) into the in-game sprite: background made transparent,
 cropped to the figure, scaled to a fixed height.
 
-Usage: python scripts/import-pet.py [source.png] [--height 360] [--tolerance 12]
+Usage: python scripts/import-pet.py [source.png] [--height 360] [--tolerance 12] [--out assets/art/pets/golem.png]
 Default source: assets/concepts/homunculus-v1.png (the stone golem, 2026-09-29). Writes assets/art/pets/golem.png,
 which HomunculusPet loads from art/pets next to the DLL. The background is flood-filled from the borders, so grey
 inside the figure stays.
@@ -23,7 +23,7 @@ def arg(name, default):
 source = Path(args[0]) if args else ROOT / "assets/concepts/homunculus-v1.png"
 height = arg("--height", 360)
 tolerance = arg("--tolerance", 12)
-out = ROOT / "assets/art/pets/golem.png"
+out = ROOT / arg("--out", "assets/art/pets/golem.png")
 
 image = Image.open(source).convert("RGBA")
 w, h = image.size

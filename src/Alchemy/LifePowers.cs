@@ -117,7 +117,7 @@ public static class LifeAxis
 
 /// <summary>
 /// The homunculus on the field, shown as the ゴーレム (2026-09-29, user). It never acts. Its look is one still
-/// sprite (PetArt) that GolemMotion animates; without the file it falls back to Osty's borrowed visuals.
+/// sprite (PetArt) that SpriteMotion animates; without the file it falls back to Osty's borrowed visuals.
 /// </summary>
 public sealed class HomunculusPet() : CustomPetModel(visibleHp: true), ILocalizationProvider
 {
@@ -222,19 +222,21 @@ public static class HomunculusPetNodePatch
         if (__instance.GetCreatureNode(creature) is not { } node || __instance.GetCreatureNode(owner.Creature) is not { } ownerNode) return;
         node.ToggleIsInteractable(true);
         node.Position = ownerNode.Position + Vector2.Right * ownerNode.Hitbox.Size.X * 0.5f + Osty.MinOffset;
-        GolemMotion.StartIdle(node);
+        SpriteMotion.StartIdle(node);
     }
 }
 
 /// <summary>
-/// The golem is a still sprite, and the game only animates Spine bodies: without this it would stand unchanged
-/// when it falls and when it comes back. Idle: a slow bob (on the sprite's offset, so it never fights the other
-/// tweens). Falling: squashed to rubble height, darkened. Reviving: back up.
+/// The golem and the alchemist (2026-09-30) are still sprites, and the game only animates Spine bodies: without
+/// this they would stand unchanged through attacks, deaths and revivals. Idle: a slow bob (on the sprite's offset,
+/// so it never fights the other tweens). Attack: a quick lunge toward the enemies. Cast / power up: a small hop.
+/// Falling: squashed low, darkened. Reviving: back up.
 /// </summary>
-public static class GolemMotion
+public static class SpriteMotion
 {
     private static Sprite2D? Sprite(NCreature node)
-        => node.Entity.Monster is HomunculusPet && !node.HasSpineAnimation ? node.Visuals.Body as Sprite2D : null;
+        => !node.HasSpineAnimation && (node.Entity.Monster is HomunculusPet || node.Entity.Player?.Character is AlchemistCharacter)
+            ? node.Visuals.Body as Sprite2D : null;
 
     public static void StartIdle(NCreature node)
     {
@@ -242,6 +244,26 @@ public static class GolemMotion
         var bob = sprite.CreateTween().SetLoops();
         bob.TweenProperty(sprite, "offset:y", -5f, 1.1).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
         bob.TweenProperty(sprite, "offset:y", 0f, 1.1).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+    }
+
+    public static void Trigger(NCreature node, string trigger)
+    {
+        if (Sprite(node) is not { } sprite) return;
+        var tween = sprite.CreateTween();
+        switch (trigger)
+        {
+            case "Attack":
+                tween.TweenProperty(sprite, "position:x", 40f, 0.08).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
+                tween.TweenProperty(sprite, "position:x", 0f, 0.22).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
+                break;
+            case "Cast" or "PowerUp":
+                tween.TweenProperty(sprite, "scale", new Vector2(0.95f, 1.06f), 0.1).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
+                tween.TweenProperty(sprite, "scale", Vector2.One, 0.2).SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
+                break;
+            default:
+                tween.Kill();
+                break;
+        }
     }
 
     public static void Fall(NCreature node)
@@ -267,15 +289,32 @@ public static class GolemMotion
 }
 
 [HarmonyPatch(typeof(NCreature), nameof(NCreature.StartDeathAnim))]
-public static class GolemFallPatch
+public static class SpriteFallPatch
 {
-    public static void Postfix(NCreature __instance) => GolemMotion.Fall(__instance);
+    public static void Postfix(NCreature __instance) => SpriteMotion.Fall(__instance);
 }
 
 [HarmonyPatch(typeof(NCreature), nameof(NCreature.StartReviveAnim))]
-public static class GolemRisePatch
+public static class SpriteRisePatch
 {
-    public static void Postfix(NCreature __instance) => GolemMotion.Rise(__instance);
+    public static void Postfix(NCreature __instance) => SpriteMotion.Rise(__instance);
+}
+
+[HarmonyPatch(typeof(NCreature), nameof(NCreature.SetAnimationTrigger))]
+public static class SpriteTriggerPatch
+{
+    public static void Postfix(NCreature __instance, string trigger) => SpriteMotion.Trigger(__instance, trigger);
+}
+
+/// The alchemist's sprite starts bobbing once its node is on the field (the pet does so in HomunculusPetNodePatch).
+[HarmonyPatch(typeof(NCombatRoom), nameof(NCombatRoom.AddCreature))]
+public static class AlchemistSpriteIdlePatch
+{
+    public static void Postfix(NCombatRoom __instance, Creature creature)
+    {
+        if (creature.Player?.Character is AlchemistCharacter && __instance.GetCreatureNode(creature) is { } node)
+            SpriteMotion.StartIdle(node);
+    }
 }
 
 /// <summary>

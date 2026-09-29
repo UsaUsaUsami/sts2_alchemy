@@ -642,6 +642,16 @@ public static class Smoke
             var golemBody=NCombatRoom.Instance?.GetCreatureNode(pet) is { } revivedNode ? revivedNode.Visuals.Body : null;
             Check(golemBody is Sprite2D { Texture: { } golemTex } && golemTex.GetHeight()==PetArt.GolemHeight && pet.Name=="ゴーレム",
                 $"the homunculus is shown as the golem sprite and named ゴーレム (body {golemBody?.GetType().Name ?? "missing"}, name {pet.Name})");
+            // 2026-09-30: the alchemist's own sprite and icons (CharacterArt) instead of the Ironclad's.
+            var alchemistBody=NCombatRoom.Instance?.GetCreatureNode(player.Creature)?.Visuals.Body;
+            var character=player.Character;
+            Check(alchemistBody is Sprite2D { Texture: { } bodyTex } && bodyTex.GetHeight()==CharacterArt.BodyHeight,
+                $"the alchemist is shown as their own sprite (body {alchemistBody?.GetType().Name ?? "missing"})");
+            Check(character.IconTexture==CharacterArt.Icon && character.IconOutlineTexture==CharacterArt.IconOutline && CharacterArt.Icon is not null,
+                "the alchemist's head icon and outline replace the borrowed ones");
+            Check(character.CharacterSelectIcon is { } selectIcon && selectIcon.GetWidth()==132 && selectIcon.GetHeight()==195
+                && character.MapMarker is { } mapMarker && mapMarker.GetWidth()==49 && mapMarker==CharacterArt.MapMarker,
+                $"the character select portrait and the map marker load from the mod's .ctex files ({character.CharacterSelectIcon?.GetSize()}, {character.MapMarker?.GetSize()})");
             player.Creature.LoseBlockInternal(player.Creature.Block); // 盛り土 is earth: its transition gave block
             var overflowResults=(await CreatureCmd.Damage(new ThrowingPlayerChoiceContext(),player.Creature,10,ValueProp.Move,null,null)).ToArray();
             Check(pet.IsDead && player.Creature.CurrentHp==ownHpBeforeHit-4-4,"damage past the homunculus's HP goes through to the alchemist");

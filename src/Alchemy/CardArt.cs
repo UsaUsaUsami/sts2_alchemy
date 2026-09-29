@@ -43,6 +43,61 @@ public static class CardArt
 }
 
 /// <summary>
+/// The alchemist's own look (2026-09-30), from art/character next to the DLL (scripts/make-character-art.py):
+/// the combat sprite cut from the key visual, the head icon and its outline, and two .ctex files for the character
+/// select button and the map marker, which the game types as CompressedTexture2D. Any missing file keeps the
+/// borrowed Ironclad asset for that spot.
+/// </summary>
+public static class CharacterArt
+{
+    /// On-screen height of the combat sprite in pixels. A trial value.
+    public const int BodyHeight = 330;
+    private static readonly Dictionary<string, Texture2D?> Loaded = [];
+
+    public static string ArtDirectory
+        => Path.Combine(Path.GetDirectoryName(typeof(CharacterArt).Assembly.Location) ?? "", "art", "character");
+
+    public static bool HasBody => File.Exists(Path.Combine(ArtDirectory, "alchemist.png"));
+    public static Texture2D? Body => Png("alchemist.png", BodyHeight);
+    public static Texture2D? Icon => Png("icon.png");
+    public static Texture2D? IconOutline => Png("icon_outline.png");
+    public static CompressedTexture2D? CharacterSelect => Ctex("char_select.ctex");
+    public static CompressedTexture2D? MapMarker => Ctex("map_marker.ctex");
+
+    private static Texture2D? Png(string file, int height = 0)
+    {
+        if (Loaded.TryGetValue(file, out var cached)) return cached;
+        Texture2D? texture = null;
+        string path = Path.Combine(ArtDirectory, file);
+        try
+        {
+            if (File.Exists(path) && Image.LoadFromFile(path) is { } image && !image.IsEmpty())
+            {
+                if (height > 0) image.Resize(image.GetWidth() * height / image.GetHeight(), height, Image.Interpolation.Lanczos);
+                texture = ImageTexture.CreateFromImage(image);
+            }
+        }
+        catch (Exception ex) { GD.PushWarning($"[Alchemy] character art {path} skipped: {ex.Message}"); }
+        return Loaded[file] = texture;
+    }
+
+    private static CompressedTexture2D? Ctex(string file)
+    {
+        if (Loaded.TryGetValue(file, out var cached)) return cached as CompressedTexture2D;
+        CompressedTexture2D? texture = null;
+        string path = Path.Combine(ArtDirectory, file);
+        try
+        {
+            var candidate = new CompressedTexture2D();
+            if (File.Exists(path) && candidate.Load(path) == Error.Ok) texture = candidate;
+        }
+        catch (Exception ex) { GD.PushWarning($"[Alchemy] character art {path} skipped: {ex.Message}"); }
+        Loaded[file] = texture;
+        return texture;
+    }
+}
+
+/// <summary>
 /// The homunculus pet's sprite (2026-09-29: a stone golem, assets/concepts/homunculus-v1.png), a transparent PNG at
 /// art/pets/golem.png made by scripts/import-pet.py. Without the file the pet keeps Osty's borrowed visuals.
 /// </summary>
