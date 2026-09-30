@@ -39,6 +39,12 @@ public sealed class AlchemistCharacter : PlaceholderCharacterModel
             ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
         }
         : null;
+    public override string? CustomCharacterSelectIconPath
+        => CharacterArt.CtexPath("char_select.ctex") ?? base.CustomCharacterSelectIconPath;
+    public override string? CustomCharacterSelectLockedIconPath
+        => CharacterArt.CtexPath("char_select.ctex") ?? base.CustomCharacterSelectLockedIconPath;
+    public override string? CustomMapMarkerPath
+        => CharacterArt.CtexPath("map_marker.ctex") ?? base.CustomMapMarkerPath;
     public override List<(string, string)> Localization => new CharacterLoc(
         "錬金術師", "錬金術師", "四元素の相を切り替えて戦い、現在相から素材を採取する。\n工房で錬成・改造・調薬・付与を行う旅人。\n【試作版：外見は仮】",
         "彼ら", "彼ら", "彼らの", "彼らの", "薬草と鉄", "次の相へ。", "炉の火が消えた。", "まだ火は残っている。", "次の工房に備えよう。", "錬金術師のカード", "錬金術師のカードを使う。");

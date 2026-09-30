@@ -5,7 +5,7 @@ Input: assets/art/character/alchemist.png (python scripts/import-pet.py assets/c
 --height 1000 --out assets/art/character/alchemist.png). Writes into assets/art/character/:
   icon.png          85x85   top panel, run history, ancients' dialogue (the hooded head with the sigil)
   icon_outline.png  85x85   white silhouette of icon.png, drawn behind it
-  char_select.png   132x195 character select button (bust on a teal panel)
+  char_select.png   132x195 character select button (the hooded face close up on a teal panel)
   map_marker.png    49x64   map position marker (a chevron, like the base game's)
 char_select and map_marker are also written as .ctex: the game types those two as CompressedTexture2D, which only
 loads Godot's own texture file (header "GST2" + WebP, the same layout as the base game's imported files).
@@ -20,6 +20,7 @@ from PIL import Image, ImageDraw, ImageFilter
 ROOT = Path(__file__).resolve().parent.parent
 DIR = ROOT / "assets/art/character"
 TEAL, DARK, GOLD = (115, 214, 178), (22, 54, 50), (214, 170, 84)
+SELECT_BG = (32, 150, 128)  # saturated like the base game's portraits (red, green, blue, pink, orange)
 
 body = Image.open(DIR / "alchemist.png").convert("RGBA")
 w, h = body.size
@@ -37,15 +38,17 @@ outline = Image.new("RGBA", icon.size, (255, 255, 255, 0))
 outline.putalpha(alpha)
 outline.save(DIR / "icon_outline.png")
 
-# Character select: head and shoulders on a flat panel, like the base game's buttons.
+# Character select: the hooded face close up on a flat saturated colour, like the base game's buttons (user,
+# 2026-09-30: "closer, about just the face"). The sigil face sits at about (0.71w, 0.12h) of the key visual.
 cw, ch = 132, 195
-bust = body.crop((int(w * 0.32), 0, int(w * 0.94), int(w * 0.62 * ch / cw)))
-bust = bust.resize((cw, round(bust.height * cw / bust.width)), Image.LANCZOS)
-panel = Image.new("RGBA", (cw, ch), DARK + (255,))
+fw = int(w * 0.34)
+fx = int(w * 0.71) - fw // 2
+bust = body.crop((fx, int(h * 0.01), fx + fw, int(h * 0.01) + fw * ch // cw)).resize((cw, ch), Image.LANCZOS)
+panel = Image.new("RGBA", (cw, ch), SELECT_BG + (255,))
 glow = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))
-ImageDraw.Draw(glow).ellipse((-20, 10, cw + 20, ch + 60), fill=TEAL + (110,))
-panel.alpha_composite(glow.filter(ImageFilter.GaussianBlur(24)))
-panel.alpha_composite(bust.crop((0, 0, cw, ch)), (0, 8))
+ImageDraw.Draw(glow).ellipse((10, 20, cw - 10, ch - 60), fill=(150, 235, 205, 120))
+panel.alpha_composite(glow.filter(ImageFilter.GaussianBlur(20)))
+panel.alpha_composite(bust)
 ImageDraw.Draw(panel).rectangle((0, 0, cw - 1, ch - 1), outline=GOLD + (255,), width=2)
 panel.save(DIR / "char_select.png")
 

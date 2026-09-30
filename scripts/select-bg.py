@@ -3,7 +3,10 @@
 Usage: python scripts/select-bg.py [--note "extra direction"] [--crop-only]
 Writes assets/concepts/select-bg.png (the raw image) and assets/art/character/select_bg.png (1920x1080, what the
 mod shows; CharacterArt.SelectBg). The base game's select screens put the character right of centre and keep the
-left side calm for the character list and description (2026-09-30).
+left side calm for the character list and description (2026-09-30). Second version (user, same day: the workshop was
+too busy and the golem sat under the ascension panel): a plain backdrop, the golem at the far right. At 1920x1080 the
+game's UI covers the info panel (x 296-822, y 345-779), the ascension panel (x 643-1277, y 738-855), the character
+buttons (y 851-1005, centred) and the confirm button (x 1760-, y 726-836), from character_select_screen.tscn.
 """
 import shutil
 import subprocess
@@ -36,12 +39,16 @@ brief = (
     "The first attached image is the base game's cast (visual language only, do not copy). The second is the "
     "Alchemist: draw them exactly like it (hooded charcoal robe with gold trim, a glowing gold alchemical sigil as the "
     "face, a vertical band of the four element marks, belt with two vials). The third is their small stone golem "
-    "companion: include it at the Alchemist's feet.\n"
-    "Composition: the Alchemist stands large, right of centre (occupying roughly the right half), three-quarter view, "
-    "a confident pose with one hand raised, a faint gold transmutation circle glowing under them. Setting: a dim, "
-    "atmospheric alchemist's workshop inside old stone ruins, with a glowing furnace, glassware, and four subtle "
-    "wisps of the element colours (ochre earth, teal water, orange fire, pale cyan air) drifting around the figure. "
-    "The left 40% of the image is darker and calmer (UI text will sit there) but still part of the same scene.\n"
+    "companion: include it clearly, standing beside the Alchemist.\n"
+    "Background: SIMPLE, like the base game's select screens: no room, no furniture, no architecture, no props. Only "
+    "a dark charcoal-to-deep-teal backdrop with soft painterly brush texture and a large faint gold transmutation "
+    "circle glowing behind the figures, plus four small wisps of the element colours (ochre earth, teal water, orange "
+    "fire, pale cyan air) near the Alchemist's raised hand.\n"
+    "Composition (the game's UI covers parts of the screen, keep them plain): the Alchemist stands large in the right "
+    "half, three-quarter view, one hand raised, the hood's top near the upper edge. The golem stands at the far right "
+    "next to the Alchemist, with its whole body visible and its feet ABOVE the bottom quarter. The left 40% and the "
+    "bottom-centre band (the lowest 30% between 25% and 70% of the width, where the character buttons and the "
+    "ascension selector sit) contain only the plain backdrop.\n"
     "Style: Slay the Spire 2 painterly look, minimal thin line work, large flat colour masses with soft brush "
     "texture, dramatic lighting. No text, no logo, no frame, no UI.\n" + (f"Extra direction: {note}\n" if note else ""))
 cmd = [codex, "exec", "-s", "workspace-write", "-C", str(ROOT), "-c", 'model_reasoning_effort="low"']

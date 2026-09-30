@@ -652,6 +652,13 @@ public static class Smoke
             Check(character.CharacterSelectIcon is { } selectIcon && selectIcon.GetWidth()==132 && selectIcon.GetHeight()==195
                 && character.MapMarker is { } mapMarker && mapMarker.GetWidth()==49 && mapMarker==CharacterArt.MapMarker,
                 $"the character select portrait and the map marker load from the mod's .ctex files ({character.CharacterSelectIcon?.GetSize()}, {character.MapMarker?.GetSize()})");
+            // The select button and map load by path (ResourceLoader), not through the patched getters alone.
+            string? selectPath=Traverse.Create(character).Property("CharacterSelectIconPath").GetValue<string>();
+            string? markerPath=Traverse.Create(character).Property("MapMarkerPath").GetValue<string>();
+            var byPath=selectPath is null ? null : ResourceLoader.Load<CompressedTexture2D>(selectPath);
+            var markerByPath=markerPath is null ? null : ResourceLoader.Load<CompressedTexture2D>(markerPath);
+            Check(byPath is { } bp && bp.GetWidth()==132 && bp.GetHeight()==195 && markerByPath is { } mp && mp.GetWidth()==49,
+                $"the game's loader reads the alchemist's select portrait and map marker from their paths ({selectPath}, {byPath?.GetSize()}, {markerByPath?.GetSize()})");
             // Shaped like the base game's AnimatedBg at 1920x1080: 2560x1200 at (-388,-80), scaled 1.1 about (1280, 600).
             var bgContainer=new Control{Position=new Vector2(-388,-80),Size=new Vector2(2560,1200),Scale=new Vector2(1.1f,1.1f),PivotOffset=new Vector2(1280,600)};
             bgContainer.AddChild(new Control{Name=character.Id.Entry+"_bg"});
