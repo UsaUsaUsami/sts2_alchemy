@@ -21,6 +21,7 @@
 ### やったこと
 - **錬金術師専用の遺物7個・ポーション3本**（2026-10-01、ユーザー承認の案。詳細は`docs/design-decisions.md`同日項）：`src/Alchemy/AlchemyRelics.cs`・`AlchemyPotions.cs`・`AlchemyPotionPool`。アイアンクラッドの遺物・ポーションはプールから外した。ゴーレムHPは明記した遺物・ポーションでも増える（design-axes 3.2を更新）。素材ボックスの容量が可変に（`BonusCapacity`）。ルール215件・スモーク394件PASS、ゲームへ反映済み（旧版`artifacts/backups/20261001-015621-113`。キャラ選択の背景の修正も同時に反映）。絵はバニラの流用。《血の杯》の戦闘開始時の発動は実機で未確認。
   - スモークの`Check`は失敗時に`ALCHEMIST_SMOKE_FAIL <名前>`をログへ出すようにした（従来は例外だけでログに理由が残らなかった）。
+- 2026-10-01：コミット（ce9dfe2まで）・ブランチ`feature/select-bg`をプッシュ済み（mainへのマージは未実施）。次は2番目のアイコン（画像生成の使用量の見積もりを出して確認をもらう）。
 - 残課題の順番（ユーザー：「上からやりましょう」）：1. 遺物・ポーション（済）→ 2. 遺物・パワー・素材・工房のアイコン → 3. 休憩所・商人の姿 → 4. モーション・効果音など。
 - **キャラ選択の肖像・背景を作り直し**（2026-09-30、ユーザー：「アイコンがアイアンクラッドになっている」「背景がごちゃごちゃ。他キャラと同じく後ろはシンプルに、ゴーレムを見やすい位置に。アセンション欄に被っている」「アイコンは顔だけくらいのアップで」）：
   - アイコン：ゲームはボタンの絵を`CharacterSelectIconPath`から読む。getterの後置きが実機で効いていなかった（推定：呼び出し側へのインライン化）ため、`CustomCharacterSelectIconPath`・`CustomCharacterSelectLockedIconPath`・`CustomMapMarkerPath`を自前の.ctexの絶対パスにした（`CharacterArt.CtexPath`）。ゲームの`ResourceLoader`で読めることをスモークで確認。
