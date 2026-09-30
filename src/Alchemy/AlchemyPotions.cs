@@ -1,3 +1,4 @@
+using Alchemy.Core;
 using BaseLib.Abstracts;
 using BaseLib.Utils;
 using MegaCrit.Sts2.Core.Models.PotionPools;
@@ -54,4 +55,41 @@ public sealed class AirPhial() : CustomPotionModel
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new CardsVar(2)];
     public override List<(string,string)> Localization=>new PotionLoc("風相の小瓶","カードを{Cards}枚引き、[energy]を1得る。");
     protected override async Task OnUse(PlayerChoiceContext c,Creature? target){PotionModel.AssertValidForTargetedPotion(target);var player=target!.Player!;await CardPileCmd.Draw(c,DynamicVars.Cards.BaseValue,player);await PlayerCmd.GainEnergy(1,player);}
+}
+
+// 2026-10-01: the alchemist's own three potions for rewards and shops (AlchemyPotionPool), user-approved. The
+// workshop phials above stay out of that pool.
+[Pool(typeof(AlchemyPotionPool))]
+public sealed class PhaseTonic() : CustomPotionModel
+{
+    public override PotionRarity Rarity=>PotionRarity.Common; public override PotionUsage Usage=>PotionUsage.CombatOnly; public override TargetType TargetType=>TargetType.AnyPlayer;
+    public override string? CustomPackedImagePath=>ModelDb.Potion<DistilledChaos>().ImagePath;
+    public override IEnumerable<IHoverTip> ExtraHoverTips=>[PhaseTransitionTip.Tip];
+    public override List<(string,string)> Localization=>new PotionLoc("転相薬","好きな相へ移る（鉄＝地、薬草＝水、火薬＝火、エーテル＝風）。",("selectionScreenPrompt","移る相を素材で選択"));
+    protected override async Task OnUse(PlayerChoiceContext c,Creature? target)
+    {
+        PotionModel.AssertValidForTargetedPotion(target);
+        var player=target!.Player!;
+        var prompt=new MegaCrit.Sts2.Core.Localization.LocString("potions",$"{Id.Entry}.selectionScreenPrompt");
+        if(await MaterialChooser.Choose(c,player,prompt,ownedOnly:false) is { } m) await PhaseTransitions.Enter(c,player,PhaseRules.PhaseFor(m));
+    }
+}
+[Pool(typeof(AlchemyPotionPool))]
+public sealed class LifeDrop() : CustomPotionModel
+{
+    public const int Drain=8;
+    public override PotionRarity Rarity=>PotionRarity.Uncommon; public override PotionUsage Usage=>PotionUsage.CombatOnly; public override TargetType TargetType=>TargetType.AnyEnemy;
+    public override string? CustomPackedImagePath=>ModelDb.Potion<BloodPotion>().ImagePath;
+    public override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<LifeDrainPower>()];
+    public override List<(string,string)> Localization=>new PotionLoc("生命の雫",$"[gold]ドレイン[/gold]{Drain}を与える。");
+    protected override Task OnUse(PlayerChoiceContext c,Creature? target){PotionModel.AssertValidForTargetedPotion(target);return PowerCmd.Apply<LifeDrainPower>(c,target!,Drain,Owner.Creature,null);}
+}
+[Pool(typeof(AlchemyPotionPool))]
+public sealed class GolemElixir() : CustomPotionModel
+{
+    public const int Gain=20;
+    public override PotionRarity Rarity=>PotionRarity.Rare; public override PotionUsage Usage=>PotionUsage.CombatOnly; public override TargetType TargetType=>TargetType.AnyPlayer;
+    public override string? CustomPackedImagePath=>ModelDb.Potion<HeartOfIron>().ImagePath;
+    public override List<(string,string)> Localization=>new PotionLoc("ゴーレムの霊薬",$"[gold]ゴーレムHP[/gold]を{Gain}得る。");
+    protected override Task OnUse(PlayerChoiceContext c,Creature? target){PotionModel.AssertValidForTargetedPotion(target);return LifeAxis.GainHomunculus(c,target!.Player!,Gain);}
 }

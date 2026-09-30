@@ -1,3 +1,5 @@
+using MegaCrit.Sts2.Core.Localization;
+using MegaCrit.Sts2.Core.Entities.Players;
 using Alchemy.Core;
 using BaseLib.Abstracts;
 using BaseLib.Utils;
@@ -110,9 +112,22 @@ public abstract class AlchemyCard(int cost, CardType type, CardRarity rarity, Ta
     /// Lets the player pick a normal material through the material-box cards. With ownedOnly, only
     /// materials the box holds are offered. Needs a "selectionScreenPrompt" entry in the card's loc.
     /// With optional, the player may confirm without picking one; that returns null.
-    protected async Task<Material?> ChooseMaterial(PlayerChoiceContext c, bool ownedOnly, bool optional = false)
+    protected Task<Material?> ChooseMaterial(PlayerChoiceContext c, bool ownedOnly, bool optional = false)
+        => MaterialChooser.Choose(c, Owner, SelectionScreenPrompt, ownedOnly, optional);
+    /// Picks an owned normal material and removes it from the run inventory.
+    protected async Task<Material?> SpendMaterial(PlayerChoiceContext c)
+        => await ChooseMaterial(c, ownedOnly: true) is { } m && Box!.Inventory.TryConsume(m) ? m : null;
+}
+
+/// <summary>
+/// Picks one of the four normal materials from a grid of their display cards. Also how an element is chosen
+/// (鉄＝地、薬草＝水、火薬＝火、エーテル＝風): cards and the 転相薬 potion share it.
+/// </summary>
+public static class MaterialChooser
+{
+    public static async Task<Material?> Choose(PlayerChoiceContext c, Player Owner, LocString prompt, bool ownedOnly, bool optional = false)
     {
-        var box = Box;
+        var box = Owner.GetRelic<MaterialBox>();
         if (box is null) return null;
         List<(Material Material, CardModel Card)> options = [];
         void Offer<T>(Material m) where T : CardModel
@@ -124,13 +139,10 @@ public abstract class AlchemyCard(int cost, CardType type, CardRarity rarity, Ta
         Offer<IronMaterialCard>(Material.Iron); Offer<HerbMaterialCard>(Material.Herb);
         Offer<PowderMaterialCard>(Material.Powder); Offer<EtherMaterialCard>(Material.Ether);
         if (options.Count == 0) return null;
-        var chosen = (await CardSelectCmd.FromSimpleGrid(c, options.Select(o => o.Card).ToList(), Owner, optional ? new CardSelectorPrefs(SelectionScreenPrompt, 0, 1) : new CardSelectorPrefs(SelectionScreenPrompt, 1))).FirstOrDefault();
+        var chosen = (await CardSelectCmd.FromSimpleGrid(c, options.Select(o => o.Card).ToList(), Owner, optional ? new CardSelectorPrefs(prompt, 0, 1) : new CardSelectorPrefs(prompt, 1))).FirstOrDefault();
         foreach (var o in options) o.Card.Owner = null!;
         return options.FirstOrDefault(o => o.Card == chosen) is { Card: not null } picked ? picked.Material : null;
     }
-    /// Picks an owned normal material and removes it from the run inventory.
-    protected async Task<Material?> SpendMaterial(PlayerChoiceContext c)
-        => await ChooseMaterial(c, ownedOnly: true) is { } m && Box!.Inventory.TryConsume(m) ? m : null;
 }
 
 public sealed class FurnaceActivation() : AlchemyCard(0, CardType.Skill, CardRarity.Token, TargetType.Self)

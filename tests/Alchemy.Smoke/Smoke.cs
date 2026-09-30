@@ -1,3 +1,5 @@
+using MegaCrit.Sts2.Core.Entities.Relics;
+using MegaCrit.Sts2.Core.Models.RelicPools;
 using System.Reflection;
 using Alchemy;
 using Alchemy.Core;
@@ -51,7 +53,7 @@ using MegaCrit.Sts2.Core.Events;
 public static class Smoke
 {
     public static void Initialize() => new Harmony("AlchemistSmoke").PatchAll(Assembly.GetExecutingAssembly());
-    private static void Check(bool ok, string name) { if(!ok) throw new Exception(name); GD.Print("ALCHEMIST_SMOKE_PASS " + name); }
+    private static void Check(bool ok, string name) { if(!ok) { GD.Print("ALCHEMIST_SMOKE_FAIL " + name); throw new Exception(name); } GD.Print("ALCHEMIST_SMOKE_PASS " + name); }
     [HarmonyPatch(typeof(OneTimeInitialization), nameof(OneTimeInitialization.ExecuteDeferred))]
     public static class Ready
     {
@@ -1046,11 +1048,71 @@ public static class Smoke
             await crucible.AfterSideTurnStart(CombatSide.Player,[player.Creature],turnState);
             await crucible.AfterSideTurnStart(CombatSide.Player,[player.Creature],turnState);
             Check(box.Inventory.Counts[(int)phaseMaterial]==beforeTrickle+1,"the crucible grants one material of the current phase once per turn");
-            box.Inventory.Counts=[AlchemyState.Capacity,0,0,0];
+            box.Inventory.Counts=[AlchemyState.BaseCapacity,0,0,0];
             turnState.RoundNumber++;
             await crucible.AfterSideTurnStart(CombatSide.Player,[player.Creature],turnState);
-            Check(box.Inventory.Total==AlchemyState.Capacity && box.Inventory.Pending.Count==0,"a full box receives nothing from the crucible and queues nothing");
+            Check(box.Inventory.Total==AlchemyState.BaseCapacity && box.Inventory.Pending.Count==0,"a full box receives nothing from the crucible and queues nothing");
             box.Inventory.Counts=[0,0,0,0];
+            // 2026-10-01: the alchemist's own relics and potions replace the borrowed Ironclad pools.
+            var alchemist=ModelDb.Character<AlchemistCharacter>();
+            var poolRelics=alchemist.RelicPool.AllRelics.Select(r=>r.GetType()).ToHashSet();
+            Type[] newRelics=[typeof(PhaseCompass),typeof(BloodChalice),typeof(PulsingCore),typeof(Quadrant),typeof(GreatCrucible),typeof(WardensFoundation),typeof(LargeMaterialBag)];
+            Check(newRelics.All(poolRelics.Contains) && !poolRelics.Overlaps(ModelDb.RelicPool<IroncladRelicPool>().AllRelics.Select(r=>r.GetType()))
+                && alchemist.PotionPool.AllPotions.Select(p=>p.GetType()).ToHashSet().SetEquals([typeof(PhaseTonic),typeof(LifeDrop),typeof(GolemElixir)]),
+                $"the alchemist's relic and potion pools are their own ({string.Join(",",poolRelics.Select(t=>t.Name))})");
+            Check(alchemist.RelicPool.AllRelics.Where(r=>newRelics.Contains(r.GetType())).Select(r=>r.Rarity).OrderBy(r=>r).SequenceEqual(
+                    new[]{RelicRarity.Common,RelicRarity.Uncommon,RelicRarity.Uncommon,RelicRarity.Rare,RelicRarity.Rare,RelicRarity.Rare,RelicRarity.Shop}.OrderBy(r=>r)),
+                "the new relics are Common 1, Uncommon 2, Rare 3, Shop 1 like a base game character's");
+            async Task<T> Gain<T>() where T:RelicModel { var r=(T)ModelDb.Relic<T>().ToMutable(); await RelicCmd.Obtain(r,player); return player.GetRelic<T>()!; }
+            var ctx=new ThrowingPlayerChoiceContext();
+            var relicFoe=turnState.HittableEnemies[0];
+            relicFoe.SetCurrentHpInternal(999);
+            await Gain<LargeMaterialBag>();
+            Check(box.Inventory.Capacity==AlchemyState.BaseCapacity+AlchemyState.LargeBagBonus,$"the large bag raises the box to 30 ({box.Inventory.Capacity})");
+            await Gain<Quadrant>();
+            var greatCrucible=await Gain<GreatCrucible>();
+            // The furnace cards arrive before the turn's energy does; let the first turn start finish.
+            await Until(()=>player.PlayerCombatState.Energy>0,"first turn energy");
+            box.Combat.Phases.StartTurn();
+            int energyBefore=player.PlayerCombatState.Energy;
+            var start=box.Combat.Phases.Current;
+            var others=new[]{AlchemyPhase.Earth,AlchemyPhase.Water,AlchemyPhase.Fire,AlchemyPhase.Air}.Where(p=>p!=start).ToArray();
+            await PhaseTransitions.Enter(ctx,player,others[0]);
+            await PhaseTransitions.Enter(ctx,player,others[1]);
+            Check(player.PlayerCombatState.Energy==energyBefore,$"the quadrant waits for the third transition (energy {energyBefore}->{player.PlayerCombatState.Energy}, transitions {box.Combat.Phases.TransitionsThisTurn}, {start}->{string.Join(",",others)})");
+            await PhaseTransitions.Enter(ctx,player,others[0]);
+            Check(player.PlayerCombatState.Energy==energyBefore+1,"the third transition of a turn gives one energy");
+            await PhaseTransitions.Enter(ctx,player,others[2]);
+            Check(player.PlayerCombatState.Energy==energyBefore+1,"the fourth does not");
+            player.Creature.LoseBlockInternal(player.Creature.Block);
+            await greatCrucible.BeforeSideTurnEnd(ctx,CombatSide.Player,[player.Creature]);
+            Check(box.Combat.Phases.KindsEnteredThisTurn==3 && player.Creature.Block==3*GreatCrucible.BlockPerKind,
+                $"the great crucible gives block per distinct element entered this turn ({box.Combat.Phases.KindsEnteredThisTurn} kinds, {player.Creature.Block} block)");
+            var pulsing=await Gain<PulsingCore>();
+            int golemBefore=LifeAxis.State(player)!.HomunculusHp;
+            await pulsing.AfterSideTurnStart(CombatSide.Player,[player.Creature],turnState);
+            Check(LifeAxis.State(player)!.HomunculusHp==golemBefore+PulsingCore.Gain && LifeAxis.Pet(player) is { IsAlive: true },
+                "the pulsing core adds golem HP at the turn start and brings the golem out");
+            await Gain<WardensFoundation>();
+            int foeDrainBefore=relicFoe.GetPower<LifeDrainPower>()?.Amount ?? 0;
+            await LifeAxis.SpendAllHomunculus(ctx,player);
+            Check(LifeAxis.Pet(player) is { IsDead: true } && (relicFoe.GetPower<LifeDrainPower>()?.Amount ?? 0)==foeDrainBefore+WardensFoundation.Drain,
+                "the warden's foundation drains every enemy when the golem falls");
+            var drop=await PotionCmd.TryToProcure<LifeDrop>(player);
+            await drop.potion.OnUseWrapper(ctx,relicFoe);
+            Check((relicFoe.GetPower<LifeDrainPower>()?.Amount ?? 0)==foeDrainBefore+WardensFoundation.Drain+LifeDrop.Drain,"the life drop drains one enemy");
+            var elixir=await PotionCmd.TryToProcure<GolemElixir>(player);
+            await elixir.potion.OnUseWrapper(ctx,player.Creature);
+            Check(LifeAxis.State(player)!.HomunculusHp==GolemElixir.Gain && LifeAxis.Pet(player) is { IsAlive: true },"the golem elixir gives 20 golem HP and revives it");
+            var tonic=await PotionCmd.TryToProcure<PhaseTonic>(player);
+            var tonicTarget=box.Combat.Phases.Current==AlchemyPhase.Water ? AlchemyPhase.Air : AlchemyPhase.Water;
+            int tonicTransitionsBefore=box.Combat.Phases.TransitionCount;
+            using(CardSelectCmd.UseSelector(new PickSelector(c=>tonicTarget==AlchemyPhase.Water ? c is HerbMaterialCard : c is EtherMaterialCard)))
+                await tonic.potion.OnUseWrapper(ctx,player.Creature);
+            Check(box.Combat.Phases.Current==tonicTarget && box.Combat.Phases.TransitionCount==tonicTransitionsBefore+1,"the phase tonic moves to the chosen element as a transition");
+            await Gain<PhaseCompass>();
+            await box.BeforeCombatStart();
+            Check(box.Combat!.Phases.TriggerFromNone,"with the compass, a new combat counts leaving the neutral phase as a transition");
             GD.Print("ALCHEMIST_LOOP_COMPLETE");
         }
         catch(Exception ex) { GD.PushError("ALCHEMIST_LOOP_FAIL "+ex); }

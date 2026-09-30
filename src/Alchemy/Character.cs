@@ -20,7 +20,7 @@ public sealed class AlchemistCharacter : PlaceholderCharacterModel
     public override int StartingHp => 75;
     public override CardPoolModel CardPool => ModelDb.CardPool<AlchemyCardPool>();
     public override RelicPoolModel RelicPool => ModelDb.RelicPool<AlchemyRelicPool>();
-    public override PotionPoolModel PotionPool => ModelDb.PotionPool<IroncladPotionPool>();
+    public override PotionPoolModel PotionPool => ModelDb.PotionPool<AlchemyPotionPool>();
     public override IEnumerable<CardModel> StartingDeck => [
         ModelDb.Card<StrikeAlchemist>(), ModelDb.Card<StrikeAlchemist>(),
         ModelDb.Card<StrikeAlchemist>(),
@@ -67,7 +67,14 @@ public sealed class AlchemyRelicPool : CustomRelicPoolModel
 {
     public override Color LabOutlineColor => new("73d6b2");
     public override string EnergyColorName => "ironclad";
-    protected override RelicModel[] GenerateAllRelics() => ModelDb.RelicPool<IroncladRelicPool>().AllRelics.ToArray();
+    // 2026-10-01: its own relics (AlchemyRelics.cs) through their [Pool] attributes, no longer the Ironclad's.
+}
+
+/// <summary>The alchemist's three potions (AlchemyPotions.cs), like each base game character's own three.</summary>
+public sealed class AlchemyPotionPool : CustomPotionPoolModel
+{
+    public override Color LabOutlineColor => new("73d6b2");
+    public override string EnergyColorName => "ironclad";
 }
 
 /// <summary>
