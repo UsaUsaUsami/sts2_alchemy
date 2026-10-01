@@ -1,0 +1,89 @@
+"""Body parts for the alchemist's own combat rig (2026-10-02, user: the repainted Necrobinder is too far from the
+character icon). One Codex image call draws every part on one sheet, separated on a flat magenta background, in the
+look of the key visual; scripts/rig-build.py cuts them out and builds the skeleton.
+
+Usage: python scripts/rig-parts.py [--tag v1] [--note "extra direction"]
+Writes assets/art/character/rig/alchemist/parts-<tag>.png (the raw sheet). Spends one image of the user's ChatGPT
+quota. References: the key visual, and a parts page of another mod's rig (HelloSpire, MIT) for the layout only.
+"""
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+REFS = [ROOT / "assets/concepts/alchemist-character-v3.png", ROOT / "artifacts/hs-alchemist-page.png"]
+OUT = ROOT / "assets/art/character/rig/alchemist"
+
+# Parts, in reading order on the sheet. Limb pieces are drawn straight and vertical with the joint at the top, so
+# the rig can hang them from their bones.
+PARTS = [
+    ("HOOD", "the hooded head seen from the side, facing RIGHT (three-quarter profile): the deep charcoal hood with "
+     "its gold edge, the face opening completely dark, and in it the glowing gold sigil (circle, triangle, small "
+     "circle, short rays) seen slightly from the side. No neck, no shoulders."),
+    ("TORSO", "the upper body from the shoulders down to the waist, facing RIGHT, NO arms and NO head: charcoal robe, "
+     "the charcoal scarf wrapped round the neck with the gold ring clasp, the vertical charcoal band with gold edges "
+     "down the front showing the earth triangle and water drop symbols, the brown sash at the waist with two small "
+     "round potion flasks (amber and teal) hanging from it."),
+    ("SKIRT", "the lower robe from the waist down to the hem, facing RIGHT, NO legs: long flared charcoal robe with "
+     "two gold stripes near the hem, the vertical front band continuing with the fire and spiral symbols."),
+    ("CAPE", "the long scarf-cape on its own, hanging from the top edge and flowing down and back to the LEFT, "
+     "charcoal outside with mustard-gold lining showing at the folds, ragged ends."),
+    ("UPPER_ARM", "one upper sleeve of the robe, straight and vertical, shoulder end at the top, charcoal."),
+    ("FOREARM", "one wide bell sleeve of the robe, straight and vertical, elbow end at the top, opening at the bottom "
+     "with two gold trim stripes at the cuff, charcoal."),
+    ("HAND_OPEN", "one dark brown leather glove, open relaxed hand, wrist at the top, fingers pointing down."),
+    ("HAND_GRIP", "one dark brown leather glove as a closed fist, wrist at the top, seen from the side, with an empty "
+     "round gap through the fist where a staff will pass horizontally."),
+    ("BOOT", "one dark brown boot with a gold strap and a short piece of dark trouser above it, seen from the side, "
+     "toe pointing RIGHT."),
+    ("STAFF", "a long, thin, straight wooden staff, vertical, with brass bands; at the top a brass ring holding the "
+     "same gold sigil (triangle and circle) as the face."),
+]
+
+BRIEF = (
+    "Create a CHARACTER PARTS SHEET for a 2D skeletal (cut-out) animation rig of the Alchemist, a playable character "
+    "in a Slay the Spire 2 mod. The first attached image is the Alchemist's key visual: match its design, colours "
+    "and painterly style exactly (charcoal hooded robe, mustard-gold trim, dark brown gloves and boots, glowing gold "
+    "sigil face, dark-on-grey value range, soft brush texture, clean dark outline). The second attached image is "
+    "another rig's parts page, ONLY to show the idea of a parts sheet: every body part drawn separately, whole, "
+    "not overlapping. Do not copy its character or style.\n"
+    "Rules: every part fully visible and separate, at least 40 px of background between parts, nothing touching the "
+    "image edge, one consistent scale (as if the full assembled character were about 900 px tall), consistent light "
+    "from the upper left. Background: a single flat pure magenta (#FF00FF) everywhere, no gradient, no shadows on "
+    "the background, no ground, no text, no labels, no numbers, no frames.\n"
+    "Draw these parts:\n")
+
+
+def arg(name, default=None):
+    return sys.argv[sys.argv.index(name) + 1] if name in sys.argv else default
+
+
+tag = arg("--tag", "v1")
+note = arg("--note", "")
+codex = shutil.which("codex") or shutil.which("codex.cmd")
+if not codex:
+    sys.exit("codex が見つかりません。")
+missing = [str(r) for r in REFS if not r.exists()]
+if missing:
+    sys.exit("参考画像がありません: " + ", ".join(missing))
+OUT.mkdir(parents=True, exist_ok=True)
+sheet = OUT / f"parts-{tag}.png"
+task = ("Use your built-in image generation tool to create exactly one image, landscape (1536x1024). Then save it as "
+        + sheet.relative_to(ROOT).as_posix() + " (overwrite if it exists). Do not edit any other file. Reply with the "
+        "saved path only.\n\n" + BRIEF + "\n".join(f"- {name}: {desc}" for name, desc in PARTS)
+        + (f"\nExtra direction: {note}" if note else "") + "\n")
+cmd = [codex, "exec", "-s", "workspace-write", "-C", str(ROOT), "-c", 'model_reasoning_effort="low"']
+for ref in REFS:
+    cmd += ["-i", str(ref)]
+cmd.append("-")
+started = time.time()
+log = ROOT / "artifacts/art-gen" / f"rig-parts-{tag}.log"
+log.parent.mkdir(parents=True, exist_ok=True)
+with open(log, "w", encoding="utf-8") as f:
+    subprocess.run(cmd, input=task, text=True, encoding="utf-8", stdout=f, stderr=subprocess.STDOUT, timeout=900,
+                   cwd=ROOT)
+if not (sheet.exists() and sheet.stat().st_mtime >= started - 1):
+    sys.exit(f"生成に失敗（ログ: {log}）")
+print(f"{sheet} ({time.time() - started:.0f} s)")

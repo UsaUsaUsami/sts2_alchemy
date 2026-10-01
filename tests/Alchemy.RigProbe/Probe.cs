@@ -89,7 +89,30 @@ public static class RigProbe
             {
                 visuals.Scale = Vector2.One * 1.25f;
                 DumpTree(visuals, 0);
-                await Capture(tree, viewport, body, "alchemist", ["idle_loop", "attack", "hurt", Alchemy.NecroRig.CastAnimation, "die"]);
+                await Capture(tree, viewport, body, "alchemist", ["idle_loop", "attack", "hurt", Alchemy.AlchemistRig.Available ? Alchemy.AlchemistRig.CastAnimation : Alchemy.NecroRig.CastAnimation, "die"]);
+            }
+            else if (mode == "custom")
+            {
+                // A rig written by scripts (ALCHEMY_PROBE_SKEL: the .json or .skel; its .atlas beside it) on the
+                // donor scene, the way HelloSpire loads its own rigs (plain files, no import).
+                string skel = System.Environment.GetEnvironmentVariable("ALCHEMY_PROBE_SKEL") ?? "";
+                var customAtlas = (GodotObject)ClassDB.Instantiate("SpineAtlasResource");
+                Log($"custom atlas load {customAtlas.Call("load_from_atlas_file", Path.ChangeExtension(skel, ".atlas"))}");
+                var file = (GodotObject)ClassDB.Instantiate("SpineSkeletonFileResource");
+                foreach (var ext in new[] { ".spine-json", ".spjson" })
+                    if (File.Exists(Path.ChangeExtension(skel, ext)))
+                        Log($"custom skel try {ext} {((GodotObject)ClassDB.Instantiate("SpineSkeletonFileResource")).Call("load_from_file", Path.ChangeExtension(skel, ext))}");
+                Log($"custom skel load {file.Call("load_from_file", skel)}");
+                var customData = (GodotObject)ClassDB.Instantiate("SpineSkeletonDataResource");
+                customData.Set("atlas_res", customAtlas);
+                customData.Set("skeleton_file_res", file);
+                Log($"custom loaded {customData.Call("is_skeleton_data_loaded")} animations: "
+                    + string.Join(",", new MegaSkeletonDataResource(customData).GetAnimationNames()));
+                body.SetSkeletonDataRes(new MegaSkeletonDataResource(customData));
+                await Frames(tree, 3);
+                visuals.Scale = Vector2.One * 1.25f;
+                var names = (System.Environment.GetEnvironmentVariable("ALCHEMY_PROBE_ANIMS") ?? "idle_loop,attack,hurt,cast,die").Split(',');
+                await Capture(tree, viewport, body, "custom", names);
             }
             else if (mode == "uvmap")
             {

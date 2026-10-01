@@ -661,11 +661,14 @@ public static class Smoke
             // 2026-09-30: the alchemist's own sprite and icons (CharacterArt) instead of the Ironclad's.
             var alchemistBody=NCombatRoom.Instance?.GetCreatureNode(player.Creature)?.Visuals.Body;
             var character=player.Character;
-            // 2026-10-01: the Necrobinder's rig repainted from a new atlas in user://alchemy_rig (NecroRig).
-            string? rigAtlas=alchemistBody?.GetClass()=="SpineSprite"
-                ? alchemistBody.Call("get_skeleton_data_res").AsGodotObject()?.Get("atlas_res").AsGodotObject()?.Call("get_source_path").AsString() : null;
-            Check(rigAtlas is not null && rigAtlas.Contains("alchemy_rig"),
-                $"the alchemist is a donor rig on the repainted atlas (body {alchemistBody?.GetClass() ?? "missing"}, atlas {rigAtlas})");
+            // 2026-10-02: the alchemist's own rig (AlchemistRig: art/character/rig/alchemist, written by rig-build.py),
+            // with its own animations; it replaced the repainted Necrobinder (NecroRig, 2026-10-01).
+            var rigData=alchemistBody?.GetClass()=="SpineSprite" ? alchemistBody.Call("get_skeleton_data_res").AsGodotObject() : null;
+            string? rigAtlas=rigData?.Get("atlas_res").AsGodotObject()?.Call("get_source_path").AsString();
+            var rigAnimations=rigData is null ? [] : new MegaCrit.Sts2.Core.Bindings.MegaSpine.MegaSkeletonDataResource(rigData).GetAnimationNames();
+            Check(rigAtlas is not null && rigAtlas.Replace('\\','/').EndsWith("rig/alchemist/alchemist.atlas")
+                && new[] { "idle_loop", "attack", "cast", "hurt", "die" }.All(rigAnimations.Contains),
+                $"the alchemist is on the own rig with its animations (body {alchemistBody?.GetClass() ?? "missing"}, atlas {rigAtlas}, animations {string.Join(",", rigAnimations)})");
             Check(character.IconTexture==CharacterArt.Icon && character.IconOutlineTexture==CharacterArt.IconOutline && CharacterArt.Icon is not null,
                 "the alchemist's head icon and outline replace the borrowed ones");
             Check(character.CharacterSelectIcon is { } selectIcon && selectIcon.GetWidth()==132 && selectIcon.GetHeight()==195

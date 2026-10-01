@@ -1,5 +1,14 @@
 ﻿# 調査記録
 
+
+## 2026-10-02 自前のSpine骨格を実行時に読み込む
+
+- 参照：HelloSpire（r0zar/HelloSpire、MIT）の`HelloSpireCode/Characters/CharacterSkeletons.cs`と、配布物の`spine/<character>/`（ユーザーが`mod_archive/`に置いたもの）。骨格を作るツール（sts2-reskin-pipeline）は非公開で、中身は確認できない。
+- HelloSpireは、バニラの骨格を使わず、人型の単純な骨格（腰・背骨・胸・首・頭・腕・脚）と自前の部品の絵（12枚ほど）、自前のアニメーション（idle_loop・relaxed_loop・hurt・die・attack・cast）を持つ。Spine 4.2.43の.skel。
+- 読み込み：`SpineAtlasResource.load_from_atlas_file`＋`SpineSkeletonFileResource.load_from_file`を`SpineSkeletonDataResource`に組み、`MegaSprite.SetSkeletonDataRes`で戦闘の体に載せる。.pckへの取り込みは不要。
+- 確認できた事実（StS2 v0.111.0、rig-probe）：JSON形式の骨格は拡張子が`.spine-json`または`.spjson`なら読める。`.json`はバイナリとして読まれ、エラー30（不正なデータ）になる。バニラの骨格の版も4.2.43。
+- この方法で錬金術師の骨格を作った（`scripts/rig-parts.py`→`rig-cut.py`→`rig-build.py`、`src/Alchemy/AlchemistRig.cs`）。
+
 ## 2026-10-01: ネクロバインダーの骨格の転用（錬金術師のモーション）
 
 - 他のキャラMODの作り方：[HelloSpire](https://github.com/r0zar/HelloSpire)はバニラの骨格を流用し、色替えシェーダーかアトラスの描き替えで見た目を変える（アルケミスト役はネクロバインダーの骨格）。[STS2-Buu](https://github.com/harsh2204/STS2-Buu)は自前のSpine（Godot 4.5.1で.pck）。[STS2 Character Mod Creator](https://slay.spencerstiles.com/guide)は5ポーズの静止絵かスプライトシート。ユーザー判断：ネクロバインダーの骨格を転用する。

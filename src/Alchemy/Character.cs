@@ -31,16 +31,19 @@ public sealed class AlchemistCharacter : PlaceholderCharacterModel
     public override IReadOnlyList<RelicModel> StartingRelics => [ModelDb.Relic<MaterialBox>()];
     // 2026-09-30: the alchemist's own look (CharacterArt). Rest site and merchant: RestMerchantArt (2026-10-01).
     // 2026-10-01: the Necrobinder's rig repainted as the alchemist (NecroRig); the still sprite only without its art.
+    // 2026-10-02: the alchemist's own rig (AlchemistRig), the repainted Necrobinder only without its files.
     public override NCreatureVisuals? CreateCustomVisuals()
-        => NecroRig.CreateVisuals()
+        => AlchemistRig.CreateVisuals()
+           ?? NecroRig.CreateVisuals()
            ?? (CharacterArt.Body is { } body ? NodeFactory<NCreatureVisuals>.CreateFromResource(body) : null);
+    private static string CastAnimation => AlchemistRig.Available ? AlchemistRig.CastAnimation : NecroRig.CastAnimation;
     // The donor's own mapping, so its animations play for the triggers the game sends.
     protected override List<(AnimState, string)> AnimationStates =>
     [
         (new AnimState("attack"), "Attack"),
         (new AnimState("hurt"), "Hit"),
-        (new AnimState(NecroRig.CastAnimation), "PowerUp"),
-        (new AnimState(NecroRig.CastAnimation), "Cast"),
+        (new AnimState(CastAnimation), "PowerUp"),
+        (new AnimState(CastAnimation), "Cast"),
     ];
     // Same shape as the base game's scenes/ui/character_icons/*_icon.tscn: a full-rect TextureRect.
     public override Control? CustomIcon => CharacterArt.Icon is { } icon

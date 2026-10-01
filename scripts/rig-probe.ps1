@@ -1,6 +1,6 @@
 ﻿# Development probe (tests/Alchemy.RigProbe): runs the isolated game WITH rendering, saves rig frames as PNG.
 # The smoke mod is set aside while it runs, so only the probe acts. Output: artifacts/rig-probe/<Name>/
-param([string]$Name = 'probe', [string]$Mode = '', [string]$Donor = '', [string]$Rig = '', [string]$Riders = '', [int]$Frames = 6000)
+param([string]$Name = 'probe', [string]$Mode = '', [string]$Donor = '', [string]$Rig = '', [string]$Riders = '', [string]$Skel = '', [string]$Anims = '', [int]$Frames = 6000)
 $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot/env.ps1"
 $root = Split-Path $PSScriptRoot
@@ -27,6 +27,9 @@ try {
     $env:ALCHEMY_PROBE_DONOR = $Donor
     $env:ALCHEMY_PROBE_RIG = $Rig
     $env:ALCHEMY_PROBE_RIDERS = $Riders
+    # -Mode custom: a script-written rig (-Skel path to its .json/.skel, .atlas beside it), -Anims to capture.
+    $env:ALCHEMY_PROBE_SKEL = if ($Skel) { (Resolve-Path $Skel).Path } else { '' }
+    $env:ALCHEMY_PROBE_ANIMS = $Anims
     try {
         Start-Process -FilePath "$runtime/SlayTheSpire2.exe" -WorkingDirectory $runtime -NoNewWindow -Wait `
             -ArgumentList '--quit-after', $Frames, '--force-steam=off', '--windowed', '--resolution', '1280x720' `
