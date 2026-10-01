@@ -135,7 +135,9 @@ public static class WorkshopMapIconPatch
         var run=RunManager.Instance.DebugOnlyGetState();
         if(!WorkshopMap.IsWorkshop(run,__instance.Point.coord)) return;
         var icon=__instance.GetNode<TextureRect>("%Icon");
-        icon.Texture=ResourceLoader.Load<Texture2D>(ImageHelper.GetImagePath("atlases/ui_atlas.sprites/map/icons/map_shop.tres"));
-        icon.SelfModulate=new Color("e6b86a");
+        // Own ink symbol (IconArt) drawn like the other nodes; the borrowed shop icon is tinted gold to stand apart.
+        string? own=IconArt.Packed("workshop_map");
+        icon.Texture=ResourceLoader.Load<Texture2D>(own ?? ImageHelper.GetImagePath("atlases/ui_atlas.sprites/map/icons/map_shop.tres"));
+        if(own is null) icon.SelfModulate=new Color("e6b86a");
     }
 }

@@ -1,3 +1,4 @@
+﻿using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.Models.RelicPools;
 using System.Reflection;
@@ -319,7 +320,7 @@ public static class Smoke
             string IconOf(NNormalMapPoint p)=>p.GetNode<TextureRect>("%Icon").Texture?.ResourcePath ?? "";
             var workshopIcons=mapPoints.Where(p=>WorkshopMap.IsWorkshop(run,p.Point.coord)).Select(IconOf).ToArray();
             var restIcons=mapPoints.Where(p=>!WorkshopMap.IsWorkshop(run,p.Point.coord) && p.Point.PointType==MapPointType.RestSite).Select(IconOf).ToArray();
-            Check(workshopIcons.Length==plannedNodes.Count && workshopIcons.All(x=>x.Contains("map_shop")) && restIcons.All(x=>!x.Contains("map_shop")),"workshop icon stays distinct from rest sites");
+            Check(workshopIcons.Length==plannedNodes.Count && workshopIcons.All(x=>x.EndsWith("workshop_map_packed.ctex")) && restIcons.All(x=>!x.Contains("workshop_map")),"workshop icon stays distinct from rest sites");
             await RunManager.Instance.EnterRoomDebug(RoomType.Monster,model:ModelDb.Encounter<BowlbugsWeak>().ToMutable(),showTransition:false);
             var box=player.GetRelic<MaterialBox>()!;
             await Until(()=>box.Combat != null && player.PlayerCombatState?.Hand.Cards.Count>0,"first battle ready");
@@ -479,6 +480,11 @@ public static class Smoke
             await Play(cs.CreateCard<FlashPowder>(player),null);
             Check(box.Combat.Phases.Current==AlchemyPhase.Fire && hpBefore-foe.CurrentHp==6+PhaseRules.BaseAmount(AlchemyPhase.Fire),
                 $"water to fire adds the fire transition's damage (dealt {hpBefore-foe.CurrentHp})");
+            // 2026-10-01: the phase dial follows the current phase in combat, with the four marks loaded.
+            await Task.Delay(100);
+            Check(PhaseDial.Node is { Visible: true } && PhaseDial.Shown==AlchemyPhase.Fire
+                && PhaseDial.Node.GetChildren().OfType<TextureRect>().Count(t=>t.Texture is not null)==4,
+                $"the phase dial lights the current phase (shown {PhaseDial.Shown}, dial {(PhaseDial.Node is null ? "missing" : "present")})");
             hpBefore=foe.CurrentHp;
             await Play(cs.CreateCard<FlashPowder>(player),null);
             Check(box.Combat.Phases.TransitionCount==2 && hpBefore-foe.CurrentHp==6,"a same-element card does not transition again");
@@ -565,6 +571,14 @@ public static class Smoke
             foe.SetCurrentHpInternal(999);
             await PowerCmd.Apply<LifeDrainPower>(new ThrowingPlayerChoiceContext(),foe,8,player.Creature,null);
             var drain=foe.GetPower<LifeDrainPower>()!;
+            // 2026-10-01: the foe's health bar shows the 8 HP the drain will take, like poison.
+            var foeBar=NCombatRoom.Instance?.GetCreatureNode(foe) is { } foeNode ? Descendants<NHealthBar>(foeNode).FirstOrDefault() : null;
+            foeBar?.RefreshValues();
+            var drainSegment=foeBar is null ? null : DrainHealthBarPatch.Segment(foeBar);
+            // OffsetLeft counts from the bar's left edge, OffsetRight from its right edge.
+            float drainWidth=drainSegment is null ? 0 : drainSegment.GetParent<Control>().Size.X+drainSegment.OffsetRight-drainSegment.OffsetLeft;
+            Check(drainSegment is { Visible: true } && drainWidth>0,
+                $"the foe's health bar shows the drain about to be taken (bar {(foeBar is null ? "missing" : "found")}, segment {drainSegment?.OffsetLeft}..{drainSegment?.OffsetRight}, width {drainWidth})");
             await drain.AfterSideTurnStart(CombatSide.Player,[player.Creature],cs);
             Check(foe.CurrentHp==999 && drain.Amount==8,"drain waits for its owner's own turn start");
             await drain.AfterSideTurnStart(CombatSide.Enemy,[foe],cs);
@@ -661,6 +675,69 @@ public static class Smoke
             var markerByPath=markerPath is null ? null : ResourceLoader.Load<CompressedTexture2D>(markerPath);
             Check(byPath is { } bp && bp.GetWidth()==132 && bp.GetHeight()==195 && markerByPath is { } mp && mp.GetWidth()==49,
                 $"the game's loader reads the alchemist's select portrait and map marker from their paths ({selectPath}, {byPath?.GetSize()}, {markerByPath?.GetSize()})");
+            // 2026-10-01: the rest site and merchant figures replace the borrowed Ironclad's, fitted to its bounds.
+            var sceneRoot=((SceneTree)Engine.GetMainLoop()).Root;
+            var restChar=MegaCrit.Sts2.Core.Nodes.RestSite.NRestSiteCharacter.Create(player,0);
+            sceneRoot.AddChild(restChar);
+            var merchantChar=PreloadManager.Cache.GetScene(player.Character.MerchantAnimPath).Instantiate<MegaCrit.Sts2.Core.Nodes.Screens.Shops.NMerchantCharacter>();
+            sceneRoot.AddChild(merchantChar);
+            RestMerchantArt.Apply(merchantChar,CharacterArt.Merchant);
+            await Task.Delay(500);
+            var restArt=restChar.GetNodeOrNull<Sprite2D>(RestMerchantArt.NodeName);
+            var merchantArt=merchantChar.GetNodeOrNull<Sprite2D>(RestMerchantArt.NodeName);
+            Check(restArt is { Visible: true, Texture: not null } && restArt.Scale.Y>0.05f && merchantArt is { Visible: true, Texture: not null } && merchantArt.Scale.Y>0.05f,
+                $"the alchemist's rest site and merchant pictures replace the Ironclad (rest {restArt?.Position} x{restArt?.Scale.Y}, merchant {merchantArt?.Position} x{merchantArt?.Scale.Y})");
+            // 2026-10-01: the pictures breathe (a slow upward stretch) with their feet kept on the ground.
+            float Bottom(Sprite2D sp)=>sp.Position.Y+sp.Texture.GetHeight()*sp.Scale.Y;
+            float scale0=restArt!.Scale.Y, bottom0=Bottom(restArt);
+            await Task.Delay(700);
+            Check(Math.Abs(restArt.Scale.Y-scale0)>0.0001f && Math.Abs(Bottom(restArt)-bottom0)<0.5f,
+                $"the rest site picture breathes with its feet in place (scale {scale0}->{restArt.Scale.Y}, bottom {bottom0}->{Bottom(restArt)})");
+            restChar.QueueFree(); merchantChar.QueueFree();
+            // 2026-10-01: taking a hit knocks the alchemist back and flushes it red; a phase transition glows in the phase's colour.
+            var alchemistNode=NCombatRoom.Instance!.GetCreatureNode(player.Creature)!;
+            var alchemistSprite=(Sprite2D)alchemistNode.Visuals.Body;
+            alchemistNode.SetAnimationTrigger("Hit");
+            await Task.Delay(60);
+            var hitTint=alchemistSprite.SelfModulate; float hitX=alchemistSprite.Position.X;
+            await Task.Delay(500);
+            Check(hitTint.G<0.9f && hitX<-5f && alchemistSprite.SelfModulate.IsEqualApprox(Colors.White) && Math.Abs(alchemistSprite.Position.X)<0.01f,
+                $"a hit knocks the alchemist back and flushes it red, then it recovers (tint {hitTint}, x {hitX})");
+            SpriteMotion.Pulse(alchemistNode,PhaseDial.Colour(AlchemyPhase.Fire));
+            var pulseTint=alchemistSprite.SelfModulate;
+            await Task.Delay(600);
+            Check(pulseTint.R>pulseTint.B+0.2f && alchemistSprite.SelfModulate.IsEqualApprox(Colors.White) && alchemistSprite.Scale.IsEqualApprox(Vector2.One),
+                $"a phase transition glows in the destination phase's colour, then fades (tint {pulseTint})");
+            // The sounds are base game FMOD events; ask FMOD whether each one exists when its server is reachable.
+            string[] sounds=[AlchemySfx.PhaseShift,AlchemySfx.Furnace,AlchemySfx.Craft,AlchemySfx.Modify,AlchemySfx.Inscribe,AlchemySfx.Brew];
+            if(Engine.HasSingleton("FmodServer"))
+            {
+                var fmod=Engine.GetSingleton("FmodServer");
+                var missingSounds=sounds.Where(e=>!fmod.Call("check_event_path",e).AsBool()).ToArray();
+                bool control=fmod.Call("check_event_path","event:/sfx/alchemy_no_such_event").AsBool();
+                Check(missingSounds.Length==0 && !control,$"the alchemist's sounds are events in the game's banks (missing: {string.Join(",",missingSounds)}; a made-up path exists: {control})");
+            }
+            else GD.Print("ALCHEMIST_SMOKE_NOTE FmodServer not reachable; the sound events were not checked");
+            // 2026-10-01: the mod's own relic, enchantment and map icons (IconArt), loaded the way the game loads them.
+            RelicModel[] ownRelics=[ModelDb.Relic<MaterialBox>(),ModelDb.Relic<RefinedMaterialBox>(),ModelDb.Relic<DarvCrucible>(),
+                ModelDb.Relic<PhaseCompass>(),ModelDb.Relic<BloodChalice>(),ModelDb.Relic<PulsingCore>(),ModelDb.Relic<Quadrant>(),
+                ModelDb.Relic<GreatCrucible>(),ModelDb.Relic<WardensFoundation>(),ModelDb.Relic<LargeMaterialBag>()];
+            var badIcons=ownRelics.Where(r=>!(r.PackedIconPath.EndsWith("_packed.ctex") && r.Icon is { } i && i.GetWidth()==85
+                && r.IconOutline is { } o && o.GetWidth()==85 && r.BigIcon is { } b && b.GetWidth()==256)).Select(r=>r.Id.Entry).ToArray();
+            Check(badIcons.Length==0, $"the alchemist's relics show their own icons, small, outline and big (wrong: {string.Join(",",badIcons)})");
+            var badPowers=ModelDb.AllPowers.OfType<AlchemyPower>().Where(p=>!(p.Icon is { } i && i.GetWidth()==64
+                && p.BigIcon is { } b && b.GetWidth()==256 && p.IconPath.EndsWith("_packed.ctex"))).Select(p=>p.Id.Entry).ToArray();
+            Check(ModelDb.AllPowers.OfType<AlchemyPower>().Count()>=24 && badPowers.Length==0,
+                $"the alchemist's powers show their own icons (wrong: {string.Join(",",badPowers)})");
+            string[] materialSlugs=[..Enum.GetValues<Alchemy.Core.Material>().Select(m=>IconArt.MaterialSlug(MaterialChoice.Normal(m))),
+                ..Enum.GetValues<RareMaterial>().Select(m=>IconArt.MaterialSlug(MaterialChoice.Rare(m)))];
+            var missingMaterials=materialSlugs.Where(s=>IconArt.Big(s) is not { } path || ResourceLoader.Load<Texture2D>(path)?.GetWidth()!=256).ToArray();
+            Check(missingMaterials.Length==0 && MaterialBox.RewardIconPath.EndsWith("material_reward.ctex"),
+                $"the seven materials and the material reward have their own icons (missing: {string.Join(",",missingMaterials)})");
+            string? modifyIcon=IconArt.Packed("workshop_modify"), mapIcon=IconArt.Packed("workshop_map");
+            Check(modifyIcon is not null && ResourceLoader.Load<Texture2D>(modifyIcon)?.GetWidth()==64
+                && mapIcon is not null && ResourceLoader.Load<Texture2D>(mapIcon)?.GetWidth()==128,
+                $"the workshop's modification and map icons load from the mod's files ({modifyIcon}, {mapIcon})");
             // Shaped like the base game's AnimatedBg at 1920x1080: 2560x1200 at (-388,-80), scaled 1.1 about (1280, 600).
             var bgContainer=new Control{Position=new Vector2(-388,-80),Size=new Vector2(2560,1200),Scale=new Vector2(1.1f,1.1f),PivotOffset=new Vector2(1280,600)};
             bgContainer.AddChild(new Control{Name=character.Id.Entry+"_bg"});

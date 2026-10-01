@@ -61,6 +61,8 @@ public static class WorkshopUi
 
     public static void Tick(NRun node, double delta)
     {
+        // Every frame, so the dial lights the new phase as the transition happens.
+        PhaseDial.Update(node, box);
         elapsed += delta;
         if (elapsed < 0.25) return;
         elapsed = 0;
@@ -90,10 +92,11 @@ public static class WorkshopUi
 
     private static Color PhaseTint(AlchemyPhase phase) => phase switch
     {
-        AlchemyPhase.Earth => new Color("e0b46c"),
-        AlchemyPhase.Water => new Color("7cc4f0"),
+        // Lighter versions of PhaseDial.Colour, readable as text on the dark button.
+        AlchemyPhase.Earth => new Color("d9a066"),
+        AlchemyPhase.Water => new Color("7aa8f5"),
         AlchemyPhase.Fire => new Color("f0806a"),
-        AlchemyPhase.Air => new Color("9be39b"),
+        AlchemyPhase.Air => new Color("a8e6fa"),
         _ => new Color("f2f2f2")
     };
 
@@ -207,6 +210,17 @@ public static class WorkshopUi
         b.AddThemeFontSizeOverride("font_size",22);
         b.Pressed += () => { if (!busy) action(); };
         (parent ?? content)!.AddChild(b);
+        return b;
+    }
+    // The material's own icon on its button (IconArt); without the file the button stays text only.
+    private static Button WithIcon(Button b, Core.Material m) => WithIcon(b, MaterialChoice.Normal(m));
+    private static Button WithIcon(Button b, MaterialChoice m)
+    {
+        if (IconArt.Big(IconArt.MaterialSlug(m)) is { } path && ResourceLoader.Load<Texture2D>(path) is { } icon)
+        {
+            b.Icon = icon;
+            b.AddThemeConstantOverride("icon_max_width", 44);
+        }
         return b;
     }
     private static void Divider(Container parent)
@@ -406,8 +420,8 @@ public static class WorkshopUi
         {
             int selected=craftInputs.Count(x=>x==material);
             int owned=box!.Inventory.Counts[(int)material];
-            Button($"{Recipes.Name(material)}\n所持 {owned} / 配置 {selected}",()=>AddCraftMaterial(material),
-                craftInputs.Count>=MaxCraftSlots || selected>=owned,materials);
+            WithIcon(Button($"{Recipes.Name(material)}\n所持 {owned} / 配置 {selected}",()=>AddCraftMaterial(material),
+                craftInputs.Count>=MaxCraftSlots || selected>=owned,materials),material);
         }
         if(craftInputs.Count==0) return;
         Button("素材をすべて戻す",()=>{craftInputs.Clear();Refresh();});
@@ -479,8 +493,8 @@ public static class WorkshopUi
         foreach(var material in Enum.GetValues<Core.Material>())
         {
             string note=material==Core.Material.Powder && !attack ? "（アタックのみ）" : "";
-            Button($"{Recipes.Name(material)}を入れる{note}\n所持 {box!.Inventory.Counts[(int)material]} / 投入 {infuseInputs[(int)material]}",
-                ()=>AddInfuseMaterial(card,material),!CanAddInfusion(card,material),materials);
+            WithIcon(Button($"{Recipes.Name(material)}を入れる{note}\n所持 {box!.Inventory.Counts[(int)material]} / 投入 {infuseInputs[(int)material]}",
+                ()=>AddInfuseMaterial(card,material),!CanAddInfusion(card,material),materials),material);
         }
         var after=current.Zip(infuseInputs,(a,b)=>a+b).ToArray();
         Text($"改造後：{InfusionText(after)}（{after.Sum()}/{InfusionRules.Limit}）",22,actions,new Color("8fd6a5"));
@@ -549,7 +563,7 @@ public static class WorkshopUi
             (Core.Material.Powder,"火相の小瓶","15ダメージ"),(Core.Material.Ether,"風相の小瓶","2枚ドロー＋1エナジー")})
         {
             bool can=unused && box.Owner.HasOpenPotionSlots && box.Inventory.Counts[(int)material]>0;
-            Button($"{name}　—　{effect}\n必要：{Recipes.Name(material)}1個（所持 {box.Inventory.Counts[(int)material]}）",()=>_ = BrewPotion(material),!can);
+            WithIcon(Button($"{name}　—　{effect}\n必要：{Recipes.Name(material)}1個（所持 {box.Inventory.Counts[(int)material]}）",()=>_ = BrewPotion(material),!can),material);
         }
     }
     private static async Task<bool> Procure<T>() where T:PotionModel
@@ -566,6 +580,7 @@ public static class WorkshopUi
                 Core.Material.Powder=>Procure<FirePhial>(),_=>Procure<AirPhial>()
             });
             status="ポーションを調合しました。";
+            AlchemySfx.Play(AlchemySfx.Brew);
         }
         catch(Exception ex){status=$"調薬できませんでした：{ex.Message}";GD.PushError(ex.ToString());}
         finally{busy=false;if(IsOpen)Refresh();}
@@ -594,7 +609,7 @@ public static class WorkshopUi
             Text($"{RareMaterials.Name(box.Inventory.Pending[0].Material)}　（残り {box.Inventory.Pending.Count}個）\n次の部屋へ進む前に受け取りを決めてください。",23);
             if (box.Inventory.Total < box.Inventory.Capacity) Button("受け取る",()=>Resolve(true));
             else foreach (var material in OwnedMaterials())
-                Button($"{RareMaterials.Name(material)}を1個手放して交換",()=>Resolve(true,material));
+                WithIcon(Button($"{RareMaterials.Name(material)}を1個手放して交換",()=>Resolve(true,material)),material);
             Button("この素材の受け取りを辞退",()=>Resolve(false));
             return;
         }
@@ -606,7 +621,7 @@ public static class WorkshopUi
             if (box.Inventory.Total >= box.Inventory.Capacity)
                 Text("素材ボックスが満杯です。受け取ると、交換か辞退を続けて選びます。",20,content,new Color("d8c082"));
             foreach (var material in offer.Candidates)
-                Button($"{RareMaterials.Name(material)}　—　{MaterialHint(material)}",()=>TakeOffer(offer.Id,material));
+                WithIcon(Button($"{RareMaterials.Name(material)}　—　{MaterialHint(material)}",()=>TakeOffer(offer.Id,material)),material);
             Button("この報酬枠を辞退する",()=>DeclineOffer(offer.Id));
             Text("辞退した枠は戻りません。次の部屋へ進む前に決めてください。",18,content,new Color("aebbc0"));
             return;
@@ -803,6 +818,7 @@ public static class WorkshopUi
                 if(CardCmd.Enchant(infusion,card,infusion.Amount) is null) throw new InvalidOperationException("改造を付与できませんでした。");
             });
             status=$"{card.Title}を工房改造しました（{InfusionText(CurrentInfusion(card))}）。";
+            AlchemySfx.Play(AlchemySfx.Modify);
             selectedUpgrade=null;
             Array.Clear(infuseInputs);
         }
@@ -820,6 +836,7 @@ public static class WorkshopUi
             box.Inventory.CommitRareAt(box.Owner.RunState.TotalFloor,rare.Material,Guid.NewGuid().ToString("N"),
                 ()=>card.AlchemistRareModifier=rare.Id,()=>card.AlchemistRareModifier=before);
             status=$"{target.Title}に{rare.Name}の「{rare.EffectName}」を刻みました。";
+            AlchemySfx.Play(AlchemySfx.Inscribe);
             selectedRareCard=null;
         }
         catch(Exception ex) { status=$"希少加工できませんでした：{ex.Message}";GD.PushError(ex.ToString()); }
@@ -850,6 +867,7 @@ public static class WorkshopUi
                 }
             });
             status = $"{recipe.Name}をデッキに追加しました。";
+            AlchemySfx.Play(AlchemySfx.Craft);
             selectedRecipe = null;
             if(materialCraftMode) craftInputs.Clear();
         }

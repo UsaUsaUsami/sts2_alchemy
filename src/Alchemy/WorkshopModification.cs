@@ -51,7 +51,7 @@ public sealed class WorkshopInfusion : CustomEnchantmentModel, ILocalizationProv
 
     public override bool HasExtraCardText => true;
     public override bool ShowAmount => true;
-    protected override string? CustomIconPath => "res://images/enchantments/sharp.png";
+    protected override string? CustomIconPath => IconArt.Packed("workshop_modify") ?? "res://images/enchantments/sharp.png";
     protected override IEnumerable<DynamicVar> CanonicalVars =>
         [new DynamicVar("Iron", 0m), new DynamicVar("Herb", 0m), new DynamicVar("Powder", 0m), new DynamicVar("Ether", 0m)];
     // design-axes 7.3: iron, herb and ether go into any card; powder only into attacks (checked per material).

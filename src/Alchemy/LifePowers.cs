@@ -230,7 +230,7 @@ public static class HomunculusPetNodePatch
 /// The golem and the alchemist (2026-09-30) are still sprites, and the game only animates Spine bodies: without
 /// this they would stand unchanged through attacks, deaths and revivals. Idle: a slow bob (on the sprite's offset,
 /// so it never fights the other tweens). Attack: a quick lunge toward the enemies. Cast / power up: a small hop.
-/// Falling: squashed low, darkened. Reviving: back up.
+/// Hit: knocked back, flushed red. Falling: squashed low, darkened. Reviving: back up.
 /// </summary>
 public static class SpriteMotion
 {
@@ -260,10 +260,30 @@ public static class SpriteMotion
                 tween.TweenProperty(sprite, "scale", new Vector2(0.95f, 1.06f), 0.1).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
                 tween.TweenProperty(sprite, "scale", Vector2.One, 0.2).SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
                 break;
+            // Taking damage (2026-10-01): knocked back away from the enemies and flushed red. The tint goes on
+            // self_modulate so it never fights Fall's darkening (modulate) when the same hit is the last.
+            case "Hit":
+                tween.SetParallel();
+                tween.TweenProperty(sprite, "position:x", -18f, 0.06).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
+                tween.TweenProperty(sprite, "position:x", 0f, 0.25).SetDelay(0.06).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.InOut);
+                sprite.SelfModulate = new Color(1f, 0.45f, 0.45f);
+                tween.TweenProperty(sprite, "self_modulate", Colors.White, 0.3);
+                break;
             default:
                 tween.Kill();
                 break;
         }
+    }
+
+    /// 相転移 (2026-10-01): the alchemist glows in the destination phase's colour (the dial's) and swells a little.
+    public static void Pulse(NCreature node, Color colour)
+    {
+        if (Sprite(node) is not { } sprite) return;
+        var tween = sprite.CreateTween().SetParallel();
+        sprite.SelfModulate = Colors.White.Lerp(colour, 0.6f) * 1.25f;
+        tween.TweenProperty(sprite, "self_modulate", Colors.White, 0.4).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
+        tween.TweenProperty(sprite, "scale", new Vector2(1.04f, 1.04f), 0.08).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
+        tween.TweenProperty(sprite, "scale", Vector2.One, 0.25).SetDelay(0.08).SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
     }
 
     public static void Fall(NCreature node)

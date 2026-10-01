@@ -11,6 +11,7 @@ using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Powers;
+using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Nodes.Vfx;
 using MegaCrit.Sts2.Core.ValueProps;
 
@@ -153,6 +154,8 @@ public static class PhaseTransitions
             box.Flash();
             var line = new LocString("relics", $"{box.Id.Entry}.phaseShift.{t.To}");
             TalkCmd.Play(line, t.Owner.Creature, PhaseColor(t.To), VfxDuration.VeryShort);
+            AlchemySfx.Play(AlchemySfx.PhaseShift);
+            if (NCombatRoom.Instance?.GetCreatureNode(t.Owner.Creature) is { } node) SpriteMotion.Pulse(node, PhaseDial.Colour(t.To));
         }
         catch (Exception ex) { GD.PushWarning($"Alchemy phase feedback skipped: {ex.Message}"); }
     }
@@ -162,7 +165,7 @@ public static class PhaseTransitions
         AlchemyPhase.Earth => VfxColor.Orange,
         AlchemyPhase.Water => VfxColor.Blue,
         AlchemyPhase.Fire => VfxColor.Red,
-        AlchemyPhase.Air => VfxColor.Green,
+        AlchemyPhase.Air => VfxColor.Cyan, // air is light blue (user, 2026-10-01)
         _ => VfxColor.White
     };
 }

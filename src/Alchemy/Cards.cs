@@ -164,7 +164,7 @@ public sealed class FurnaceActivation() : AlchemyCard(0, CardType.Skill, CardRar
         if (card is null) return;
         await CardCmd.Exhaust(choiceContext, card);
         if (!combat.UseFurnace()) return;
-        box!.GrantFromFurnace();
+        if (box!.GrantFromFurnace()) AlchemySfx.Play(AlchemySfx.Furnace);
     }
     protected override void OnUpgrade() { }
 }

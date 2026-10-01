@@ -28,7 +28,7 @@ public sealed class AlchemistCharacter : PlaceholderCharacterModel
         ModelDb.Card<DefendAlchemist>(),
         ModelDb.Card<EarthenGuard>(), ModelDb.Card<SoothingMist>(), ModelDb.Card<InstantAlchemy>()];
     public override IReadOnlyList<RelicModel> StartingRelics => [ModelDb.Relic<MaterialBox>()];
-    // 2026-09-30: the alchemist's own look (CharacterArt). Rest site and merchant still borrow the Ironclad's.
+    // 2026-09-30: the alchemist's own look (CharacterArt). Rest site and merchant: RestMerchantArt (2026-10-01).
     public override NCreatureVisuals? CreateCustomVisuals()
         => CharacterArt.Body is { } body ? NodeFactory<NCreatureVisuals>.CreateFromResource(body) : null;
     // Same shape as the base game's scenes/ui/character_icons/*_icon.tscn: a full-rect TextureRect.

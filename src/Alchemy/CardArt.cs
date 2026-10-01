@@ -62,6 +62,9 @@ public static class CharacterArt
     public static Texture2D? Icon => Png("icon.png");
     public static Texture2D? IconOutline => Png("icon_outline.png");
     public static Texture2D? SelectBg => Png("select_bg.png");
+    // Rest site and merchant figures (RestMerchantArt), scaled on screen to the borrowed Ironclad figure's height.
+    public static Texture2D? RestSite => Png("rest_site.png");
+    public static Texture2D? Merchant => Png("merchant.png");
     public static CompressedTexture2D? CharacterSelect => Ctex("char_select.ctex");
     public static CompressedTexture2D? MapMarker => Ctex("map_marker.ctex");
 
@@ -104,6 +107,37 @@ public static class CharacterArt
         catch (Exception ex) { GD.PushWarning($"[Alchemy] character art {path} skipped: {ex.Message}"); }
         Loaded[file] = texture;
         return texture;
+    }
+}
+
+/// <summary>
+/// The mod's own icons (2026-10-01): .ctex files in art/icons next to the DLL, made by scripts/generate-icons.py and
+/// scripts/import-icons.py. The game loads relic, power, enchantment and map icons from a path with ResourceLoader,
+/// so these hand out the file's absolute path, the way the character select button already does (CharacterArt).
+/// A missing file returns null and the caller keeps its borrowed base-game icon.
+/// </summary>
+public static class IconArt
+{
+    public static string ArtDirectory
+        => Path.Combine(Path.GetDirectoryName(typeof(IconArt).Assembly.Location) ?? "", "art", "icons");
+
+    /// The icon's slug for a model class: PhaseCompass -> phase_compass.
+    public static string Slug(Type type) => Snake(type.Name);
+    public static string Snake(string name)
+        => string.Concat(name.Select((c, i) => i > 0 && char.IsUpper(c) ? "_" + char.ToLowerInvariant(c) : char.ToLowerInvariant(c).ToString()));
+
+    /// material_iron, material_void_crystal, ... for a normal or rare material.
+    public static string MaterialSlug(Core.MaterialChoice m)
+        => "material_" + Snake(m.Class == Core.MaterialClass.Normal ? m.NormalMaterial.ToString() : m.RareMaterial.ToString());
+
+    public static string? Big(string slug) => Ctex(slug);
+    public static string? Packed(string slug) => Ctex(slug + "_packed");
+    public static string? Outline(string slug) => Ctex(slug + "_outline");
+
+    private static string? Ctex(string name)
+    {
+        string path = Path.Combine(ArtDirectory, name + ".ctex");
+        return File.Exists(path) ? path.Replace('\\', '/') : null;
     }
 }
 
