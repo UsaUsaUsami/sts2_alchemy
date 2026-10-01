@@ -108,6 +108,32 @@ public static class CharacterArt
 }
 
 /// <summary>
+/// The mod's own icons (2026-10-01): .ctex files in art/icons next to the DLL, made by scripts/generate-icons.py and
+/// scripts/import-icons.py. The game loads relic, power, enchantment and map icons from a path with ResourceLoader,
+/// so these hand out the file's absolute path, the way the character select button already does (CharacterArt).
+/// A missing file returns null and the caller keeps its borrowed base-game icon.
+/// </summary>
+public static class IconArt
+{
+    public static string ArtDirectory
+        => Path.Combine(Path.GetDirectoryName(typeof(IconArt).Assembly.Location) ?? "", "art", "icons");
+
+    /// The icon's slug for a model class: PhaseCompass -> phase_compass.
+    public static string Slug(Type type)
+        => string.Concat(type.Name.Select((c, i) => i > 0 && char.IsUpper(c) ? "_" + char.ToLowerInvariant(c) : char.ToLowerInvariant(c).ToString()));
+
+    public static string? Big(string slug) => Ctex(slug);
+    public static string? Packed(string slug) => Ctex(slug + "_packed");
+    public static string? Outline(string slug) => Ctex(slug + "_outline");
+
+    private static string? Ctex(string name)
+    {
+        string path = Path.Combine(ArtDirectory, name + ".ctex");
+        return File.Exists(path) ? path.Replace('\\', '/') : null;
+    }
+}
+
+/// <summary>
 /// The homunculus pet's sprite (2026-09-29: a stone golem, assets/concepts/homunculus-v1.png), a transparent PNG at
 /// art/pets/golem.png made by scripts/import-pet.py. Without the file the pet keeps Osty's borrowed visuals.
 /// </summary>

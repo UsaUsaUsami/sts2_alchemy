@@ -17,6 +17,8 @@ try {
     Write-Output "カード絵: $(@(Get-ChildItem dist/Alchemy/art/cards -Filter *.png).Count)枚"
     # The golem pet sprite (PetArt in CardArt.cs).
     if (Test-Path assets/art/character) { New-Item -ItemType Directory -Force dist/Alchemy/art/character | Out-Null; Copy-Item assets/art/character/* -Include *.png,*.ctex dist/Alchemy/art/character }
+    # Relic, power, enchantment and map icons (IconArt in CardArt.cs).
+    if (Test-Path assets/art/icons) { New-Item -ItemType Directory -Force dist/Alchemy/art/icons | Out-Null; Copy-Item assets/art/icons/*.ctex dist/Alchemy/art/icons }
     if (Test-Path assets/art/pets) { New-Item -ItemType Directory -Force dist/Alchemy/art/pets | Out-Null; Copy-Item assets/art/pets/*.png dist/Alchemy/art/pets }
     Write-Output "配布ファイル: $root\dist\Alchemy"
 } finally { Pop-Location }

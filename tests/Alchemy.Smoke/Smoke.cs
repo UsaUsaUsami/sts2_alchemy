@@ -319,7 +319,7 @@ public static class Smoke
             string IconOf(NNormalMapPoint p)=>p.GetNode<TextureRect>("%Icon").Texture?.ResourcePath ?? "";
             var workshopIcons=mapPoints.Where(p=>WorkshopMap.IsWorkshop(run,p.Point.coord)).Select(IconOf).ToArray();
             var restIcons=mapPoints.Where(p=>!WorkshopMap.IsWorkshop(run,p.Point.coord) && p.Point.PointType==MapPointType.RestSite).Select(IconOf).ToArray();
-            Check(workshopIcons.Length==plannedNodes.Count && workshopIcons.All(x=>x.Contains("map_shop")) && restIcons.All(x=>!x.Contains("map_shop")),"workshop icon stays distinct from rest sites");
+            Check(workshopIcons.Length==plannedNodes.Count && workshopIcons.All(x=>x.EndsWith("workshop_map_packed.ctex")) && restIcons.All(x=>!x.Contains("workshop_map")),"workshop icon stays distinct from rest sites");
             await RunManager.Instance.EnterRoomDebug(RoomType.Monster,model:ModelDb.Encounter<BowlbugsWeak>().ToMutable(),showTransition:false);
             var box=player.GetRelic<MaterialBox>()!;
             await Until(()=>box.Combat != null && player.PlayerCombatState?.Hand.Cards.Count>0,"first battle ready");
@@ -661,6 +661,17 @@ public static class Smoke
             var markerByPath=markerPath is null ? null : ResourceLoader.Load<CompressedTexture2D>(markerPath);
             Check(byPath is { } bp && bp.GetWidth()==132 && bp.GetHeight()==195 && markerByPath is { } mp && mp.GetWidth()==49,
                 $"the game's loader reads the alchemist's select portrait and map marker from their paths ({selectPath}, {byPath?.GetSize()}, {markerByPath?.GetSize()})");
+            // 2026-10-01: the mod's own relic, enchantment and map icons (IconArt), loaded the way the game loads them.
+            RelicModel[] ownRelics=[ModelDb.Relic<MaterialBox>(),ModelDb.Relic<RefinedMaterialBox>(),ModelDb.Relic<DarvCrucible>(),
+                ModelDb.Relic<PhaseCompass>(),ModelDb.Relic<BloodChalice>(),ModelDb.Relic<PulsingCore>(),ModelDb.Relic<Quadrant>(),
+                ModelDb.Relic<GreatCrucible>(),ModelDb.Relic<WardensFoundation>(),ModelDb.Relic<LargeMaterialBag>()];
+            var badIcons=ownRelics.Where(r=>!(r.PackedIconPath.EndsWith("_packed.ctex") && r.Icon is { } i && i.GetWidth()==85
+                && r.IconOutline is { } o && o.GetWidth()==85 && r.BigIcon is { } b && b.GetWidth()==256)).Select(r=>r.Id.Entry).ToArray();
+            Check(badIcons.Length==0, $"the alchemist's relics show their own icons, small, outline and big (wrong: {string.Join(",",badIcons)})");
+            string? modifyIcon=IconArt.Packed("workshop_modify"), mapIcon=IconArt.Packed("workshop_map");
+            Check(modifyIcon is not null && ResourceLoader.Load<Texture2D>(modifyIcon)?.GetWidth()==64
+                && mapIcon is not null && ResourceLoader.Load<Texture2D>(mapIcon)?.GetWidth()==128,
+                $"the workshop's modification and map icons load from the mod's files ({modifyIcon}, {mapIcon})");
             // Shaped like the base game's AnimatedBg at 1920x1080: 2560x1200 at (-388,-80), scaled 1.1 about (1280, 600).
             var bgContainer=new Control{Position=new Vector2(-388,-80),Size=new Vector2(2560,1200),Scale=new Vector2(1.1f,1.1f),PivotOffset=new Vector2(1280,600)};
             bgContainer.AddChild(new Control{Name=character.Id.Entry+"_bg"});

@@ -24,9 +24,10 @@ public sealed class RefinedMaterialBox : MaterialBox
 {
     public override int FurnaceTokens => HarvestCombat.RefinedFurnaceLimit;
     public override bool OpensInRandomPhase => true;
-    public override string PackedIconPath => "res://images/atlases/relic_atlas.sprites/black_blood.tres";
-    protected override string PackedIconOutlinePath => "res://images/atlases/relic_outline_atlas.sprites/black_blood.tres";
-    protected override string BigIconPath => "res://images/relics/black_blood.png";
+    public override string PackedIconPath => IconArt.Packed(IconArt.Slug(GetType())) ?? "res://images/atlases/relic_atlas.sprites/black_blood.tres";
+    protected override string PackedIconOutlinePath
+        => IconArt.Outline(IconArt.Slug(GetType())) ?? "res://images/atlases/relic_outline_atlas.sprites/black_blood.tres";
+    protected override string BigIconPath => IconArt.Big(IconArt.Slug(GetType())) ?? "res://images/relics/black_blood.png";
     public override List<(string,string)> Localization => BoxLoc("精錬された素材ボックス", "炉の火が強まった。");
 }
 
@@ -68,9 +69,10 @@ public static class CrucibleTrickle
 public sealed class DarvCrucible : CustomRelicModel
 {
     public override RelicRarity Rarity => RelicRarity.Ancient;
-    public override string PackedIconPath => "res://images/atlases/relic_atlas.sprites/philosophers_stone.tres";
-    protected override string PackedIconOutlinePath => "res://images/atlases/relic_outline_atlas.sprites/philosophers_stone.tres";
-    protected override string BigIconPath => "res://images/relics/philosophers_stone.png";
+    public override string PackedIconPath => IconArt.Packed("darv_crucible") ?? "res://images/atlases/relic_atlas.sprites/philosophers_stone.tres";
+    protected override string PackedIconOutlinePath
+        => IconArt.Outline("darv_crucible") ?? "res://images/atlases/relic_outline_atlas.sprites/philosophers_stone.tres";
+    protected override string BigIconPath => IconArt.Big("darv_crucible") ?? "res://images/relics/philosophers_stone.png";
     public override List<(string,string)> Localization => new RelicLoc("ダーヴの坩堝（旧）",
         "自分のターン開始時、現在相に対応する素材を1個得る。無相では得ない。素材ボックスが満杯なら得ない。",
         "古い坩堝は、今も火を覚えている。");

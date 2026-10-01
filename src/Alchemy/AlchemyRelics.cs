@@ -15,13 +15,15 @@ namespace Alchemy;
 /// The alchemist's own relic pool (2026-10-01, user-approved list), shaped like each base game character's: the
 /// starter plus Common 1, Uncommon 2, Rare 3 and Shop 1. It replaced the borrowed Ironclad relics. None of them adds
 /// materials: only ancients may exceed the furnace cap (design-axes 6.1). None adds draw on a transition (原則5).
-/// Icons are borrowed base game relics until the mod has its own.
+/// Icons are the mod's own (IconArt, by class name); the named base-game relic is the fallback without the file.
 /// </summary>
 public abstract class AlchemyRelic(string icon) : CustomRelicModel
 {
-    public override string PackedIconPath => $"res://images/atlases/relic_atlas.sprites/{icon}.tres";
-    protected override string PackedIconOutlinePath => $"res://images/atlases/relic_outline_atlas.sprites/{icon}.tres";
-    protected override string BigIconPath => $"res://images/relics/{icon}.png";
+    public override string PackedIconPath
+        => IconArt.Packed(IconArt.Slug(GetType())) ?? $"res://images/atlases/relic_atlas.sprites/{icon}.tres";
+    protected override string PackedIconOutlinePath
+        => IconArt.Outline(IconArt.Slug(GetType())) ?? $"res://images/atlases/relic_outline_atlas.sprites/{icon}.tres";
+    protected override string BigIconPath => IconArt.Big(IconArt.Slug(GetType())) ?? $"res://images/relics/{icon}.png";
     protected HarvestCombat? Combat => Owner.GetRelic<MaterialBox>()?.Combat;
 }
 
