@@ -53,9 +53,16 @@ public static class RigProbe
             Log("data props: " + string.Join(",", data.GetPropertyList().Select(p => (string)p["name"])));
             Log("animations: " + string.Join(",", new MegaSkeletonDataResource(data).GetAnimationNames()));
 
-            await Capture(tree, viewport, body, "original", ["idle_loop", "attack", "hurt", "cast_mighty", "die"]);
-
-            if (Swap(spine, data, atlas)) await Capture(tree, viewport, body, "swapped", ["idle_loop", "attack"]);
+            if (System.Environment.GetEnvironmentVariable("ALCHEMY_PROBE_MODE") == "uvmap")
+            {
+                Swap(spine, data, atlas, recolour: false); // only to export the atlas text and pages for the scripts
+                await UvMap(tree, viewport, visuals, body, spine);
+            }
+            else
+            {
+                await Capture(tree, viewport, body, "original", ["idle_loop", "attack", "hurt", "cast_mighty", "die"]);
+                if (Swap(spine, data, atlas, recolour: true)) await Capture(tree, viewport, body, "swapped", ["idle_loop", "attack"]);
+            }
         }
         catch (Exception ex) { Log("ERROR " + ex); }
         Log("DONE");
@@ -64,7 +71,7 @@ public static class RigProbe
 
     /// Rebuilds the skeleton data on a copy of the atlas whose first page is recoloured, to see whether a page can be
     /// replaced at runtime from a file outside the game's pack.
-    private static bool Swap(GodotObject spine, GodotObject data, GodotObject atlas)
+    private static bool Swap(GodotObject spine, GodotObject data, GodotObject atlas, bool recolour)
     {
         try
         {
@@ -84,7 +91,7 @@ public static class RigProbe
             {
                 var image = textures[i].As<Texture2D>().GetImage();
                 if (image.IsCompressed()) image.Decompress();
-                if (i == 0)
+                if (i == 0 && recolour)
                     for (int y = 0; y < image.GetHeight(); y++)
                         for (int x = 0; x < image.GetWidth(); x++)
                         {
@@ -102,10 +109,48 @@ public static class RigProbe
             newData.Set("skeleton_file_res", data.Get("skeleton_file_res"));
             newData.Set("atlas_res", newAtlas);
             Log($"new data loaded: {newData.Call("is_skeleton_data_loaded")}");
-            spine.Call("set_skeleton_data_res", newData);
+            if (recolour) spine.Call("set_skeleton_data_res", newData);
             return true;
         }
         catch (Exception ex) { Log("SWAP ERROR " + ex); return false; }
+    }
+
+    /// The same frozen pose twice: as drawn (pose.png) and with every pixel's atlas position on the first page encoded
+    /// in its colour (uv.png: v = x*1024 + y + 1 in 24-bit RGB, 0 = nothing; the front-most part wins). scripts
+    /// read the two together to know which atlas pixel shows where.
+    private static async Task UvMap(SceneTree tree, SubViewport viewport, NCreatureVisuals visuals, MegaSprite body, GodotObject spine)
+    {
+        viewport.Size = new Vector2I(1400, 1400);
+        visuals.Scale = Vector2.One * 3f;
+        visuals.Position = new Vector2(700, 1250);
+        for (int i = 0; i < 120 && body.TryGetAnimationState() is null; i++) await Frames(tree, 1);
+        var state = body.GetAnimationState();
+        state.SetAnimation("idle_loop");
+        await Frames(tree, 2);
+        state.SetTimeScale(0f);
+        await Frames(tree, 4);
+        viewport.GetTexture().GetImage().SavePng($"{Out}/pose.png");
+        var page = body.BoundObject.Call("get_skeleton_data_res").AsGodotObject().Get("atlas_res").AsGodotObject()
+            .Get("textures").AsGodotArray()[0].As<Texture2D>();
+        var shader = new Shader { Code = """
+            shader_type canvas_item;
+            render_mode blend_disabled, unshaded;
+            uniform vec2 page_size;
+            void fragment() {
+                vec4 t = texture(TEXTURE, UV);
+                if (t.a < 0.5 || distance(1.0 / TEXTURE_PIXEL_SIZE, page_size) > 0.5) discard;
+                vec2 px = floor(UV * page_size);
+                float v = px.x * 1024.0 + px.y + 1.0;
+                COLOR = vec4(floor(v / 65536.0) / 255.0, floor(mod(v, 65536.0) / 256.0) / 255.0, mod(v, 256.0) / 255.0, 1.0);
+            }
+            """ };
+        var material = new ShaderMaterial { Shader = shader };
+        material.SetShaderParameter("page_size", page.GetSize());
+        Log($"page size {page.GetSize()}");
+        body.SetNormalMaterial(material);
+        await Frames(tree, 4);
+        viewport.GetTexture().GetImage().SavePng($"{Out}/uv.png");
+        Log("uv map saved");
     }
 
     private static async Task Capture(SceneTree tree, SubViewport viewport, MegaSprite body, string tag, string[] animations)
