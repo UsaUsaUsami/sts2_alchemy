@@ -159,46 +159,6 @@
    "attachment": "cape"
   },
   {
-   "name": "arm_b",
-   "bone": "arm_b",
-   "attachment": "arm_b"
-  },
-  {
-   "name": "hand_b",
-   "bone": "hand_b",
-   "attachment": "hand_b"
-  },
-  {
-   "name": "fore_b",
-   "bone": "fore_b",
-   "attachment": "fore_b"
-  },
-  {
-   "name": "foot_b",
-   "bone": "foot_b",
-   "attachment": "foot_b"
-  },
-  {
-   "name": "foot_f",
-   "bone": "foot_f",
-   "attachment": "foot_f"
-  },
-  {
-   "name": "skirt",
-   "bone": "skirt",
-   "attachment": "skirt"
-  },
-  {
-   "name": "torso",
-   "bone": "torso",
-   "attachment": "torso"
-  },
-  {
-   "name": "head",
-   "bone": "head",
-   "attachment": "head"
-  },
-  {
    "name": "staff",
    "bone": "staff",
    "attachment": "staff"
@@ -217,6 +177,46 @@
    "name": "fore_f",
    "bone": "fore_f",
    "attachment": "fore_f"
+  },
+  {
+   "name": "foot_f",
+   "bone": "foot_f",
+   "attachment": "foot_f"
+  },
+  {
+   "name": "foot_b",
+   "bone": "foot_b",
+   "attachment": "foot_b"
+  },
+  {
+   "name": "skirt",
+   "bone": "skirt",
+   "attachment": "skirt"
+  },
+  {
+   "name": "torso",
+   "bone": "torso",
+   "attachment": "torso"
+  },
+  {
+   "name": "head",
+   "bone": "head",
+   "attachment": "head"
+  },
+  {
+   "name": "arm_b",
+   "bone": "arm_b",
+   "attachment": "arm_b"
+  },
+  {
+   "name": "hand_b",
+   "bone": "hand_b",
+   "attachment": "hand_b"
+  },
+  {
+   "name": "fore_b",
+   "bone": "fore_b",
+   "attachment": "fore_b"
   }
  ],
  "skins": [
@@ -230,78 +230,6 @@
       "rotation": 90,
       "width": 363,
       "height": 757
-     }
-    },
-    "arm_b": {
-     "arm_b": {
-      "x": 142.21,
-      "y": -0.31,
-      "rotation": 110,
-      "width": 130,
-      "height": 305
-     }
-    },
-    "hand_b": {
-     "hand_b": {
-      "x": 100.49,
-      "y": -1.25,
-      "rotation": 100,
-      "width": 136,
-      "height": 251
-     }
-    },
-    "fore_b": {
-     "fore_b": {
-      "x": 130.38,
-      "y": 1.37,
-      "rotation": 100,
-      "width": 228,
-      "height": 303
-     }
-    },
-    "foot_b": {
-     "foot_b": {
-      "x": 30.0,
-      "y": -8.0,
-      "rotation": 0,
-      "width": 257,
-      "height": 219
-     }
-    },
-    "foot_f": {
-     "foot_f": {
-      "x": 25.0,
-      "y": -12.0,
-      "rotation": 0,
-      "width": 257,
-      "height": 219
-     }
-    },
-    "skirt": {
-     "skirt": {
-      "x": 265.0,
-      "y": -0.0,
-      "rotation": 90,
-      "width": 411,
-      "height": 578
-     }
-    },
-    "torso": {
-     "torso": {
-      "x": 90.0,
-      "y": -10.0,
-      "rotation": -90,
-      "width": 306,
-      "height": 556
-     }
-    },
-    "head": {
-     "head": {
-      "x": 130.0,
-      "y": -17.0,
-      "rotation": -90,
-      "width": 286,
-      "height": 293
      }
     },
     "staff": {
@@ -336,6 +264,78 @@
       "x": 122.96,
       "y": 14.31,
       "rotation": 90,
+      "width": 228,
+      "height": 303
+     }
+    },
+    "foot_f": {
+     "foot_f": {
+      "x": 25.0,
+      "y": -12.0,
+      "rotation": 0,
+      "width": 257,
+      "height": 219
+     }
+    },
+    "foot_b": {
+     "foot_b": {
+      "x": 30.0,
+      "y": -8.0,
+      "rotation": 0,
+      "width": 257,
+      "height": 219
+     }
+    },
+    "skirt": {
+     "skirt": {
+      "x": 265.0,
+      "y": -0.0,
+      "rotation": 90,
+      "width": 411,
+      "height": 578
+     }
+    },
+    "torso": {
+     "torso": {
+      "x": 90.0,
+      "y": -10.0,
+      "rotation": -90,
+      "width": 306,
+      "height": 556
+     }
+    },
+    "head": {
+     "head": {
+      "x": 130.0,
+      "y": -17.0,
+      "rotation": -90,
+      "width": 286,
+      "height": 293
+     }
+    },
+    "arm_b": {
+     "arm_b": {
+      "x": 142.21,
+      "y": -0.31,
+      "rotation": 110,
+      "width": 130,
+      "height": 305
+     }
+    },
+    "hand_b": {
+     "hand_b": {
+      "x": 100.49,
+      "y": -1.25,
+      "rotation": 100,
+      "width": 136,
+      "height": 251
+     }
+    },
+    "fore_b": {
+     "fore_b": {
+      "x": 130.38,
+      "y": 1.37,
+      "rotation": 100,
       "width": 228,
       "height": 303
      }

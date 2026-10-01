@@ -47,23 +47,26 @@ BONES = {
 }
 
 # Slots in draw order (back to front): (slot, bone, part, world centre x, y, extra rotation, flip, tint).
-# tint darkens the far-side limbs so they read as behind.
+# The torso is drawn turned to the right (three-quarter view), so the near side is the LEFT of the picture: the left
+# arm and foot are drawn in front of the body, the right (enemy-side) arm that holds the staff behind it, darkened
+# by tint so it reads as farther (user, 2026-10-02: "the arms look the wrong way round").
+# Bone names: *_f = the forward (enemy-side, far) limbs, *_b = the back-side (near) limbs.
 FAR = "a8a8b0"
 SLOTS = [
     ("cape", "cape", "CAPE", -150, 560, 0, False, None),
-    ("arm_b", "arm_b", "UPPER_ARM", -125, 720, 10, True, FAR),
-    ("hand_b", "hand_b", "HAND_OPEN", -175, 230, 5, True, FAR),
-    ("fore_b", "fore_b", "FOREARM", -160, 460, 5, True, FAR),
-    ("foot_b", "foot_b", "BOOT", -40, 112, 0, False, FAR),
-    ("foot_f", "foot_f", "BOOT", 95, 108, 0, False, None),
+    ("staff", "staff", "STAFF", 345, 640, 0, False, None),
+    ("hand_f", "hand_f", "HAND_GRIP", 345, 400, 0, False, FAR),
+    ("arm_f", "arm_f", "UPPER_ARM", 130, 720, -10, False, FAR),
+    ("fore_f", "fore_f", "FOREARM", 245, 505, 40, False, FAR),
+    ("foot_f", "foot_f", "BOOT", 95, 108, 0, False, FAR),
+    ("foot_b", "foot_b", "BOOT", -40, 112, 0, False, None),
     # The boots stay behind the robe: only the shoes show under the hem.
     ("skirt", "skirt", "SKIRT", 0, 345, 0, False, None),
     ("torso", "torso", "TORSO", 10, 690, 0, False, None),
     ("head", "head", "HOOD", 25, 1030, 0, False, None),
-    ("staff", "staff", "STAFF", 345, 640, 0, False, None),
-    ("hand_f", "hand_f", "HAND_GRIP", 345, 400, 0, False, None),
-    ("arm_f", "arm_f", "UPPER_ARM", 130, 720, -10, False, None),
-    ("fore_f", "fore_f", "FOREARM", 245, 505, 40, False, None),
+    ("arm_b", "arm_b", "UPPER_ARM", -125, 720, 10, True, None),
+    ("hand_b", "hand_b", "HAND_OPEN", -175, 230, 5, True, None),
+    ("fore_b", "fore_b", "FOREARM", -160, 460, 5, True, None),
 ]
 
 

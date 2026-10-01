@@ -17,6 +17,7 @@
 3. `scripts/rig-build.py`：部品を組み上げた姿の画面座標で置き、骨の座標へ変換してSpine 4.2 JSON（`.spine-json`）・アトラス・ページ画像を書き出す。骨18本、スロット13、アニメーション5種（idle_loop・attack・cast・hurt・die）。立ち姿のプレビューは`artifacts/rig-custom/setup.png`。
 4. `src/Alchemy/AlchemistRig.cs`：ネクロバインダーのシーン（大きさ・印の位置のため）に自前の骨格を載せ、シーンの演出（頭の炎・鎌の粒子・斬撃）は隠す。詠唱は`cast`。
 5. 配布物には`alchemist.atlas`・`.png`・`.spine-json`だけを入れる（build.ps1）。スモークの体の確認項目を自前の骨格用に書き換えた。
+6. ユーザー「腕の位置が反対に見える」→ 胴の絵は右向きの3/4なので、手前は画面左の腕。左の腕を胴より手前・普通の色に、杖を持つ右の腕を胴より奥・暗めに入れ替えた（ポーズは同じ）。スモーク405件PASS、反映済み（旧版`artifacts/backups/20261002-013932-634`）。確認用は`artifacts/rig-probe/own-v2-sheet.png`。
 
 ### 次にやること・返答待ち
 1. **ユーザーが実際の戦闘画面で確認**（大きさ・位置・動き）。
