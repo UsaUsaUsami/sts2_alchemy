@@ -687,7 +687,37 @@ public static class Smoke
             var merchantArt=merchantChar.GetNodeOrNull<Sprite2D>(RestMerchantArt.NodeName);
             Check(restArt is { Visible: true, Texture: not null } && restArt.Scale.Y>0.05f && merchantArt is { Visible: true, Texture: not null } && merchantArt.Scale.Y>0.05f,
                 $"the alchemist's rest site and merchant pictures replace the Ironclad (rest {restArt?.Position} x{restArt?.Scale.Y}, merchant {merchantArt?.Position} x{merchantArt?.Scale.Y})");
+            // 2026-10-01: the pictures breathe (a slow upward stretch) with their feet kept on the ground.
+            float Bottom(Sprite2D sp)=>sp.Position.Y+sp.Texture.GetHeight()*sp.Scale.Y;
+            float scale0=restArt!.Scale.Y, bottom0=Bottom(restArt);
+            await Task.Delay(700);
+            Check(Math.Abs(restArt.Scale.Y-scale0)>0.0001f && Math.Abs(Bottom(restArt)-bottom0)<0.5f,
+                $"the rest site picture breathes with its feet in place (scale {scale0}->{restArt.Scale.Y}, bottom {bottom0}->{Bottom(restArt)})");
             restChar.QueueFree(); merchantChar.QueueFree();
+            // 2026-10-01: taking a hit knocks the alchemist back and flushes it red; a phase transition glows in the phase's colour.
+            var alchemistNode=NCombatRoom.Instance!.GetCreatureNode(player.Creature)!;
+            var alchemistSprite=(Sprite2D)alchemistNode.Visuals.Body;
+            alchemistNode.SetAnimationTrigger("Hit");
+            await Task.Delay(60);
+            var hitTint=alchemistSprite.SelfModulate; float hitX=alchemistSprite.Position.X;
+            await Task.Delay(500);
+            Check(hitTint.G<0.9f && hitX<-5f && alchemistSprite.SelfModulate.IsEqualApprox(Colors.White) && Math.Abs(alchemistSprite.Position.X)<0.01f,
+                $"a hit knocks the alchemist back and flushes it red, then it recovers (tint {hitTint}, x {hitX})");
+            SpriteMotion.Pulse(alchemistNode,PhaseDial.Colour(AlchemyPhase.Fire));
+            var pulseTint=alchemistSprite.SelfModulate;
+            await Task.Delay(600);
+            Check(pulseTint.R>pulseTint.B+0.2f && alchemistSprite.SelfModulate.IsEqualApprox(Colors.White) && alchemistSprite.Scale.IsEqualApprox(Vector2.One),
+                $"a phase transition glows in the destination phase's colour, then fades (tint {pulseTint})");
+            // The sounds are base game FMOD events; ask FMOD whether each one exists when its server is reachable.
+            string[] sounds=[AlchemySfx.PhaseShift,AlchemySfx.Furnace,AlchemySfx.Craft,AlchemySfx.Modify,AlchemySfx.Inscribe,AlchemySfx.Brew];
+            if(Engine.HasSingleton("FmodServer"))
+            {
+                var fmod=Engine.GetSingleton("FmodServer");
+                var missingSounds=sounds.Where(e=>!fmod.Call("check_event_path",e).AsBool()).ToArray();
+                bool control=fmod.Call("check_event_path","event:/sfx/alchemy_no_such_event").AsBool();
+                Check(missingSounds.Length==0 && !control,$"the alchemist's sounds are events in the game's banks (missing: {string.Join(",",missingSounds)}; a made-up path exists: {control})");
+            }
+            else GD.Print("ALCHEMIST_SMOKE_NOTE FmodServer not reachable; the sound events were not checked");
             // 2026-10-01: the mod's own relic, enchantment and map icons (IconArt), loaded the way the game loads them.
             RelicModel[] ownRelics=[ModelDb.Relic<MaterialBox>(),ModelDb.Relic<RefinedMaterialBox>(),ModelDb.Relic<DarvCrucible>(),
                 ModelDb.Relic<PhaseCompass>(),ModelDb.Relic<BloodChalice>(),ModelDb.Relic<PulsingCore>(),ModelDb.Relic<Quadrant>(),

@@ -580,6 +580,7 @@ public static class WorkshopUi
                 Core.Material.Powder=>Procure<FirePhial>(),_=>Procure<AirPhial>()
             });
             status="ポーションを調合しました。";
+            AlchemySfx.Play(AlchemySfx.Brew);
         }
         catch(Exception ex){status=$"調薬できませんでした：{ex.Message}";GD.PushError(ex.ToString());}
         finally{busy=false;if(IsOpen)Refresh();}
@@ -817,6 +818,7 @@ public static class WorkshopUi
                 if(CardCmd.Enchant(infusion,card,infusion.Amount) is null) throw new InvalidOperationException("改造を付与できませんでした。");
             });
             status=$"{card.Title}を工房改造しました（{InfusionText(CurrentInfusion(card))}）。";
+            AlchemySfx.Play(AlchemySfx.Modify);
             selectedUpgrade=null;
             Array.Clear(infuseInputs);
         }
@@ -834,6 +836,7 @@ public static class WorkshopUi
             box.Inventory.CommitRareAt(box.Owner.RunState.TotalFloor,rare.Material,Guid.NewGuid().ToString("N"),
                 ()=>card.AlchemistRareModifier=rare.Id,()=>card.AlchemistRareModifier=before);
             status=$"{target.Title}に{rare.Name}の「{rare.EffectName}」を刻みました。";
+            AlchemySfx.Play(AlchemySfx.Inscribe);
             selectedRareCard=null;
         }
         catch(Exception ex) { status=$"希少加工できませんでした：{ex.Message}";GD.PushError(ex.ToString()); }
@@ -864,6 +867,7 @@ public static class WorkshopUi
                 }
             });
             status = $"{recipe.Name}をデッキに追加しました。";
+            AlchemySfx.Play(AlchemySfx.Craft);
             selectedRecipe = null;
             if(materialCraftMode) craftInputs.Clear();
         }

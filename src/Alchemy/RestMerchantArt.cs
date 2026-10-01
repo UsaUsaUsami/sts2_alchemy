@@ -62,7 +62,26 @@ public static class RestMerchantArt
         float left = alignFront ? (flipped ? box.Position.X : box.End.X - width) : centreX - width / 2;
         sprite.Position = new Vector2(flipped ? left + width : left, box.End.Y - box.Size.Y);
         sprite.Visible = true;
+        Breathe(sprite);
         GD.Print($"[Alchemy] scene art fitted to {box} (scale {scale:0.###})");
+    }
+
+    /// The Ironclad's skeleton breathes there; the picture does too (2026-10-01): a slow stretch of 1.2% upward,
+    /// feet kept on the ground (the sprite is drawn from its top edge, so the top moves with the stretch).
+    private static void Breathe(Sprite2D sprite)
+    {
+        float restY = sprite.Scale.Y;
+        float bottom = sprite.Position.Y + sprite.Texture.GetHeight() * restY;
+        void Stretch(float t)
+        {
+            if (!GodotObject.IsInstanceValid(sprite)) return;
+            // X stays whatever it is now: FlipX may mirror the sprite while it breathes.
+            sprite.Scale = new Vector2(sprite.Scale.X, restY * (1 + 0.012f * t));
+            sprite.Position = new Vector2(sprite.Position.X, bottom - sprite.Texture.GetHeight() * sprite.Scale.Y);
+        }
+        var tween = sprite.CreateTween().SetLoops();
+        tween.TweenMethod(Callable.From<float>(Stretch), 0f, 1f, 1.6).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+        tween.TweenMethod(Callable.From<float>(Stretch), 1f, 0f, 1.6).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
     }
 
     public static bool IsAlchemist(Player? player) => player?.Character is AlchemistCharacter;
