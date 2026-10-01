@@ -22,7 +22,7 @@ public static class RigProbe
     [HarmonyPatch(typeof(OneTimeInitialization), nameof(OneTimeInitialization.ExecuteDeferred))]
     public static class Ready
     {
-        public static void Postfix() => Callable.From(() => _ = Run()).CallDeferred();
+        public static void Postfix() => Callable.From(() => { _ = Run(); }).CallDeferred();
     }
 
     private static async Task Run()
@@ -39,6 +39,16 @@ public static class RigProbe
             tree.Root.AddChild(viewport);
             string mode = System.Environment.GetEnvironmentVariable("ALCHEMY_PROBE_MODE") ?? "";
             // ALCHEMY_PROBE_RIG picks the rig donor (necrobinder / silent) for side-by-side comparisons.
+            // ALCHEMY_PROBE_RIDERS: "slot,file,x,y,rotation,scale;..." to try pictures on the rig without rebuilding.
+            if (System.Environment.GetEnvironmentVariable("ALCHEMY_PROBE_RIDERS") is { Length: > 0 } riders)
+            {
+                Alchemy.NecroRig.Riders.Clear();
+                foreach (var spec in riders.Split(';', StringSplitOptions.RemoveEmptyEntries))
+                {
+                    var f = spec.Split(',');
+                    Alchemy.NecroRig.Riders.Add(new(f[0], f[1], new Vector2(float.Parse(f[2]), float.Parse(f[3])), float.Parse(f[4]), float.Parse(f[5])));
+                }
+            }
             if (System.Environment.GetEnvironmentVariable("ALCHEMY_PROBE_RIG") is { Length: > 0 } rigName)
                 Alchemy.NecroRig.Donor = Enum.Parse<Alchemy.NecroRig.RigDonor>(rigName, ignoreCase: true);
             // "alchemist": the alchemist's own visuals, made the way combat makes them (CharacterModel.CreateVisuals).
@@ -59,7 +69,23 @@ public static class RigProbe
             Log("data props: " + string.Join(",", data.GetPropertyList().Select(p => (string)p["name"])));
             Log("animations: " + string.Join(",", new MegaSkeletonDataResource(data).GetAnimationNames()));
 
-            if (mode == "alchemist")
+            if (mode == "api")
+            {
+                foreach (var cls in ClassDB.GetClassList().Where(c => c.StartsWith("Spine")).OrderBy(c => c))
+                    Log($"class {cls}: " + string.Join(",", ClassDB.ClassGetMethodList(cls, true).Select(m => (string)m["name"])));
+                foreach (var boneObj in data.Call("get_bones").AsGodotArray())
+                {
+                    var bone = boneObj.AsGodotObject();
+                    var parent = bone.Call("get_parent").AsGodotObject();
+                    Log($"bone {bone.Call("get_bone_name")} parent={parent?.Call("get_bone_name")} len={bone.Call("get_length")} sx={bone.Call("get_scale_x")} sy={bone.Call("get_scale_y")} x={bone.Call("get_x")} y={bone.Call("get_y")} rot={bone.Call("get_rotation")}");
+                }
+                foreach (var slotObj in data.Call("get_slots").AsGodotArray())
+                {
+                    var slot = slotObj.AsGodotObject();
+                    Log($"slot {slot.Call("get_name")} bone={slot.Call("get_bone_data").AsGodotObject()?.Call("get_bone_name")} attachment={slot.Call("get_attachment_name")}");
+                }
+            }
+            else if (mode == "alchemist")
             {
                 visuals.Scale = Vector2.One * 1.25f;
                 await Capture(tree, viewport, body, "alchemist", ["idle_loop", "attack", "hurt", Alchemy.NecroRig.CastAnimation, "die"]);

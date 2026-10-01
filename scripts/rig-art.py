@@ -29,7 +29,7 @@ def save(im, name):
     im.resize((im.width // S, im.height // S), Image.LANCZOS).save(OUT / f"{name}.png")
 
 
-def staff(name, size, x0, y0, slope, ring_at, ring, bottom_y, dark=False):
+def staff(name, size, x0, y0, slope, ring_at, ring, bottom_y, dark=False, head=True):
     """The pole on the scythe's pole line, joined to a brass ring that sits in the blade's thick heel. The game draws
     the part as a mesh shaped like the scythe, so everything must stay inside that outline (measured upright: the
     heel spans about x 6-40 at y 64-104 on the 215x434 part); the crescent tip is left empty."""
@@ -43,12 +43,21 @@ def staff(name, size, x0, y0, slope, ring_at, ring, bottom_y, dark=False):
     cx, cy, r = ring_at[0] * S, ring_at[1] * S, ring * S
     shade = (10, 8, 6, 255)
     d.line([a, b], fill=shade if dark else WOOD, width=int(width))
-    d.line([(cx + r * 0.6, cy + r * 0.6), a], fill=shade if dark else GOLD, width=int(width * 1.1))  # the collar
+    if not head:  # the big ring rides on the bone instead (staff_head); the pole runs on to the top of the heel
+        top = (px(56), 56 * S)
+        d.line([top, a], fill=WOOD, width=int(width))
+        d.line([(top[0] - width, top[1] - 2 * S), (top[0] + width, top[1] + 2 * S)], fill=GOLD, width=int(width * 1.2))
+        a = top
+    else:
+        d.line([(cx + r * 0.6, cy + r * 0.6), a], fill=shade if dark else GOLD, width=int(width * 1.1))  # the collar
     if not dark:
         d.line([(a[0] - width * 0.25, a[1]), (b[0] - width * 0.25, b[1])], fill=WOOD_HI, width=max(1, int(width * 0.3)))
         for t in (0.12, 0.5):  # brass bands on the pole
             y = pole_top + (bottom_y - pole_top) * t
             d.line([(px(y) - width, (y - 3) * S), (px(y) + width, (y + 3) * S)], fill=GOLD, width=int(width * 0.9))
+    if not head:
+        save(im, name)
+        return
     d.ellipse([cx - r, cy - r, cx + r, cy + r], outline=shade if dark else GOLD, width=int(max(2, ring / 3.5) * S))
     if not dark:
         d.ellipse([cx - r * 0.72, cy - r * 0.72, cx + r * 0.72, cy + r * 0.72], outline=GOLD_LO, width=S)
@@ -58,7 +67,7 @@ def staff(name, size, x0, y0, slope, ring_at, ring, bottom_y, dark=False):
     save(im, name)
 
 
-staff("scythe", (215, 434), 67, 120, 0.4661, (25, 84), 13, 432)
+staff("scythe", (215, 434), 67, 120, 0.4661, (25, 84), 13, 432, head=False)
 staff("sythe_dissolve", (213, 432), 65, 120, 0.466, (25, 84), 13, 430, dark=True)
 staff("scythe_glow", (120, 229), 64.5, 120, 0.475, (14, 45), 7, 228, dark=True)
 
@@ -103,6 +112,43 @@ def band(name, size, left, right, marks_y, mark=4.2):
 
 sigil("head", (47, 50), (30, 24), 9.5)
 band("skirt_flap", (25, 127), 6, 19, (22, 46, 70, 94))
+
+def hood(name, w=200, h=230):
+    """The key visual's hood for the Necrobinder rig, drawn upright (peak up and back, opening facing right). It
+    rides on the head bone in front of the head; the opening is left empty so the dark face and its sigil show."""
+    im = canvas(w, h)
+    d = ImageDraw.Draw(im)
+    P = lambda pts: [(x * S, y * S) for x, y in pts]
+    outline = [(70, 8), (40, 40), (22, 90), (18, 140), (30, 190), (60, 222), (120, 228), (170, 212), (188, 180),
+               (178, 150), (160, 128), (150, 96), (140, 60), (115, 30)]
+    d.polygon(P(outline), fill=(30, 29, 35, 255))
+    d.polygon(P([(70, 8), (40, 40), (26, 92), (24, 140), (40, 170), (60, 120), (70, 70)]), fill=(20, 19, 24, 255))  # shade
+    d.polygon(P([(130, 205), (170, 212), (188, 180), (178, 150), (150, 180)]), fill=(46, 44, 52, 255))  # light fold
+    opening = [118, 92, 186, 178]
+    d.ellipse([v * S for v in opening], fill=(0, 0, 0, 0))
+    d.arc([v * S for v in (114, 88, 190, 182)], 0, 360, fill=GOLD, width=int(3 * S))
+    d.line(P([(60, 222), (120, 228), (170, 212)]), fill=GOLD, width=int(3 * S))
+    save(im, name)
+
+
+def ring_head(name, size=120):
+    """A big brass sigil ring for the staff head (rides on the scythe bone, outside the scythe's own outline)."""
+    im = canvas(size, size)
+    d = ImageDraw.Draw(im)
+    c, r = size / 2 * S, size * 0.42 * S
+    d.ellipse([c - r, c - r, c + r, c + r], outline=GOLD, width=int(size / 14 * S))
+    d.ellipse([c - r * 0.8, c - r * 0.8, c + r * 0.8, c + r * 0.8], outline=GOLD_LO, width=int(size / 60 * S))
+    tri = [(c + r * 0.7 * math.cos(math.radians(a)), c + r * 0.7 * math.sin(math.radians(a))) for a in (-90, 30, 150)]
+    d.polygon(tri, outline=GOLD_HI, width=int(size / 30 * S))
+    d.ellipse([c - r * 0.16, c - r * 0.16, c + r * 0.16, c + r * 0.16], fill=GOLD_HI)
+    for a in range(0, 360, 45):
+        x, y = math.cos(math.radians(a)), math.sin(math.radians(a))
+        d.line([(c + x * r * 1.05, c + y * r * 1.05), (c + x * r * 1.18, c + y * r * 1.18)], fill=GOLD_HI, width=int(size / 40 * S))
+    save(im, name)
+
+
+hood("hood")
+ring_head("staff_head")
 
 # The Silent (2026-10-01 trial): the face is the dark right half of its head part; the band on the hanging cloth.
 OUT = BASE / "silent"

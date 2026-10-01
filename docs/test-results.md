@@ -1,5 +1,9 @@
 ﻿# テスト結果記録
 
+## 隔離実機スモーク（2026-10-01、ネクロバインダーの体型・フード・杖頭）
+
+- `scripts/smoke.ps1 -Name rig-necro2`：**405件PASS・FAIL 0**。見た目は`scripts/rig-probe.ps1 -Mode alchemist -Rig necrobinder`で全動作を確認（`artifacts/rig-probe/necro-v2-sheet.png`）。反映済み（旧版`artifacts/backups/20261001-233617-113`）。実際の戦闘画面は未確認。
+
 ## 隔離実機スモーク（2026-10-01、サイレントの骨格の転用）
 
 - `scripts/smoke.ps1 -Name rig-silent`：**405件PASS・FAIL 0**（骨格の借り先がサイレントで、塗り替えたアトラス`alchemy_rig/silent`が使われ、被弾でhurtが再生される）。見た目は`scripts/rig-probe.ps1 -Mode alchemist -Rig silent`で確認（`artifacts/rig-probe/silent-alch/sheet.png`）。反映済み。実際の戦闘画面は未確認。

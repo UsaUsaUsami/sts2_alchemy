@@ -17,7 +17,7 @@ public static class NecroRig
 {
     public enum RigDonor { Necrobinder, Silent }
     /// The donor in use. A trial choice between the two (2026-10-01).
-    public static RigDonor Donor { get; set; } = RigDonor.Silent;
+    public static RigDonor Donor { get; set; } = RigDonor.Necrobinder;
     private static string DonorName => Donor.ToString().ToLowerInvariant();
     private static readonly Dictionary<RigDonor, GodotObject> built = [];
     private static bool failed;
@@ -98,7 +98,11 @@ public static class NecroRig
             var visuals = scene.Instantiate<NCreatureVisuals>(PackedScene.GenEditState.Disabled);
             var spine = visuals.GetNode("Visuals");
             var original = spine.Get("skeleton_data_res").AsGodotObject();
-            if (Build(original) is { } data) spine.Set("skeleton_data_res", data);
+            if (Build(original) is { } data)
+            {
+                spine.Set("skeleton_data_res", data);
+                Attach((Node2D)spine);
+            }
             Flames(visuals);
             return visuals;
         }
@@ -138,9 +142,78 @@ public static class NecroRig
         data.Set("atlas_res", newAtlas);
         data.Set("default_mix", original.Get("default_mix"));
         data.Set("animation_mixes", original.Get("animation_mixes"));
+        Reshape(data);
         if (!data.Call("is_skeleton_data_loaded").AsBool()) throw new InvalidOperationException("skeleton data did not load");
         GD.Print($"[Alchemy] {DonorName} rig repainted ({pages.Sum(p => p.Regions.Count)} parts)");
         return built[Donor] = data;
+    }
+
+    /// Bone proportions (setup pose scale, multiplied), so the Necrobinder's bone-thin limbs read as an alchemist's.
+    /// Scale Y is across the bone: thicker. Animations key scale relative to the setup pose, so they keep it.
+    public static readonly Dictionary<string, Vector2> Proportions = new()
+    {
+        ["arm_l_upper"] = new(1f, 1.6f), ["arm_l_lower"] = new(1f, 1.5f),
+        ["arm_r_upper"] = new(1f, 1.6f), ["arm_r_lower"] = new(1f, 1.5f),
+        ["leg_l_upper"] = new(1f, 1.5f), ["leg_l_lower"] = new(1f, 1.4f),
+        ["leg_r_upper"] = new(1f, 1.5f), ["leg_r_lower"] = new(1f, 1.4f),
+        // Scale is inherited: the sleeves hanging from the upper arms and the feet are scaled back.
+        ["sleeve_l_follow"] = new(1f, 1 / 1.6f), ["sleeve_r_base"] = new(1f, 1 / 1.6f),
+        ["foot_l"] = new(1f, 1 / 1.4f), ["foot_r"] = new(1f, 1 / 1.4f),
+    };
+
+    private static void Reshape(GodotObject data)
+    {
+        if (Donor != RigDonor.Necrobinder) return;
+        foreach (var (name, scale) in Proportions)
+        {
+            if (data.Call("find_bone", name).AsGodotObject() is not { } bone) { GD.PushWarning($"[Alchemy] no bone {name}"); continue; }
+            bone.Call("set_scale_x", bone.Call("get_scale_x").AsSingle() * scale.X);
+            bone.Call("set_scale_y", bone.Call("get_scale_y").AsSingle() * scale.Y);
+        }
+    }
+
+    /// The mod's own pictures riding on the rig: each sits in a SpineSlotNode, which follows the slot's bone and is
+    /// drawn at the slot's place in the draw order (the way the scene itself hangs its fire and slash on bones).
+    /// Position and rotation are in the bone's own space; Scale is applied to the picture.
+    /// OnlyWith: shown only while the slot shows that attachment (the staff head goes with the scythe part, which
+    /// the animations swap out, e.g. while it dissolves on death).
+    public sealed record Rider(string Slot, string File, Vector2 Position, float Rotation, float Scale, string? OnlyWith = null);
+    /// Trial placements (2026-10-01), measured with scripts/rig-probe.ps1 -Riders.
+    public static readonly List<Rider> Riders =
+    [
+        new("head", "hood.png", new(15, -30), 90, 1.2f),
+        new("scythe", "staff_head.png", new(650, -90), 0, 1.3f, OnlyWith: "scythe"),
+    ];
+
+    private static void Attach(Node2D spine)
+    {
+        var gated = new List<(Sprite2D Sprite, string Slot, string Attachment)>();
+        foreach (var rider in Riders.Where(r => Donor == RigDonor.Necrobinder))
+        {
+            string path = Path.Combine(RigArtDirectory, rider.File);
+            if (!File.Exists(path) || Image.LoadFromFile(path) is not { } image || image.IsEmpty()) continue;
+            var slotNode = (Node2D)ClassDB.Instantiate("SpineSlotNode");
+            slotNode.Name = "Alchemist_" + Path.GetFileNameWithoutExtension(rider.File);
+            slotNode.Set("slot_name", rider.Slot);
+            var sprite = new Sprite2D
+            {
+                Texture = ImageTexture.CreateFromImage(image), Position = rider.Position,
+                RotationDegrees = rider.Rotation, Scale = Vector2.One * rider.Scale,
+            };
+            slotNode.AddChild(sprite);
+            spine.AddChild(slotNode);
+            if (rider.OnlyWith is { } attachment) gated.Add((sprite, rider.Slot, attachment));
+        }
+        if (gated.Count == 0) return;
+        spine.Connect("world_transforms_changed", Callable.From((Variant _) =>
+        {
+            if (spine.Call("get_skeleton").AsGodotObject() is not { } skeleton) return;
+            foreach (var (sprite, slot, attachment) in gated)
+            {
+                var current = skeleton.Call("find_slot", slot).AsGodotObject()?.Call("get_attachment").AsGodotObject();
+                sprite.Visible = current?.Call("get_attachment_name").AsString() == attachment;
+            }
+        }));
     }
 
     /// The atlas text is not a property of SpineAtlasResource; the imported resource it came from is JSON with it.
