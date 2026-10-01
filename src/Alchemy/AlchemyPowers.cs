@@ -12,14 +12,16 @@ using MegaCrit.Sts2.Core.ValueProps;
 
 namespace Alchemy;
 
-/// <summary>Stacking buff with placeholder art borrowed from a base-game power.</summary>
+/// <summary>Stacking buff; IconSource is the base-game power whose icon stands in when the mod has none.</summary>
 public abstract class AlchemyPower : CustomPowerModel
 {
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
     protected abstract PowerModel IconSource { get; }
-    public override string? CustomPackedIconPath => IconSource.PackedIconPath;
-    public override string? CustomBigIconPath => $"res://images/powers/{IconSource.Id.Entry.ToLowerInvariant()}.png";
+    // The mod's own icon (IconArt, by class name) when its file exists, else the borrowed base-game power's.
+    public override string? CustomPackedIconPath => IconArt.Packed(IconArt.Slug(GetType())) ?? IconSource.PackedIconPath;
+    public override string? CustomBigIconPath
+        => IconArt.Big(IconArt.Slug(GetType())) ?? $"res://images/powers/{IconSource.Id.Entry.ToLowerInvariant()}.png";
 
     protected AlchemyPhase CurrentPhase => Owner.Player?.GetRelic<MaterialBox>()?.Combat?.Phases.Current ?? AlchemyPhase.None;
     protected async Task DamageAllEnemies(PlayerChoiceContext c, decimal amount)

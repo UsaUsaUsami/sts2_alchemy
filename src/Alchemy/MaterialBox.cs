@@ -42,7 +42,7 @@ public class MaterialBox : CustomRelicModel
         => IconArt.Outline(IconArt.Slug(GetType())) ?? "res://images/atlases/relic_outline_atlas.sprites/burning_blood.tres";
     protected override string BigIconPath => IconArt.Big(IconArt.Slug(GetType())) ?? "res://images/relics/burning_blood.png";
     public const string RewardLocKey = "materialReward";
-    public const string RewardIconPath = "res://images/relics/burning_blood.png";
+    public static string RewardIconPath => IconArt.Big("material_reward") ?? "res://images/relics/burning_blood.png";
     /// Furnace activations dealt at the start of each combat, which is also that combat's cap.
     public virtual int FurnaceTokens => HarvestCombat.FurnaceLimit;
     /// design-axes 6.3 G-1: only the box Orobas refined opens combats in a random element.

@@ -119,8 +119,13 @@ public static class IconArt
         => Path.Combine(Path.GetDirectoryName(typeof(IconArt).Assembly.Location) ?? "", "art", "icons");
 
     /// The icon's slug for a model class: PhaseCompass -> phase_compass.
-    public static string Slug(Type type)
-        => string.Concat(type.Name.Select((c, i) => i > 0 && char.IsUpper(c) ? "_" + char.ToLowerInvariant(c) : char.ToLowerInvariant(c).ToString()));
+    public static string Slug(Type type) => Snake(type.Name);
+    public static string Snake(string name)
+        => string.Concat(name.Select((c, i) => i > 0 && char.IsUpper(c) ? "_" + char.ToLowerInvariant(c) : char.ToLowerInvariant(c).ToString()));
+
+    /// material_iron, material_void_crystal, ... for a normal or rare material.
+    public static string MaterialSlug(Core.MaterialChoice m)
+        => "material_" + Snake(m.Class == Core.MaterialClass.Normal ? m.NormalMaterial.ToString() : m.RareMaterial.ToString());
 
     public static string? Big(string slug) => Ctex(slug);
     public static string? Packed(string slug) => Ctex(slug + "_packed");

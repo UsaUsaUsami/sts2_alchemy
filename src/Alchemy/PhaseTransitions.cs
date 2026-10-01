@@ -162,7 +162,7 @@ public static class PhaseTransitions
         AlchemyPhase.Earth => VfxColor.Orange,
         AlchemyPhase.Water => VfxColor.Blue,
         AlchemyPhase.Fire => VfxColor.Red,
-        AlchemyPhase.Air => VfxColor.Green,
+        AlchemyPhase.Air => VfxColor.Cyan, // air is light blue (user, 2026-10-01)
         _ => VfxColor.White
     };
 }

@@ -479,6 +479,11 @@ public static class Smoke
             await Play(cs.CreateCard<FlashPowder>(player),null);
             Check(box.Combat.Phases.Current==AlchemyPhase.Fire && hpBefore-foe.CurrentHp==6+PhaseRules.BaseAmount(AlchemyPhase.Fire),
                 $"water to fire adds the fire transition's damage (dealt {hpBefore-foe.CurrentHp})");
+            // 2026-10-01: the phase dial follows the current phase in combat, with the four marks loaded.
+            await Task.Delay(100);
+            Check(PhaseDial.Node is { Visible: true } && PhaseDial.Shown==AlchemyPhase.Fire
+                && PhaseDial.Node.GetChildren().OfType<TextureRect>().Count(t=>t.Texture is not null)==4,
+                $"the phase dial lights the current phase (shown {PhaseDial.Shown}, dial {(PhaseDial.Node is null ? "missing" : "present")})");
             hpBefore=foe.CurrentHp;
             await Play(cs.CreateCard<FlashPowder>(player),null);
             Check(box.Combat.Phases.TransitionCount==2 && hpBefore-foe.CurrentHp==6,"a same-element card does not transition again");
@@ -668,6 +673,15 @@ public static class Smoke
             var badIcons=ownRelics.Where(r=>!(r.PackedIconPath.EndsWith("_packed.ctex") && r.Icon is { } i && i.GetWidth()==85
                 && r.IconOutline is { } o && o.GetWidth()==85 && r.BigIcon is { } b && b.GetWidth()==256)).Select(r=>r.Id.Entry).ToArray();
             Check(badIcons.Length==0, $"the alchemist's relics show their own icons, small, outline and big (wrong: {string.Join(",",badIcons)})");
+            var badPowers=ModelDb.AllPowers.OfType<AlchemyPower>().Where(p=>!(p.Icon is { } i && i.GetWidth()==64
+                && p.BigIcon is { } b && b.GetWidth()==256 && p.IconPath.EndsWith("_packed.ctex"))).Select(p=>p.Id.Entry).ToArray();
+            Check(ModelDb.AllPowers.OfType<AlchemyPower>().Count()>=24 && badPowers.Length==0,
+                $"the alchemist's powers show their own icons (wrong: {string.Join(",",badPowers)})");
+            string[] materialSlugs=[..Enum.GetValues<Alchemy.Core.Material>().Select(m=>IconArt.MaterialSlug(MaterialChoice.Normal(m))),
+                ..Enum.GetValues<RareMaterial>().Select(m=>IconArt.MaterialSlug(MaterialChoice.Rare(m)))];
+            var missingMaterials=materialSlugs.Where(s=>IconArt.Big(s) is not { } path || ResourceLoader.Load<Texture2D>(path)?.GetWidth()!=256).ToArray();
+            Check(missingMaterials.Length==0 && MaterialBox.RewardIconPath.EndsWith("material_reward.ctex"),
+                $"the seven materials and the material reward have their own icons (missing: {string.Join(",",missingMaterials)})");
             string? modifyIcon=IconArt.Packed("workshop_modify"), mapIcon=IconArt.Packed("workshop_map");
             Check(modifyIcon is not null && ResourceLoader.Load<Texture2D>(modifyIcon)?.GetWidth()==64
                 && mapIcon is not null && ResourceLoader.Load<Texture2D>(mapIcon)?.GetWidth()==128,

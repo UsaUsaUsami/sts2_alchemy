@@ -34,7 +34,13 @@ RELIC = ("Relic icon in the style of Slay the Spire 2 (see the reference sheet, 
 MAP = ("Map legend symbol like the base game's map icons: drawn only in dark brown ink (#3b2a1e) with a few bold "
        "sketchy strokes, little or no hatching, no colour fill, no rim. Fills about 60% of its cell.")
 FLAT = ("Flat emblem like the base game's power and enchantment icons (reference sheet, bottom row): one simple bold "
-        "shape, two or three flat colours, a soft lighter outline, no background scene. Fills about 70% of its cell.")
+        "shape, two or three flat colours, a soft lighter outline, no background scene, NO fine detail. Fills about 70% "
+        "of its cell.")
+# Materials: painted like relics but imported at power sizes (256 and 64), since they sit in lists, not a relic bar.
+ITEM = RELIC.replace("Relic icon", "Item icon")
+# Element colours (user, 2026-10-01): earth brown, water blue, fire red, air light blue. The marks are the four on the
+# alchemist's robe in the key visual.
+EARTH, WATER, FIRE, AIR = "earth brown", "deep blue", "red", "light sky blue"
 
 GROUPS = {
     # Trial (user, 2026-10-01: try one sheet first). DarvCrucible is the ancient relic kept for old saves.
@@ -53,6 +59,59 @@ GROUPS = {
         ("large_material_bag", RELIC, "大きな素材鞄, a big bulging brown leather sack with one buckle"),
         ("workshop_map", MAP, "工房 (alchemist's workshop node on the map): an alembic flask standing on a small anvil"),
         ("workshop_modify", FLAT, "改造 (workshop modification of a card): a small plain hammer, flat grey and gold"),
+    ],
+    # Powers of the phase-transition axis. Slugs are the class names (IconArt.Slug).
+    "powers-phase": [
+        ("flame_heart_power", FLAT, f"焔の心 (gain strength on entering fire): a {FIRE} flame shaped like a heart"),
+        ("sky_power", FLAT, "オーバードライブ (energy next turn after many transitions): a gold lightning bolt over a small "
+         "circular arrow"),
+        ("wind_afterimage_power", FLAT, f"残風の刃 (damage per transition at end of turn): a {AIR} crescent blade with two "
+         "faded copies trailing behind it"),
+        ("earth_king_power", FLAT, f"大地の王 (block is kept): a {EARTH} stone crown"),
+        ("preparation_power", FLAT, "励起 (next transition is stronger): a gold upward chevron with a small glow"),
+        ("synergy_power", FLAT, "ダブルシフト (next transition fires twice): two gold curved arrows chasing each other"),
+        ("philosophers_stone_power", FLAT, "賢者の石 (all transitions stronger): a single faceted red gemstone"),
+        ("earth_core_power", FLAT, f"大地の心核: a round {EARTH} core with a plain triangle on it"),
+        ("water_core_power", FLAT, f"流水の心核: a round {WATER} core with a plain water drop on it"),
+        ("fire_core_power", FLAT, f"劫火の心核: a round {FIRE} core with a plain flame on it"),
+        ("air_core_power", FLAT, f"疾風の心核: a round {AIR} core with a plain swirl on it"),
+        ("phase_wheel_power", FLAT, f"四相輪転 (moves to the next phase): a wheel split in four quarters, {EARTH}, {WATER}, "
+         f"{FIRE}, {AIR}, with one arrow around it"),
+    ],
+    # Powers of the life axis (drain and the golem) and the rest.
+    "powers-life": [
+        ("crucible_power", FLAT, "エレメント・リローデッド (a material each turn): a small grey-brown ore lump with a gold "
+         "circular arrow"),
+        ("self_cultivation_power", FLAT, "自らを糧に (drain yourself for more golem HP): a dark red drop falling into an open "
+         "hand"),
+        ("nourish_power", FLAT, "養分 (drain gives extra golem HP): a green sprout growing from a dark red drop"),
+        ("symbiosis_power", FLAT, "共生 (block while the golem stands): two interlocked rings, one ochre stone, one silver"),
+        ("awakened_vessel_power", FLAT, "番人の目覚め (golem HP becomes damage): a round ochre stone with one glowing gold eye"),
+        ("philosophers_blood_power", FLAT, "賢者の血 (golem blocks, enemy is drained): a gold drop with a small red core"),
+        ("gate_of_truth_power", FLAT, "真理の扉 (big golem HP hits all enemies): a tall stone door slightly open, white "
+         "light from the gap"),
+        ("culture_vat_power", FLAT, "自己修復 (golem HP each turn): a round ochre stone with a green plus sign"),
+        ("life_drain_power", FLAT, "ドレイン (loses HP that feeds the golem): a dark crimson drop with a thin curl rising from "
+         "it"),
+        ("homunculus_power", FLAT, "ゴーレム (the golem takes hits): the head of a chunky ochre stone golem, one glowing gold "
+         "circle-and-triangle eye"),
+        ("death_mark_power", FLAT, "死亡 (dies next turn): a plain cracked grey skull"),
+        ("drain_miasma_power", FLAT, "吸精の瘴気 (drain on all enemies): a dark crimson cloud of mist"),
+    ],
+    # Materials, the material reward, and the four element marks for the phase dial (PhaseDial).
+    "materials": [
+        ("material_iron", ITEM, "鉄 (iron): one grey iron ore nugget"),
+        ("material_herb", ITEM, "薬草 (herb): a small bunch of green leaves"),
+        ("material_powder", ITEM, "火薬 (gunpowder): a small heap of black powder with a few red sparks"),
+        ("material_ether", ITEM, f"エーテル (ether): a small glass ampoule of glowing {AIR} vapour"),
+        ("material_mercury", ITEM, "水銀 (mercury): a round bead of shiny silver liquid metal"),
+        ("material_stardust", ITEM, "星砂 (star sand): a small pile of gold sand with star-shaped grains"),
+        ("material_void_crystal", ITEM, "虚無結晶 (void crystal): one dark violet-black crystal"),
+        ("material_reward", ITEM, "素材 (material reward): an iron nugget, a green leaf and a small vial together"),
+        ("phase_earth", FLAT, f"地 (earth): a plain upward triangle, flat {EARTH}"),
+        ("phase_water", FLAT, f"水 (water): a plain water drop, flat {WATER}"),
+        ("phase_fire", FLAT, f"火 (fire): a plain flame, flat {FIRE}"),
+        ("phase_air", FLAT, f"風 (air): a plain spiral swirl, flat {AIR}"),
     ],
 }
 
