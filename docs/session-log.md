@@ -4,6 +4,28 @@
 
 ---
 
+## 2026-10-02 セッション9（ネクロバインダー版の見た目のズレを直す）— 次のセッションはここから
+
+### 今の状態
+- 未コミット：`NecroRig.cs`・`scripts/rig-art.py`・`assets/art/character/rig/necrobinder/`（scythe_glow.png削除、sythe_dissolve.png）・`tests/Alchemy.RigProbe/Probe.cs`・`AGENTS.md`（yomiyasuの1行）。
+- ルールテスト・スモーク405件PASS。ゲームへ反映済み（旧版`artifacts/backups/20261002-001658-419`）。
+- yomiyasuスキルはプラグイン版だけ残した（`skills/`・`.agents/`・`.claude/skills`・`skills-lock.json`は削除）。
+
+### このセッションでやったこと（ユーザー選択：「見た目のズレを直す」）
+1. 頭の炎を消した：シーンの`HeadBoneNode/SteppedFireMix_dark`（シェーダーの炎、アトラスの部品ではない）を非表示。頭まわりの炎の部品（eye_*・glow・glow_head・flame_extra・flames_placeholder・back_flame_temp）も消した。死亡時に頭の上に出ていた金色の棘も消えた。
+2. 杖頭：杖の先は骨`scythe_twist`（scythe_slideの子、x 709）に付いている。杖頭の絵はこの骨を毎フレーム追う（`Rider.Follow`）。待機中に杖から浮いていた件と、攻撃の回転中に離れる件の両方が直った。
+3. 詠唱中に出ていた黒いフックの杖（`scythe_glow`の上に描いた暗い杖）をやめ、部品ごと消した。消滅用の`sythe_dissolve`は輪のない普通の杖に。
+4. 攻撃の斬撃が灰色の斑点に見えるのはバニラも同じ（元のネクロバインダーでも暗い残像）。手は付けていない。
+5. 指の骨を太くする案は、描画しても違いが見えなかったので戻した。開いた左手は1枚の部品。
+6. プローブ：`-Mode alchemist`でシーンツリー（`tree`）、杖頭の変換（`rider`）、鎌のメッシュ変形（`deform`）をログに出す。
+
+### 次にやること・返答待ち
+1. **ユーザーが実際の戦闘画面で確認**。確認用：`artifacts/rig-probe/necro-v3-sheet.png`。
+2. 残り：裸足に見える足（足先の指の形が残る。ブーツの絵を載せる案）、死亡時にフードが傾いて体に残る、胸のあばら骨の形。
+3. 休憩所・商人・キャラ選択も同じ方法で。ゴーレムの骨格。声・動作音（返答待ち）。
+
+---
+
 ## 2026-10-01 セッション8（モーション：ネクロバインダーの骨格の転用）— 次のセッションはここから
 
 ### 今の状態

@@ -68,8 +68,10 @@ def staff(name, size, x0, y0, slope, ring_at, ring, bottom_y, dark=False, head=T
 
 
 staff("scythe", (215, 434), 67, 120, 0.4661, (25, 84), 13, 432, head=False)
-staff("sythe_dissolve", (213, 432), 65, 120, 0.466, (25, 84), 13, 430, dark=True)
-staff("scythe_glow", (120, 229), 64.5, 120, 0.475, (14, 45), 7, 228, dark=True)
+# The dissolving scythe (death) is the plain staff too; the big ring rides on the bone only with "scythe" (2026-10-02).
+staff("sythe_dissolve", (213, 432), 65, 120, 0.466, (25, 84), 13, 430, head=False)
+# scythe_glow (the glowing copy in the big cast) has no drawing: the part is dropped, the cast's sparks stay.
+(OUT / "scythe_glow.png").unlink(missing_ok=True)
 
 def sigil(name, size, centre, radius):
     """The gold alchemical sigil of the key visual (circle, triangle, dot, short rays) for the dark hood face."""

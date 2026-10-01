@@ -53,8 +53,9 @@ public static class NecroRig
         "belts" or "belt top" => Belt,
         "head" => Face,
         "back flame neck" => new(new Color("0c0b0e"), Gold),
-        "back_flame_temp" => new(new Color("1c1408"), new Color("6a4a18")),
         "scythe" or "scythe_glow" or "sythe_dissolve" => Clear,
+        // The fire about the skull (eyes, head glow, the tongues over it) goes with the head fire (2026-10-02).
+        _ when part.StartsWith("eye_") || part is "glow" or "glow_head" or "flame_extra" or "flames_placeholder" or "back_flame_temp" => Clear,
         "thumb1" or "thumb2" or "thumb3" or "wrist" or "webbing" => Brass,
         "shadow" => null,
         _ when part.StartsWith("death/") => part switch
@@ -177,17 +178,20 @@ public static class NecroRig
     /// Position and rotation are in the bone's own space; Scale is applied to the picture.
     /// OnlyWith: shown only while the slot shows that attachment (the staff head goes with the scythe part, which
     /// the animations swap out, e.g. while it dissolves on death).
-    public sealed record Rider(string Slot, string File, Vector2 Position, float Rotation, float Scale, string? OnlyWith = null);
+    /// Follow: a bone the picture keeps to, Position then being the offset from it in the slot bone's space (the
+    /// scythe's tip is skinned to scythe_twist, which the attack's spin moves along the staff; 2026-10-02).
+    public sealed record Rider(string Slot, string File, Vector2 Position, float Rotation, float Scale, string? OnlyWith = null, string? Follow = null);
     /// Trial placements (2026-10-01), measured with scripts/rig-probe.ps1 -Riders.
     public static readonly List<Rider> Riders =
     [
         new("head", "hood.png", new(15, -30), 90, 1.2f),
-        new("scythe", "staff_head.png", new(650, -90), 0, 1.3f, OnlyWith: "scythe"),
+        // Just past the staff's tip (scythe_twist, at x 709 y -4 of the slot bone), turned to face along the staff.
+        new("scythe", "staff_head.png", new(41, 4), 90, 1.3f, OnlyWith: "scythe", Follow: "scythe_twist"),
     ];
 
     private static void Attach(Node2D spine)
     {
-        var gated = new List<(Sprite2D Sprite, string Slot, string Attachment)>();
+        var gated = new List<(Sprite2D Sprite, Rider Rider)>();
         foreach (var rider in Riders.Where(r => Donor == RigDonor.Necrobinder))
         {
             string path = Path.Combine(RigArtDirectory, rider.File);
@@ -202,16 +206,25 @@ public static class NecroRig
             };
             slotNode.AddChild(sprite);
             spine.AddChild(slotNode);
-            if (rider.OnlyWith is { } attachment) gated.Add((sprite, rider.Slot, attachment));
+            if (rider.OnlyWith is not null || rider.Follow is not null) gated.Add((sprite, rider));
         }
         if (gated.Count == 0) return;
         spine.Connect("world_transforms_changed", Callable.From((Variant _) =>
         {
             if (spine.Call("get_skeleton").AsGodotObject() is not { } skeleton) return;
-            foreach (var (sprite, slot, attachment) in gated)
+            foreach (var (sprite, rider) in gated)
             {
-                var current = skeleton.Call("find_slot", slot).AsGodotObject()?.Call("get_attachment").AsGodotObject();
-                sprite.Visible = current?.Call("get_attachment_name").AsString() == attachment;
+                if (rider.OnlyWith is { } attachment)
+                {
+                    var current = skeleton.Call("find_slot", rider.Slot).AsGodotObject()?.Call("get_attachment").AsGodotObject();
+                    sprite.Visible = current?.Call("get_attachment_name").AsString() == attachment;
+                }
+                if (rider.Follow is { } boneName && skeleton.Call("find_bone", boneName).AsGodotObject() is { } bone
+                    && sprite.GetParent() is Node2D slotNode)
+                {
+                    var anchor = bone.Call("get_global_transform").AsTransform2D().Origin;
+                    sprite.GlobalPosition = anchor + slotNode.GlobalTransform.BasisXform(rider.Position);
+                }
             }
         }));
     }
@@ -320,11 +333,18 @@ public static class NecroRig
     }
 
     /// The head fire and the scythe/slash effects are blue and pink in the scene; they take the brass of the magic
-    /// circle (user, 2026-10-01).
+    /// circle (user, 2026-10-01). The fire over the head is the Necrobinder's own and not in the key visual: it goes
+    /// (2026-10-02). Hidden by alpha as well, in case the scene's flame script shows it again.
     private static void Flames(Node visuals)
     {
         foreach (var node in Descendants(visuals))
         {
+            if (node is Sprite2D fire && fire.Name == "SteppedFireMix_dark")
+            {
+                fire.Visible = false;
+                fire.SelfModulate = new Color(1, 1, 1, 0);
+                continue;
+            }
             if (node is CanvasItem { Material: ShaderMaterial material } item && node.Name != "Visuals")
             {
                 item.Material = Brassy(material);

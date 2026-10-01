@@ -88,6 +88,7 @@ public static class RigProbe
             else if (mode == "alchemist")
             {
                 visuals.Scale = Vector2.One * 1.25f;
+                DumpTree(visuals, 0);
                 await Capture(tree, viewport, body, "alchemist", ["idle_loop", "attack", "hurt", Alchemy.NecroRig.CastAnimation, "die"]);
             }
             else if (mode == "uvmap")
@@ -190,6 +191,28 @@ public static class RigProbe
         Log("uv map saved");
     }
 
+    /// The scene under the visuals: class, name, the slot or bone a Spine node follows, texture and shader parameters.
+    private static void DumpTree(Node node, int depth)
+    {
+        var line = $"tree {new string(' ', depth * 2)}{node.GetClass()} {node.Name}";
+        foreach (var prop in new[] { "slot_name", "bone_name" })
+            if (node.Get(prop).VariantType == Variant.Type.String) line += $" {prop}={node.Get(prop)}";
+        if (node is CanvasItem item)
+        {
+            line += $" visible={item.Visible} modulate={item.Modulate}";
+            if (item.Material is ShaderMaterial sm)
+                line += $" shader={sm.Shader?.ResourcePath} params=" + string.Join("|",
+                    RenderingServer.GetShaderParameterList(sm.Shader!.GetRid()).Select(p => (string)p["name"]).Select(n => $"{n}:{sm.GetShaderParameter(n)}"));
+        }
+        if (node.Get("texture").AsGodotObject() is Texture2D tex) line += $" texture={tex.ResourcePath}";
+        if (node.GetClass() == "SpineSlotNode" && node.Get("normal_material").AsGodotObject() is ShaderMaterial nm)
+            line += $" normal_material={nm.Shader?.ResourcePath} params=" + string.Join("|",
+                RenderingServer.GetShaderParameterList(nm.Shader!.GetRid()).Select(p => (string)p["name"]).Select(n => $"{n}:{nm.GetShaderParameter(n)}"));
+        if (node is GpuParticles2D p) line += $" particles texture={p.Texture?.ResourcePath}";
+        Log(line);
+        foreach (var child in node.GetChildren()) DumpTree(child, depth + 1);
+    }
+
     private static async Task Capture(SceneTree tree, SubViewport viewport, MegaSprite body, string tag, string[] animations)
     {
         for (int i = 0; i < 120 && body.TryGetAnimationState() is null; i++) await Frames(tree, 1);
@@ -200,6 +223,16 @@ public static class RigProbe
             {
                 await Frames(tree, 8);
                 viewport.GetTexture().GetImage().SavePng($"{Out}/{tag}_{name}_{f}.png");
+                // Where the riders' slot nodes are on the frame, to place pictures by frame pixels.
+                foreach (var rider in viewport.FindChildren("Alchemist_*", owned: false).OfType<Node2D>())
+                    Log($"rider {name}_{f} {rider.Name} transform={rider.GetGlobalTransform()}");
+                // The scythe part's mesh deform (the spin is drawn by deforming it, not by its bone).
+                if (body.BoundObject.Call("get_skeleton").AsGodotObject()?.Call("find_slot", "scythe").AsGodotObject() is { } slot)
+                {
+                    var deform = slot.Call("get_deform").AsFloat32Array();
+                    string range = deform.Length < 2 ? "" : $" x {Enumerable.Range(0, deform.Length / 2).Min(i => deform[2 * i]):0}..{Enumerable.Range(0, deform.Length / 2).Max(i => deform[2 * i]):0} y {Enumerable.Range(0, deform.Length / 2).Min(i => deform[2 * i + 1]):0}..{Enumerable.Range(0, deform.Length / 2).Max(i => deform[2 * i + 1]):0}";
+                    Log($"deform {name}_{f} n={deform.Length}{range} attachment={slot.Call("get_attachment").AsGodotObject()?.Call("get_attachment_name")}");
+                }
             }
             Log($"captured {tag} {name}");
         }
