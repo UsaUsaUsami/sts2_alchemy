@@ -41,7 +41,7 @@ public static class LifeAxis
 
     public static Creature? Pet(Player player) => player.PlayerCombatState?.GetPet<HomunculusPet>();
 
-    /// The only way homunculus HP goes up: drain, and cards that say so.
+    /// The only way homunculus HP goes up: drain, and cards, relics and potions that say so (relics/potions: 2026-10-01).
     public static async Task GainHomunculus(PlayerChoiceContext c, Player player, int amount)
     {
         if (State(player) is not { } life || amount <= 0) return;
@@ -160,8 +160,8 @@ public sealed class HomunculusPower : AlchemyPower
     public override PowerStackType StackType => PowerStackType.Single;
     protected override PowerModel IconSource => ModelDb.Power<RegenPower>();
     public override List<(string,string)> Localization => new PowerLoc("ゴーレム",
-        "錬金術師への攻撃のうち、ブロックを超えた分を代わりに受ける。HPはドレインと、ゴーレムHPを得ると書かれたカードでだけ増える。0になると倒れ、HPを得ると復活する。戦闘終了で消える。",
-        "錬金術師への攻撃のうち、[gold]ブロック[/gold]を超えた分を代わりに受ける。[gold]ゴーレムHP[/gold]は[gold]ドレイン[/gold]と、ゴーレムHPを得ると書かれたカードでだけ増える。0になると倒れ、HPを得ると復活する。戦闘終了で消える。");
+        "錬金術師への攻撃のうち、ブロックを超えた分を代わりに受ける。HPはドレインと、ゴーレムHPを得ると書かれたカード・遺物・ポーションでだけ増える。0になると倒れ、HPを得ると復活する。戦闘終了で消える。",
+        "錬金術師への攻撃のうち、[gold]ブロック[/gold]を超えた分を代わりに受ける。[gold]ゴーレムHP[/gold]は[gold]ドレイン[/gold]と、ゴーレムHPを得ると書かれたカード・遺物・ポーションでだけ増える。0になると倒れ、HPを得ると復活する。戦闘終了で消える。");
     // Same rule as DieForYouPower: only powered attacks, only while alive, overflow goes back to the alchemist.
     public override Creature ModifyUnblockedDamageTarget(Creature target, decimal _, ValueProp props, Creature? __)
         => target == Owner.PetOwner?.Creature && Owner.IsAlive && props.IsPoweredAttack() ? Owner : target;

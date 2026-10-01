@@ -1,4 +1,4 @@
-using Godot;
+﻿using Godot;
 using MegaCrit.Sts2.Core.Models;
 
 namespace Alchemy;
@@ -61,8 +61,18 @@ public static class CharacterArt
     public static Texture2D? Body => Png("alchemist.png", BodyHeight);
     public static Texture2D? Icon => Png("icon.png");
     public static Texture2D? IconOutline => Png("icon_outline.png");
+    public static Texture2D? SelectBg => Png("select_bg.png");
     public static CompressedTexture2D? CharacterSelect => Ctex("char_select.ctex");
     public static CompressedTexture2D? MapMarker => Ctex("map_marker.ctex");
+
+    /// The file's absolute path for the game's ResourceLoader, or null without the file. The getters that hand out
+    /// these textures only load a path, and a postfix on them did not reach the real select button (still the
+    /// Ironclad, user report 2026-09-30), so the path itself is redirected.
+    public static string? CtexPath(string file)
+    {
+        string path = Path.Combine(ArtDirectory, file);
+        return File.Exists(path) ? path.Replace('\\', '/') : null;
+    }
 
     private static Texture2D? Png(string file, int height = 0)
     {

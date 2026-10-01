@@ -179,7 +179,7 @@ public static class PhaseTransitionTip
         "属性カードを使って、今と違う相へ移ること。移った先の相の効果が発動する。\n" +
         $"地：{PhaseRules.BaseAmount(AlchemyPhase.Earth)}[gold]ブロック[/gold]　水：敵に[gold]脱力[/gold]{PhaseRules.BaseAmount(AlchemyPhase.Water)}\n" +
         $"火：敵に{PhaseRules.BaseAmount(AlchemyPhase.Fire)}ダメージ　風：カードを{PhaseRules.BaseAmount(AlchemyPhase.Air)}枚引く\n" +
-        "同じ相のカードを続けて使ったときと、無相から最初の相へ移ったときは起きない。";
+        "同じ相のカードを続けて使ったときと、無相から最初の相へ移ったとき（方位盤がなければ）は起きない。";
 
     // Built on each use: HoverTip resolves its text at construction, so a cached one made before the loc loaded would keep the key.
     public static IHoverTip Tip => new HoverTip(Loc(TitleKey), Loc(DescriptionKey));

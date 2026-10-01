@@ -24,7 +24,15 @@ namespace Alchemy;
 public class MaterialBox : CustomRelicModel
 {
     private AlchemyState? state;
-    public AlchemyState Inventory => state ??= new();
+    public AlchemyState Inventory
+    {
+        get
+        {
+            state ??= new();
+            state.BonusCapacity = IsMutable && Owner?.GetRelic<LargeMaterialBag>() is not null ? AlchemyState.LargeBagBonus : 0;
+            return state;
+        }
+    }
     public HarvestCombat? Combat { get; private set; }
     public override RelicRarity Rarity => RelicRarity.Starter;
     public override bool ShowCounter => true;
@@ -58,6 +66,7 @@ public class MaterialBox : CustomRelicModel
     public override Task BeforeCombatStart()
     {
         Combat = new(FurnaceTokens);
+        Combat.Phases.TriggerFromNone = Owner.GetRelic<PhaseCompass>() is not null;
         // design-axes 6.3 G-1: the refined box opens in a random element, without a transition effect or a count.
         if (OpensInRandomPhase) Combat.Phases.Open(PhaseRules.Opening(Owner.RunState.Rng.Seed, $"{Owner.RunState.TotalFloor}:{Owner.RunState.CurrentRoom?.Id}:opening"));
         return Task.CompletedTask;

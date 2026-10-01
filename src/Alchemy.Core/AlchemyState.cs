@@ -51,9 +51,14 @@ public sealed class AlchemyState
 {
     // v0.21: restored to two per furnace and a box of 20 (design-axes 0.1). v0.16 had cut them to 1 and 10 by
     // following an outdated brief; they return together with material-spending cards and costlier recipes.
-    public const int Capacity = 20;
+    public const int BaseCapacity = 20;
+    /// 大きな素材鞄 (a shop relic, 2026-10-01) adds this. The game side sets BonusCapacity from the relics each
+    /// time the inventory is read, so it is not saved.
+    public const int LargeBagBonus = 10;
     // The largest box any version allowed; save validation accepts up to this.
-    public const int LegacyCapacity = 20;
+    public const int LegacyCapacity = BaseCapacity + LargeBagBonus;
+    [System.Text.Json.Serialization.JsonIgnore] public int BonusCapacity { get; set; }
+    [System.Text.Json.Serialization.JsonIgnore] public int Capacity => BaseCapacity + BonusCapacity;
     // Each furnace activation grants this many units. Elite and boss slots grant one chosen material
     // (AGENTS.md 4.4). Standard card rewards do not pass through this inventory.
     public const int YieldPerEvent = 2;

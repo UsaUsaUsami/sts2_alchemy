@@ -10,14 +10,18 @@ public sealed class AlchemyPhaseState(bool triggerFromNone = false)
     public AlchemyPhase Current { get; private set; } = AlchemyPhase.None;
     /// The phase held before Current, for "return to the previous phase" effects. None until the second element.
     public AlchemyPhase Previous { get; private set; } = AlchemyPhase.None;
-    public bool TriggerFromNone { get; } = triggerFromNone;
+    /// Whether leaving the neutral phase is a transition. Off by default; 方位盤 turns it on for its owner's combats.
+    public bool TriggerFromNone { get; set; } = triggerFromNone;
     public int TransitionCount { get; private set; }
     /// Transitions since the start of the current player turn.
     public int TransitionsThisTurn { get; private set; }
     private readonly int[] transitionsInto = new int[5];
     /// Transitions into `phase` this combat (嵐刃 counts air, v0.23).
     public int TransitionsInto(AlchemyPhase phase) => transitionsInto[(int)phase];
-    public void StartTurn() => TransitionsThisTurn = 0;
+    private readonly HashSet<AlchemyPhase> enteredThisTurn = [];
+    /// Distinct elements transitioned into since the turn began (大坩堝, 2026-10-01).
+    public int KindsEnteredThisTurn => enteredThisTurn.Count;
+    public void StartTurn() { TransitionsThisTurn = 0; enteredThisTurn.Clear(); }
 
     /// Sets the phase a combat opens in (design-axes 6.3 G-1). Not a transition: nothing resolves, nothing
     /// counts and there is no previous phase. Only valid before the first transition of the combat.
@@ -37,7 +41,7 @@ public sealed class AlchemyPhaseState(bool triggerFromNone = false)
         Previous = from;
         Current = next;
         bool triggered = from != AlchemyPhase.None || TriggerFromNone;
-        if (triggered) { TransitionCount++; TransitionsThisTurn++; transitionsInto[(int)next]++; }
+        if (triggered) { TransitionCount++; TransitionsThisTurn++; transitionsInto[(int)next]++; enteredThisTurn.Add(next); }
         return new(from, next, triggered);
     }
 

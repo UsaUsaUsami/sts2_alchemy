@@ -78,8 +78,8 @@ public static class WorkshopUi
             node.AddChild(launcher);
         }
         var combat = box.Combat;
-        launcher!.Text = combat is null ? $"素材・工房  {box.Inventory.Total}/{AlchemyState.Capacity}"
-            : $"素材 {box.Inventory.Total}/{AlchemyState.Capacity}  炉 {combat.FurnaceUsed}/{combat.Limit}\n現在相：{MaterialBox.PhaseName(combat.Phases.Current)}"+(combat.LastTransition.Length>0?$"　（{combat.LastTransition}）":"")
+        launcher!.Text = combat is null ? $"素材・工房  {box.Inventory.Total}/{box.Inventory.Capacity}"
+            : $"素材 {box.Inventory.Total}/{box.Inventory.Capacity}  炉 {combat.FurnaceUsed}/{combat.Limit}\n現在相：{MaterialBox.PhaseName(combat.Phases.Current)}"+(combat.LastTransition.Length>0?$"　（{combat.LastTransition}）":"")
               +(combat.Life.HomunculusAppeared?$"\nゴーレムHP：{LifeAxis.State(box.Owner)?.HomunculusHp ?? 0}":"");
         // Phase colour keeps the current phase readable at a glance; outside combat the button is neutral.
         launcher.AddThemeColorOverride("font_color", PhaseTint(combat?.Phases.Current ?? AlchemyPhase.None));
@@ -577,7 +577,7 @@ public static class WorkshopUi
         foreach (var child in sidebar.GetChildren()) { sidebar.RemoveChild(child); child.QueueFree(); }
         foreach (var child in content.GetChildren()) { content.RemoveChild(child); child.QueueFree(); }
         Text(workshop ? "錬金工房" : "素材ボックス", 34, sidebar, new Color("f2d18b"));
-        Text($"容量  {box.Inventory.Total} / {AlchemyState.Capacity}", 24, sidebar);
+        Text($"容量  {box.Inventory.Total} / {box.Inventory.Capacity}", 24, sidebar);
         Divider(sidebar);
         Text(MaterialSummary(), 22, sidebar);
         MaterialCardRow();
@@ -592,7 +592,7 @@ public static class WorkshopUi
         {
             Text("未受領素材",32,content,new Color("f2d18b"));
             Text($"{RareMaterials.Name(box.Inventory.Pending[0].Material)}　（残り {box.Inventory.Pending.Count}個）\n次の部屋へ進む前に受け取りを決めてください。",23);
-            if (box.Inventory.Total < AlchemyState.Capacity) Button("受け取る",()=>Resolve(true));
+            if (box.Inventory.Total < box.Inventory.Capacity) Button("受け取る",()=>Resolve(true));
             else foreach (var material in OwnedMaterials())
                 Button($"{RareMaterials.Name(material)}を1個手放して交換",()=>Resolve(true,material));
             Button("この素材の受け取りを辞退",()=>Resolve(false));
@@ -603,7 +603,7 @@ public static class WorkshopUi
             var offer = box.Inventory.Offers.FirstOrDefault(o=>o.Id==offerId) ?? box.Inventory.Offers[0];
             Text("素材を1つ選ぶ",32,content,new Color("f2d18b"));
             Text($"3つの候補から1個だけ受け取れます。未解決の報酬枠は残り {box.Inventory.Offers.Count} 個です。",23);
-            if (box.Inventory.Total >= AlchemyState.Capacity)
+            if (box.Inventory.Total >= box.Inventory.Capacity)
                 Text("素材ボックスが満杯です。受け取ると、交換か辞退を続けて選びます。",20,content,new Color("d8c082"));
             foreach (var material in offer.Candidates)
                 Button($"{RareMaterials.Name(material)}　—　{MaterialHint(material)}",()=>TakeOffer(offer.Id,material));
@@ -698,7 +698,7 @@ public static class WorkshopUi
         var holder = MountCard(stage, CreateMaterialPreviewCard(MaterialCards.Canonical(offer.Material)), 0.62f, false);
         if (holder is not null) UpdateCardWhenReady(holder, PileType.None, CardPreviewMode.Normal);
         bool sold = box!.Inventory.Received.Contains(offer.Id);
-        bool full = box.Inventory.Total >= AlchemyState.Capacity || !box.Inventory.Settled;
+        bool full = box.Inventory.Total >= box.Inventory.Capacity || !box.Inventory.Settled;
         bool afford = box.Owner.Gold >= MerchantMaterialOffers.Price;
         Text($"{Recipes.Name(offer.Material)}　{MerchantMaterialOffers.Price}G",20,wrapper,!sold&&afford&&!full?new Color("f2d18b"):new Color("90989c"));
         string label = sold ? "売り切れ" : full ? "ボックスを整理してください" : afford ? "購入する" : "ゴールド不足";
@@ -708,7 +708,7 @@ public static class WorkshopUi
     private static async Task BuyMaterial(MerchantMaterialOffer offer)
     {
         if (box is null || busy || !InMerchantRoom || box.Owner.Gold < MerchantMaterialOffers.Price
-            || box.Inventory.Total >= AlchemyState.Capacity || !box.Inventory.Settled
+            || box.Inventory.Total >= box.Inventory.Capacity || !box.Inventory.Settled
             || box.Inventory.Received.Contains(offer.Id)
             || !CurrentMerchantOffers.Contains(offer)) return;
         busy = true;
