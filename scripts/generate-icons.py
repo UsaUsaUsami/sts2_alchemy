@@ -26,39 +26,33 @@ COLS, ROWS = 4, 3
 KEY = (255, 0, 255)
 INK = (59, 42, 30)
 
-RELIC = ("Relic icon in the style of Slay the Spire 2 (see the reference sheet, top row): ONE hand-painted object, "
-         "chunky readable silhouette, soft painterly shading, a dark outline and a thin light-grey sticker rim around "
-         "the whole object, slight three-quarter view, saturated colours. The object fills about 70% of its cell.")
-MAP = ("Map legend symbol like the base game's map icons: drawn only in dark brown ink (#3b2a1e) with loose sketchy "
-       "strokes and a little hatching, no colour fill, no rim. Fills about 60% of its cell.")
+RELIC = ("Relic icon in the style of Slay the Spire 2 (see the reference sheet, top row): ONE simple object, as plain "
+         "as the reference: big soft shapes, only three to five flat colour masses with gentle painterly shading, NO "
+         "fine detail, NO engraving, NO ornament, NO texture noise, NO small symbols, NO sparkles. A dark outline and a "
+         "thin light-grey sticker rim around the whole object. It must read at 40 pixels. Fills about 70% of its cell.")
+# User, 2026-10-01: the first sheet was too busy, the phase-transition relics most of all. Keep subjects to one idea.
+MAP = ("Map legend symbol like the base game's map icons: drawn only in dark brown ink (#3b2a1e) with a few bold "
+       "sketchy strokes, little or no hatching, no colour fill, no rim. Fills about 60% of its cell.")
 FLAT = ("Flat emblem like the base game's power and enchantment icons (reference sheet, bottom row): one simple bold "
         "shape, two or three flat colours, a soft lighter outline, no background scene. Fills about 70% of its cell.")
 
 GROUPS = {
     # Trial (user, 2026-10-01: try one sheet first). DarvCrucible is the ancient relic kept for old saves.
     "relics": [
-        ("material_box", RELIC, "素材ボックス, the alchemist's starter relic: a small sturdy wooden case with brass corners, "
-         "lid open, four little compartments holding an iron nugget, a green herb, black powder and a pale-cyan ether wisp"),
-        ("refined_material_box", RELIC, "精錬された素材ボックス, the same wooden case upgraded: dark lacquered wood with gold "
-         "bands, a small glowing furnace window on the front, faint gold sparks"),
-        ("darv_crucible", RELIC, "ダーヴの坩堝, an ancient crucible: a squat cracked stone crucible with old runes, embers "
-         "glowing inside, green-bronze patina"),
-        ("phase_compass", RELIC, "方位盤, a brass compass whose four points are marked earth (ochre triangle), water (blue "
-         "drop), fire (red flame), air (pale-cyan swirl); the needle glows gold"),
-        ("blood_chalice", RELIC, "血の杯, a dark silver chalice with a single drop of deep red blood running down its side"),
-        ("pulsing_core", RELIC, "脈打つ核石, a fist-sized ochre stone core like the golem's heart, with a glowing gold "
-         "circle-and-triangle sigil and thin glowing cracks, as if beating"),
-        ("quadrant", RELIC, "四分儀, a brass quarter-circle astronomical quadrant with a plumb line; its arc is divided into "
-         "four segments in ochre, blue, red and pale cyan"),
-        ("great_crucible", RELIC, "大坩堝, a large black iron crucible on three legs, four swirling colours (ochre, blue, "
-         "red, pale cyan) mixing into one gold liquid inside"),
-        ("wardens_foundation", RELIC, "番人の礎, a square foundation stone of smooth ochre blocks, a carved golem sigil "
-         "(circle and triangle) on its face, a crack with faint red light"),
-        ("large_material_bag", RELIC, "大きな素材鞄, a big bulging brown leather satchel, buckles straining, iron nuggets, "
-         "herbs and a small vial poking out of the top"),
+        ("material_box", RELIC, "素材ボックス, the starter relic: a small plain wooden box with the lid open, a few coloured "
+         "lumps inside"),
+        ("refined_material_box", RELIC, "精錬された素材ボックス, the same small box upgraded: dark wood with gold edges, a warm "
+         "orange glow from inside"),
+        ("darv_crucible", RELIC, "ダーヴの坩堝, an ancient squat green-bronze crucible with glowing embers inside"),
+        ("phase_compass", RELIC, "方位盤, a plain round brass compass seen from the front, one gold needle, no markings"),
+        ("blood_chalice", RELIC, "血の杯, a plain silver chalice with one red drop running down its side"),
+        ("pulsing_core", RELIC, "脈打つ核石, a round ochre stone with one glowing gold crack, like a heart"),
+        ("quadrant", RELIC, "四分儀, a plain brass quarter-circle instrument (a quadrant), nothing else"),
+        ("great_crucible", RELIC, "大坩堝, a large plain black iron pot on three legs, filled with glowing gold liquid"),
+        ("wardens_foundation", RELIC, "番人の礎, a single square ochre foundation stone block, slightly cracked"),
+        ("large_material_bag", RELIC, "大きな素材鞄, a big bulging brown leather sack with one buckle"),
         ("workshop_map", MAP, "工房 (alchemist's workshop node on the map): an alembic flask standing on a small anvil"),
-        ("workshop_modify", FLAT, "改造 (workshop modification of a card): a small brass hammer striking a gold rune, "
-         "two or three sparks"),
+        ("workshop_modify", FLAT, "改造 (workshop modification of a card): a small plain hammer, flat grey and gold"),
     ],
 }
 
