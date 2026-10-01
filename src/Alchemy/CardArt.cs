@@ -62,6 +62,9 @@ public static class CharacterArt
     public static Texture2D? Icon => Png("icon.png");
     public static Texture2D? IconOutline => Png("icon_outline.png");
     public static Texture2D? SelectBg => Png("select_bg.png");
+    // Rest site and merchant figures (RestMerchantArt), scaled on screen to the borrowed Ironclad figure's height.
+    public static Texture2D? RestSite => Png("rest_site.png");
+    public static Texture2D? Merchant => Png("merchant.png");
     public static CompressedTexture2D? CharacterSelect => Ctex("char_select.ctex");
     public static CompressedTexture2D? MapMarker => Ctex("map_marker.ctex");
 

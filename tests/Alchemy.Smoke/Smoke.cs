@@ -675,6 +675,19 @@ public static class Smoke
             var markerByPath=markerPath is null ? null : ResourceLoader.Load<CompressedTexture2D>(markerPath);
             Check(byPath is { } bp && bp.GetWidth()==132 && bp.GetHeight()==195 && markerByPath is { } mp && mp.GetWidth()==49,
                 $"the game's loader reads the alchemist's select portrait and map marker from their paths ({selectPath}, {byPath?.GetSize()}, {markerByPath?.GetSize()})");
+            // 2026-10-01: the rest site and merchant figures replace the borrowed Ironclad's, fitted to its bounds.
+            var sceneRoot=((SceneTree)Engine.GetMainLoop()).Root;
+            var restChar=MegaCrit.Sts2.Core.Nodes.RestSite.NRestSiteCharacter.Create(player,0);
+            sceneRoot.AddChild(restChar);
+            var merchantChar=PreloadManager.Cache.GetScene(player.Character.MerchantAnimPath).Instantiate<MegaCrit.Sts2.Core.Nodes.Screens.Shops.NMerchantCharacter>();
+            sceneRoot.AddChild(merchantChar);
+            RestMerchantArt.Apply(merchantChar,CharacterArt.Merchant);
+            await Task.Delay(500);
+            var restArt=restChar.GetNodeOrNull<Sprite2D>(RestMerchantArt.NodeName);
+            var merchantArt=merchantChar.GetNodeOrNull<Sprite2D>(RestMerchantArt.NodeName);
+            Check(restArt is { Visible: true, Texture: not null } && restArt.Scale.Y>0.05f && merchantArt is { Visible: true, Texture: not null } && merchantArt.Scale.Y>0.05f,
+                $"the alchemist's rest site and merchant pictures replace the Ironclad (rest {restArt?.Position} x{restArt?.Scale.Y}, merchant {merchantArt?.Position} x{merchantArt?.Scale.Y})");
+            restChar.QueueFree(); merchantChar.QueueFree();
             // 2026-10-01: the mod's own relic, enchantment and map icons (IconArt), loaded the way the game loads them.
             RelicModel[] ownRelics=[ModelDb.Relic<MaterialBox>(),ModelDb.Relic<RefinedMaterialBox>(),ModelDb.Relic<DarvCrucible>(),
                 ModelDb.Relic<PhaseCompass>(),ModelDb.Relic<BloodChalice>(),ModelDb.Relic<PulsingCore>(),ModelDb.Relic<Quadrant>(),
