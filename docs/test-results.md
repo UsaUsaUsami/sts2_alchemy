@@ -1,5 +1,9 @@
 ﻿# テスト結果記録
 
+## 隔離実機スモーク（2026-10-01、サイレントの骨格の転用）
+
+- `scripts/smoke.ps1 -Name rig-silent`：**405件PASS・FAIL 0**（骨格の借り先がサイレントで、塗り替えたアトラス`alchemy_rig/silent`が使われ、被弾でhurtが再生される）。見た目は`scripts/rig-probe.ps1 -Mode alchemist -Rig silent`で確認（`artifacts/rig-probe/silent-alch/sheet.png`）。反映済み。実際の戦闘画面は未確認。
+
 ## 隔離実機スモーク（2026-10-01、ネクロバインダーの骨格の転用）
 
 - `scripts/smoke.ps1 -Name rig`：**405件PASS・FAIL 0**。置き換え：錬金術師の体がSpine骨格で、アトラスが`user://alchemy_rig`の塗り替え版であること、被弾でhurtの動きが再生されること、相転移の光が骨格に掛かること（旧：1枚絵の高さ・跳ね返りの確認）。

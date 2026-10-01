@@ -34,13 +34,13 @@ public sealed class AlchemistCharacter : PlaceholderCharacterModel
     public override NCreatureVisuals? CreateCustomVisuals()
         => NecroRig.CreateVisuals()
            ?? (CharacterArt.Body is { } body ? NodeFactory<NCreatureVisuals>.CreateFromResource(body) : null);
-    // The Necrobinder's own mapping, so its animations play for the triggers the game sends.
+    // The donor's own mapping, so its animations play for the triggers the game sends.
     protected override List<(AnimState, string)> AnimationStates =>
     [
         (new AnimState("attack"), "Attack"),
         (new AnimState("hurt"), "Hit"),
-        (new AnimState("cast_mighty"), "PowerUp"),
-        (new AnimState("cast_mighty"), "Cast"),
+        (new AnimState(NecroRig.CastAnimation), "PowerUp"),
+        (new AnimState(NecroRig.CastAnimation), "Cast"),
     ];
     // Same shape as the base game's scenes/ui/character_icons/*_icon.tscn: a full-rect TextureRect.
     public override Control? CustomIcon => CharacterArt.Icon is { } icon

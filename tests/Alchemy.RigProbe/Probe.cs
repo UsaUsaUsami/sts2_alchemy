@@ -38,10 +38,13 @@ public static class RigProbe
             };
             tree.Root.AddChild(viewport);
             string mode = System.Environment.GetEnvironmentVariable("ALCHEMY_PROBE_MODE") ?? "";
+            // ALCHEMY_PROBE_RIG picks the rig donor (necrobinder / silent) for side-by-side comparisons.
+            if (System.Environment.GetEnvironmentVariable("ALCHEMY_PROBE_RIG") is { Length: > 0 } rigName)
+                Alchemy.NecroRig.Donor = Enum.Parse<Alchemy.NecroRig.RigDonor>(rigName, ignoreCase: true);
             // "alchemist": the alchemist's own visuals, made the way combat makes them (CharacterModel.CreateVisuals).
             var visuals = mode == "alchemist"
                 ? MegaCrit.Sts2.Core.Models.ModelDb.Character<Alchemy.AlchemistCharacter>().CreateVisuals()
-                : ResourceLoader.Load<PackedScene>(SceneHelper.GetScenePath("creature_visuals/necrobinder")).Instantiate<NCreatureVisuals>(PackedScene.GenEditState.Disabled);
+                : ResourceLoader.Load<PackedScene>(SceneHelper.GetScenePath("creature_visuals/" + (System.Environment.GetEnvironmentVariable("ALCHEMY_PROBE_DONOR") is { Length: > 0 } donor ? donor : "necrobinder"))).Instantiate<NCreatureVisuals>(PackedScene.GenEditState.Disabled);
             visuals.Position = new Vector2(350, 620);
             viewport.AddChild(visuals);
             await Frames(tree, 3);
@@ -59,7 +62,7 @@ public static class RigProbe
             if (mode == "alchemist")
             {
                 visuals.Scale = Vector2.One * 1.25f;
-                await Capture(tree, viewport, body, "alchemist", ["idle_loop", "attack", "hurt", "cast_mighty", "die"]);
+                await Capture(tree, viewport, body, "alchemist", ["idle_loop", "attack", "hurt", Alchemy.NecroRig.CastAnimation, "die"]);
             }
             else if (mode == "uvmap")
             {
@@ -106,7 +109,7 @@ public static class RigProbe
                             var c = image.GetPixel(x, y);
                             image.SetPixel(x, y, new Color(c.G * 0.3f, c.R, c.B * 0.3f, c.A)); // green-shifted test page
                         }
-                string page = i == 0 ? "necrobinder.png" : $"necrobinder_{i + 1}.png";
+                string page = Alchemy.NecroRig.ParsePages(atlasText)[i].Name;
                 image.SavePng($"{dir}/{page}");
             }
             File.WriteAllText(ProjectSettings.GlobalizePath($"{dir}/probe.atlas"), atlasText);

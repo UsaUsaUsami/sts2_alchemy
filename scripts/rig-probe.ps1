@@ -1,6 +1,6 @@
 ﻿# Development probe (tests/Alchemy.RigProbe): runs the isolated game WITH rendering, saves rig frames as PNG.
 # The smoke mod is set aside while it runs, so only the probe acts. Output: artifacts/rig-probe/<Name>/
-param([string]$Name = 'probe', [string]$Mode = '', [int]$Frames = 6000)
+param([string]$Name = 'probe', [string]$Mode = '', [string]$Donor = '', [string]$Rig = '', [int]$Frames = 6000)
 $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot/env.ps1"
 $root = Split-Path $PSScriptRoot
@@ -10,9 +10,9 @@ try {
     & "$env:DOTNET_ROOT/dotnet.exe" build tests/Alchemy.RigProbe/Alchemy.RigProbe.csproj -c Release --disable-build-servers -p:UseSharedCompilation=false
     if ($LASTEXITCODE -ne 0) { throw 'ビルドに失敗しました。' }
     Copy-Item src/Alchemy/bin/Release/net9.0/Alchemy.dll, src/Alchemy/Alchemy.json "$runtime/mods/Alchemy" -Force
-    $rig = "$runtime/mods/Alchemy/art/character/rig"
-    if (Test-Path $rig) { Remove-Item $rig -Recurse -Force }
-    if (Test-Path assets/art/character/rig) { New-Item -ItemType Directory -Force $rig | Out-Null; Copy-Item assets/art/character/rig/*.png $rig -Force }
+    $rigDir = "$runtime/mods/Alchemy/art/character/rig"
+    if (Test-Path $rigDir) { Remove-Item $rigDir -Recurse -Force }
+    if (Test-Path assets/art/character/rig) { Copy-Item assets/art/character/rig $rigDir -Recurse -Force }
     New-Item -ItemType Directory -Force "$runtime/mods/AlchemyRigProbe" | Out-Null
     Copy-Item tests/Alchemy.RigProbe/bin/Release/net9.0/AlchemyRigProbe.dll, tests/Alchemy.RigProbe/AlchemyRigProbe.json "$runtime/mods/AlchemyRigProbe" -Force
     $out = Join-Path $root "artifacts/rig-probe/$Name"
@@ -24,6 +24,8 @@ try {
     $env:APPDATA = Join-Path $root 'artifacts/smoke/appdata'
     $env:ALCHEMY_PROBE_OUT = $out
     $env:ALCHEMY_PROBE_MODE = $Mode
+    $env:ALCHEMY_PROBE_DONOR = $Donor
+    $env:ALCHEMY_PROBE_RIG = $Rig
     try {
         Start-Process -FilePath "$runtime/SlayTheSpire2.exe" -WorkingDirectory $runtime -NoNewWindow -Wait `
             -ArgumentList '--quit-after', $Frames, '--force-steam=off', '--windowed', '--resolution', '1280x720' `

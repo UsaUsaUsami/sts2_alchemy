@@ -5,23 +5,28 @@ using MegaCrit.Sts2.Core.Nodes.Combat;
 namespace Alchemy;
 
 /// <summary>
-/// The alchemist's combat body (2026-10-01, user: "ネクロ転用が好ましい"): the Necrobinder's Spine rig and animations,
-/// repainted as the alchemist. Nothing of the base game is shipped. At first use the Necrobinder's atlas pages are
-/// read from the game, each part is recoloured from its own shading (a gradient map, Recipes), the mod's own drawings
-/// (art/character/rig/*.png: the staff, the face sigil, the robe band) are laid on top, and the result is written to
-/// user://alchemy_rig and loaded as a new atlas under the game's own skeleton. scripts/rig-probe.ps1 renders it.
-/// The head fire is a shader and particles in the scene, recoloured to the brass of the magic circle (Flames).
+/// The alchemist's combat body (2026-10-01): a base game character's Spine rig and animations, repainted as the
+/// alchemist. First the Necrobinder (user: "ネクロ転用が好ましい"), then the Silent on trial (user: "サイレント転用を
+/// ためして"); Donor picks which. Nothing of the base game is shipped. At first use the donor's atlas pages are read
+/// from the game, each part is recoloured from its own shading (a gradient map, Recipes), the mod's own drawings
+/// (art/character/rig/<donor>/*.png: the staff, the face sigil, the robe band) are laid on top, and the result is
+/// written to user://alchemy_rig/<donor> and loaded as a new atlas under the game's own skeleton.
+/// scripts/rig-probe.ps1 renders it. Effects in the scene (fire, slash, particles) take the brass of the magic circle.
 /// </summary>
 public static class NecroRig
 {
-    private const string SceneName = "creature_visuals/necrobinder";
-    private static readonly string CacheDir = "user://alchemy_rig";
-    private static GodotObject? built;
+    public enum RigDonor { Necrobinder, Silent }
+    /// The donor in use. A trial choice between the two (2026-10-01).
+    public static RigDonor Donor { get; set; } = RigDonor.Silent;
+    private static string DonorName => Donor.ToString().ToLowerInvariant();
+    private static readonly Dictionary<RigDonor, GodotObject> built = [];
     private static bool failed;
 
-    public static string RigArtDirectory => Path.Combine(CharacterArt.ArtDirectory, "rig");
-    /// The rig is used when the mod's drawings are installed; without them the alchemist keeps the still sprite.
+    public static string RigArtDirectory => Path.Combine(CharacterArt.ArtDirectory, "rig", DonorName);
+    /// The rig is used when the mod's drawings for the donor are installed; without them the still sprite is used.
     public static bool Available => !failed && Directory.Exists(RigArtDirectory);
+    /// The animation the donor plays for skills and powers (the Necrobinder's big cast; the Silent has one cast).
+    public static string CastAnimation => Donor == RigDonor.Necrobinder ? "cast_mighty" : "cast";
 
     /// A gradient from the part's darkest to its lightest shade, or Clear: the part is dropped and only the overlay drawn.
     private readonly record struct Recipe(Color Dark, Color Light, bool Clear = false, int Trim = 0);
@@ -37,7 +42,9 @@ public static class NecroRig
     private static Recipe Face => new(new Color("08080a"), new Color("2b2930"));
     private static readonly Recipe Clear = new(default, default, Clear: true);
 
-    private static Recipe? For(string part) => part switch
+    private static Recipe? For(string part) => Donor == RigDonor.Necrobinder ? ForNecrobinder(part) : ForSilent(part);
+
+    private static Recipe? ForNecrobinder(string part) => part switch
     {
         "skirt top" or "sleeve_l_extended" or "bottom sleeve" or "l sleeve top" => Cloth(trim: 3),
         "skirt back" or "l sleeve bottom" or "l shoulder bottom" or "bottom shoulder" or "l shoulder" => ClothBack,
@@ -62,12 +69,32 @@ public static class NecroRig
         _ => Leather,
     };
 
+    /// The Silent: hood and cloak become the robe, the grey hanging cloth the element band, the skull mask and horns
+    /// go (the dark face with the sigil shows), the bandaged limbs become gloves and boots, the daggers brass.
+    private static Recipe? ForSilent(string part) => part switch
+    {
+        "skull" or "top horn" or "bottom horn" or "hair" or "hair top" or "eye"
+            or "death_half_scale/death_skull" or "death_half_scale/death_antlers" or "death_half_scale/death_hair" => Clear,
+        "head" => Face,
+        "dress" => Cloth(),
+        "badge" => Brass,
+        "right cape" or "top arm cloak" or "cape_front_attack" or "cape_front_blocking" or "hood top" or "torso copy"
+            or "death_half_scale/death_skirt fabric" or "death_half_scale/death_torso" => Cloth(trim: 3),
+        "cloak back" or "back arm cloak" or "back arm cloak back" or "left cape" or "cape_back_attack" or "bottom hood"
+            or "neck top" or "neck bottom" or "death_half_scale/death_hood" or "death_half_scale/death_neck"
+            or "death_half_scale/death_skirt back" => ClothBack,
+        "top dagger" or "back dagger" or "shiv_hand" => Brass,
+        "blade_shine" or "blade_twirls" or "shiv_blur" or "slash" => Glow,
+        "shadow" or "death_half_scale/death_shadow" => null,
+        _ => Leather,
+    };
+
     public static NCreatureVisuals? CreateVisuals()
     {
         if (!Available) return null;
         try
         {
-            var scene = ResourceLoader.Load<PackedScene>(SceneHelper.GetScenePath(SceneName));
+            var scene = ResourceLoader.Load<PackedScene>(SceneHelper.GetScenePath("creature_visuals/" + DonorName));
             var visuals = scene.Instantiate<NCreatureVisuals>(PackedScene.GenEditState.Disabled);
             var spine = visuals.GetNode("Visuals");
             var original = spine.Get("skeleton_data_res").AsGodotObject();
@@ -78,29 +105,30 @@ public static class NecroRig
         catch (Exception ex)
         {
             failed = true;
-            GD.PushWarning($"[Alchemy] necrobinder rig skipped: {ex}");
+            GD.PushWarning($"[Alchemy] {DonorName} rig skipped: {ex}");
             return null;
         }
     }
 
     private static GodotObject? Build(GodotObject original)
     {
-        if (built is not null) return built;
+        if (built.TryGetValue(Donor, out var cached)) return cached;
+        string cacheDir = "user://alchemy_rig/" + DonorName;
         var atlas = original.Get("atlas_res").AsGodotObject();
         string text = AtlasText(atlas);
         var textures = atlas.Get("textures").AsGodotArray();
         var pages = ParsePages(text);
         if (pages.Count != textures.Count) throw new InvalidOperationException($"atlas pages {pages.Count} != textures {textures.Count}");
-        DirAccess.MakeDirRecursiveAbsolute(CacheDir);
+        DirAccess.MakeDirRecursiveAbsolute(cacheDir);
         for (int i = 0; i < pages.Count; i++)
         {
             var image = textures[i].As<Texture2D>().GetImage();
             if (image.IsCompressed()) image.Decompress();
             image.Convert(Image.Format.Rgba8);
             foreach (var region in pages[i].Regions) Paint(image, region);
-            image.SavePng($"{CacheDir}/{pages[i].Name}");
+            image.SavePng($"{cacheDir}/{pages[i].Name}");
         }
-        string atlasPath = ProjectSettings.GlobalizePath($"{CacheDir}/alchemist.atlas");
+        string atlasPath = ProjectSettings.GlobalizePath($"{cacheDir}/alchemist.atlas");
         File.WriteAllText(atlasPath, text);
         var newAtlas = (GodotObject)ClassDB.Instantiate("SpineAtlasResource");
         var err = newAtlas.Call("load_from_atlas_file", atlasPath).AsInt32();
@@ -111,8 +139,8 @@ public static class NecroRig
         data.Set("default_mix", original.Get("default_mix"));
         data.Set("animation_mixes", original.Get("animation_mixes"));
         if (!data.Call("is_skeleton_data_loaded").AsBool()) throw new InvalidOperationException("skeleton data did not load");
-        GD.Print($"[Alchemy] necrobinder rig repainted ({pages.Sum(p => p.Regions.Count)} parts)");
-        return built = data;
+        GD.Print($"[Alchemy] {DonorName} rig repainted ({pages.Sum(p => p.Regions.Count)} parts)");
+        return built[Donor] = data;
     }
 
     /// The atlas text is not a property of SpineAtlasResource; the imported resource it came from is JSON with it.

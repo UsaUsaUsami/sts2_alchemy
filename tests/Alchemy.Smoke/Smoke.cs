@@ -665,7 +665,7 @@ public static class Smoke
             string? rigAtlas=alchemistBody?.GetClass()=="SpineSprite"
                 ? alchemistBody.Call("get_skeleton_data_res").AsGodotObject()?.Get("atlas_res").AsGodotObject()?.Call("get_source_path").AsString() : null;
             Check(rigAtlas is not null && rigAtlas.Contains("alchemy_rig"),
-                $"the alchemist is the Necrobinder's rig on the repainted atlas (body {alchemistBody?.GetClass() ?? "missing"}, atlas {rigAtlas})");
+                $"the alchemist is a donor rig on the repainted atlas (body {alchemistBody?.GetClass() ?? "missing"}, atlas {rigAtlas})");
             Check(character.IconTexture==CharacterArt.Icon && character.IconOutlineTexture==CharacterArt.IconOutline && CharacterArt.Icon is not null,
                 "the alchemist's head icon and outline replace the borrowed ones");
             Check(character.CharacterSelectIcon is { } selectIcon && selectIcon.GetWidth()==132 && selectIcon.GetHeight()==195
