@@ -7,3 +7,5 @@ artifacts/
 *.user
 assets/art/incoming/
 __pycache__/
+# Other mods' release builds kept for reference (HelloSpire etc.); not ours to commit.
+mod_archive/
