@@ -1,3 +1,4 @@
+﻿using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.Models.RelicPools;
 using System.Reflection;
@@ -570,6 +571,14 @@ public static class Smoke
             foe.SetCurrentHpInternal(999);
             await PowerCmd.Apply<LifeDrainPower>(new ThrowingPlayerChoiceContext(),foe,8,player.Creature,null);
             var drain=foe.GetPower<LifeDrainPower>()!;
+            // 2026-10-01: the foe's health bar shows the 8 HP the drain will take, like poison.
+            var foeBar=NCombatRoom.Instance?.GetCreatureNode(foe) is { } foeNode ? Descendants<NHealthBar>(foeNode).FirstOrDefault() : null;
+            foeBar?.RefreshValues();
+            var drainSegment=foeBar is null ? null : DrainHealthBarPatch.Segment(foeBar);
+            // OffsetLeft counts from the bar's left edge, OffsetRight from its right edge.
+            float drainWidth=drainSegment is null ? 0 : drainSegment.GetParent<Control>().Size.X+drainSegment.OffsetRight-drainSegment.OffsetLeft;
+            Check(drainSegment is { Visible: true } && drainWidth>0,
+                $"the foe's health bar shows the drain about to be taken (bar {(foeBar is null ? "missing" : "found")}, segment {drainSegment?.OffsetLeft}..{drainSegment?.OffsetRight}, width {drainWidth})");
             await drain.AfterSideTurnStart(CombatSide.Player,[player.Creature],cs);
             Check(foe.CurrentHp==999 && drain.Amount==8,"drain waits for its owner's own turn start");
             await drain.AfterSideTurnStart(CombatSide.Enemy,[foe],cs);
