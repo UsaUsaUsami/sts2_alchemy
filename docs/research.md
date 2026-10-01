@@ -1,5 +1,13 @@
 ﻿# 調査記録
 
+## 2026-10-01: ネクロバインダーの骨格の転用（錬金術師のモーション）
+
+- 他のキャラMODの作り方：[HelloSpire](https://github.com/r0zar/HelloSpire)はバニラの骨格を流用し、色替えシェーダーかアトラスの描き替えで見た目を変える（アルケミスト役はネクロバインダーの骨格）。[STS2-Buu](https://github.com/harsh2204/STS2-Buu)は自前のSpine（Godot 4.5.1で.pck）。[STS2 Character Mod Creator](https://slay.spencerstiles.com/guide)は5ポーズの静止絵かスプライトシート。ユーザー判断：ネクロバインダーの骨格を転用する。
+- ネクロバインダーの戦闘骨格：Spine 4.2.43、`res://animations/characters/necrobinder/necrobinder.atlas`（3ページ：本体745×523・斬撃16×74・死亡時の破片443×77、scale 0.359）。動き：idle_loop・relaxed_loop・low_health_loop・attack・hurt・cast・cast_mighty・die。
+- spine-godotのAPI（実機で列挙）：`SpineAtlasResource`は`load_from_atlas_file`と`textures`等の読み取りのみ。アトラスの本文はプロパティにないが、`<atlas>.import`の`remap/path`が指す取り込み済みファイル（JSON、`atlas_data`）を`FileAccess`で読める。`SpineSkeletonDataResource`は`atlas_res`・`skeleton_file_res`を設定でき、`SpineSprite.set_skeleton_data_res`で差し替えられる。
+- **実機で確認**（`scripts/rig-probe.ps1`、画面を描く状態で起動しフレームをPNGに保存）：アトラス本文と描き替えたページ画像をユーザーフォルダに書き出し、`load_from_atlas_file`（res://外の絶対パス）→新しい骨格データ（骨格はゲームのものをそのまま）→差し替え、で本体のページが置き換わり、待機・攻撃の動きはそのまま再生された（緑に塗った試験ページ）。ゲームの素材をMODに同梱せずに済む。
+- 未解決：頭の青い炎はページを替えても青いまま（別の描画の可能性）。休憩所・商人は別の骨格（`restsite_necrobinder`・`necrobinder_shop`）。
+
 ## 対象環境（2026-09-21 確認）
 
 - ゲーム本体：Slay the Spire 2 v0.111.0（commit `41cef1ea`、`release_info.json`のdateは2026-08-13、branch `v0.111.0`）

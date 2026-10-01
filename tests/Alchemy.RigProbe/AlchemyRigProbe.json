@@ -1,0 +1,1 @@
+{"id":"AlchemyRigProbe","name":"Alchemy rig probe (frame capture)","author":"syouh","version":"0.1.0","has_dll":true,"has_pck":false,"affects_gameplay":false,"dependencies":[{"id":"Alchemy"}]}
