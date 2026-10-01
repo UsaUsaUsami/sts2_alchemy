@@ -226,6 +226,11 @@ public static class RigProbe
                 // Where the riders' slot nodes are on the frame, to place pictures by frame pixels.
                 foreach (var rider in viewport.FindChildren("Alchemist_*", owned: false).OfType<Node2D>())
                     Log($"rider {name}_{f} {rider.Name} transform={rider.GetGlobalTransform()}");
+                // Bones near the staff's tip, in frame pixels, to see which one the drawn tip keeps to.
+                if (body.BoundObject.Call("get_skeleton").AsGodotObject() is { } sk)
+                    foreach (var boneName in new[] { "scythe_twist", "scythe_twist_counter", "scythe_vfx_attach_2", "scythe_slide" })
+                        if (sk.Call("find_bone", boneName).AsGodotObject() is { } b)
+                            Log($"bone {name}_{f} {boneName} at={b.Call("get_global_transform").AsTransform2D().Origin}");
                 // The scythe part's mesh deform (the spin is drawn by deforming it, not by its bone).
                 if (body.BoundObject.Call("get_skeleton").AsGodotObject()?.Call("find_slot", "scythe").AsGodotObject() is { } slot)
                 {

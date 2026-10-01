@@ -7,7 +7,7 @@
 ## 2026-10-02 セッション9（ネクロバインダー版の見た目のズレを直す）— 次のセッションはここから
 
 ### 今の状態
-- 未コミット：`NecroRig.cs`・`scripts/rig-art.py`・`assets/art/character/rig/necrobinder/`（scythe_glow.png削除、sythe_dissolve.png）・`tests/Alchemy.RigProbe/Probe.cs`・`AGENTS.md`（yomiyasuの1行）。
+- すべてコミット済み（この項の最後のコミット）。
 - ルールテスト・スモーク405件PASS。ゲームへ反映済み（旧版`artifacts/backups/20261002-001658-419`）。
 - yomiyasuスキルはプラグイン版だけ残した（`skills/`・`.agents/`・`.claude/skills`・`skills-lock.json`は削除）。
 
@@ -19,10 +19,16 @@
 5. 指の骨を太くする案は、描画しても違いが見えなかったので戻した。開いた左手は1枚の部品。
 6. プローブ：`-Mode alchemist`でシーンツリー（`tree`）、杖頭の変換（`rider`）、鎌のメッシュ変形（`deform`）をログに出す。
 
+7. （コミット56a9e27の後）杖頭は`scythe_twist`と`scythe_twist_counter`の中点を追う（回転中の杖先は2つの骨のほぼ中間にある）。杖そのものが先端の少し下で途切れていた（鎌のメッシュの形の内側にしか描けない）ので、杖頭の絵に下へ伸びる柄を描き足した（`rig-art.py`の`ring_head`）。
+8. 首元の段々（死亡時に目立つ）の正体は`chest`（あばら骨の形の部品）。部品ごとに目立つ色を塗って特定した。`chest`・`spine`をほぼ単色の暗い襟の色に。死亡時にフードが後ろへ倒れる動き自体は元のモーションなので残した。
+9. Gemini：Gemini CLIの個人Googleアカウントでのログインは廃止済み。Antigravity CLI（`agy`）を導入・ログイン済み。`scripts/ask-agy.ps1`で画像・ログの一次チェックを頼める（メモリgemini-via-agy）。攻撃中の杖頭の隙間をGeminiが見つけた。
+10. スモーク405件PASS、ゲームへ反映済み（旧版`artifacts/backups/20261002-005950-828`）。
+
 ### 次にやること・返答待ち
-1. **ユーザーが実際の戦闘画面で確認**。確認用：`artifacts/rig-probe/necro-v3-sheet.png`。
-2. 残り：裸足に見える足（足先の指の形が残る。ブーツの絵を載せる案）、死亡時にフードが傾いて体に残る、胸のあばら骨の形。
+1. **ユーザーが実際の戦闘画面で確認**。確認用：`artifacts/rig-probe/necro-v4-sheet.png`。
+2. 残り：裸足に見える足（ブーツの絵を載せる案）。
 3. 休憩所・商人・キャラ選択も同じ方法で。ゴーレムの骨格。声・動作音（返答待ち）。
+4. Jev（TypeSafe AI）：カード名の見直しのときに候補の採点に試す程度（ユーザーのusageが余っている）。
 
 ---
 

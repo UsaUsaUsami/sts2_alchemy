@@ -49,7 +49,9 @@ public static class NecroRig
         "skirt top" or "sleeve_l_extended" or "bottom sleeve" or "l sleeve top" => Cloth(trim: 3),
         "skirt back" or "l sleeve bottom" or "l shoulder bottom" or "bottom shoulder" or "l shoulder" => ClothBack,
         "skirt flap" => Cloth(),
-        "chest" or "spine" => ClothFlat,
+        // The chest is a ribcage and the spine vertebrae; they show under the hood (most when the head tilts back on
+        // death). An almost flat dark collar hides the ribs (found by tinting parts, 2026-10-02).
+        "chest" or "spine" => new(new Color("121115"), new Color("1c1b21")),
         "belts" or "belt top" => Belt,
         "head" => Face,
         "back flame neck" => new(new Color("0c0b0e"), Gold),
@@ -178,15 +180,16 @@ public static class NecroRig
     /// Position and rotation are in the bone's own space; Scale is applied to the picture.
     /// OnlyWith: shown only while the slot shows that attachment (the staff head goes with the scythe part, which
     /// the animations swap out, e.g. while it dissolves on death).
-    /// Follow: a bone the picture keeps to, Position then being the offset from it in the slot bone's space (the
-    /// scythe's tip is skinned to scythe_twist, which the attack's spin moves along the staff; 2026-10-02).
-    public sealed record Rider(string Slot, string File, Vector2 Position, float Rotation, float Scale, string? OnlyWith = null, string? Follow = null);
+    /// Follow: bones the picture keeps to (their midpoint), Position then being the offset from it in the slot bone's
+    /// space. The scythe's tip is skinned to scythe_twist and scythe_twist_counter, which the attack's spin moves
+    /// apart; the drawn tip stays near their midpoint (measured with rig-probe, 2026-10-02).
+    public sealed record Rider(string Slot, string File, Vector2 Position, float Rotation, float Scale, string? OnlyWith = null, string[]? Follow = null);
     /// Trial placements (2026-10-01), measured with scripts/rig-probe.ps1 -Riders.
     public static readonly List<Rider> Riders =
     [
         new("head", "hood.png", new(15, -30), 90, 1.2f),
-        // Just past the staff's tip (scythe_twist, at x 709 y -4 of the slot bone), turned to face along the staff.
-        new("scythe", "staff_head.png", new(41, 4), 90, 1.3f, OnlyWith: "scythe", Follow: "scythe_twist"),
+        // Just past the staff's tip (the twist bones' midpoint, x 719 y -5 of the slot bone), facing along the staff.
+        new("scythe", "staff_head.png", new(31, 5), 90, 1.3f, OnlyWith: "scythe", Follow: ["scythe_twist", "scythe_twist_counter"]),
     ];
 
     private static void Attach(Node2D spine)
@@ -219,10 +222,12 @@ public static class NecroRig
                     var current = skeleton.Call("find_slot", rider.Slot).AsGodotObject()?.Call("get_attachment").AsGodotObject();
                     sprite.Visible = current?.Call("get_attachment_name").AsString() == attachment;
                 }
-                if (rider.Follow is { } boneName && skeleton.Call("find_bone", boneName).AsGodotObject() is { } bone
-                    && sprite.GetParent() is Node2D slotNode)
+                if (rider.Follow is { } bones && sprite.GetParent() is Node2D slotNode)
                 {
-                    var anchor = bone.Call("get_global_transform").AsTransform2D().Origin;
+                    var points = bones.Select(name => skeleton.Call("find_bone", name).AsGodotObject())
+                        .OfType<GodotObject>().Select(bone => bone.Call("get_global_transform").AsTransform2D().Origin).ToList();
+                    if (points.Count == 0) continue;
+                    var anchor = points.Aggregate(Vector2.Zero, (sum, p) => sum + p) / points.Count;
                     sprite.GlobalPosition = anchor + slotNode.GlobalTransform.BasisXform(rider.Position);
                 }
             }

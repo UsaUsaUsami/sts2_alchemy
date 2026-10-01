@@ -133,11 +133,23 @@ def hood(name, w=200, h=230):
     save(im, name)
 
 
-def ring_head(name, size=120):
-    """A big brass sigil ring for the staff head (rides on the scythe bone, outside the scythe's own outline)."""
-    im = canvas(size, size)
+def ring_head(name, size=120, stem=120):
+    """A big brass sigil ring for the staff head (rides on the twist bones, outside the scythe's own outline).
+    stem: a piece of pole below the ring, in picture pixels from the ring's centre. The pole drawn on the scythe part
+    breaks a little below the tip, where the part's mesh follows the inside of the blade (2026-10-02); the stem covers
+    that. The canvas is twice the stem tall so the ring stays at its centre (the sprite is centred)."""
+    h = max(size, 2 * stem + 8)
+    im = canvas(size, h)
     d = ImageDraw.Draw(im)
     c, r = size / 2 * S, size * 0.42 * S
+    cy = h / 2 * S
+    if stem:
+        width = 4.5 * S
+        d.line([(c, cy + r), (c, cy + stem * S)], fill=WOOD, width=int(width))
+        d.line([(c - width * 0.25, cy + r), (c - width * 0.25, cy + stem * S)], fill=WOOD_HI, width=max(1, int(width * 0.3)))
+        d.line([(c - width * 1.2, cy + r + 3 * S), (c + width * 1.2, cy + r + 3 * S)], fill=GOLD, width=int(width * 1.2))
+    im_ring = canvas(size, size)
+    d = ImageDraw.Draw(im_ring)
     d.ellipse([c - r, c - r, c + r, c + r], outline=GOLD, width=int(size / 14 * S))
     d.ellipse([c - r * 0.8, c - r * 0.8, c + r * 0.8, c + r * 0.8], outline=GOLD_LO, width=int(size / 60 * S))
     tri = [(c + r * 0.7 * math.cos(math.radians(a)), c + r * 0.7 * math.sin(math.radians(a))) for a in (-90, 30, 150)]
@@ -146,6 +158,7 @@ def ring_head(name, size=120):
     for a in range(0, 360, 45):
         x, y = math.cos(math.radians(a)), math.sin(math.radians(a))
         d.line([(c + x * r * 1.05, c + y * r * 1.05), (c + x * r * 1.18, c + y * r * 1.18)], fill=GOLD_HI, width=int(size / 40 * S))
+    im.alpha_composite(im_ring, (0, int(cy - c)))
     save(im, name)
 
 
