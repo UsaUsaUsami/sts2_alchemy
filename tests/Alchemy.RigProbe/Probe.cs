@@ -37,8 +37,11 @@ public static class RigProbe
                 Disable3D = true, OwnWorld3D = true,
             };
             tree.Root.AddChild(viewport);
-            var scene = ResourceLoader.Load<PackedScene>(SceneHelper.GetScenePath("creature_visuals/necrobinder"));
-            var visuals = scene.Instantiate<NCreatureVisuals>(PackedScene.GenEditState.Disabled);
+            string mode = System.Environment.GetEnvironmentVariable("ALCHEMY_PROBE_MODE") ?? "";
+            // "alchemist": the alchemist's own visuals, made the way combat makes them (CharacterModel.CreateVisuals).
+            var visuals = mode == "alchemist"
+                ? MegaCrit.Sts2.Core.Models.ModelDb.Character<Alchemy.AlchemistCharacter>().CreateVisuals()
+                : ResourceLoader.Load<PackedScene>(SceneHelper.GetScenePath("creature_visuals/necrobinder")).Instantiate<NCreatureVisuals>(PackedScene.GenEditState.Disabled);
             visuals.Position = new Vector2(350, 620);
             viewport.AddChild(visuals);
             await Frames(tree, 3);
@@ -53,7 +56,12 @@ public static class RigProbe
             Log("data props: " + string.Join(",", data.GetPropertyList().Select(p => (string)p["name"])));
             Log("animations: " + string.Join(",", new MegaSkeletonDataResource(data).GetAnimationNames()));
 
-            if (System.Environment.GetEnvironmentVariable("ALCHEMY_PROBE_MODE") == "uvmap")
+            if (mode == "alchemist")
+            {
+                visuals.Scale = Vector2.One * 1.25f;
+                await Capture(tree, viewport, body, "alchemist", ["idle_loop", "attack", "hurt", "cast_mighty", "die"]);
+            }
+            else if (mode == "uvmap")
             {
                 Swap(spine, data, atlas, recolour: false); // only to export the atlas text and pages for the scripts
                 await UvMap(tree, viewport, visuals, body, spine);

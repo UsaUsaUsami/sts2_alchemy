@@ -26,6 +26,7 @@ try {
     if (Test-Path $character) { Remove-Item $character -Recurse -Force }
     New-Item -ItemType Directory -Force $character | Out-Null
     Copy-Item assets/art/character/* $character -Include *.png,*.ctex -Force
+    if (Test-Path assets/art/character/rig) { New-Item -ItemType Directory -Force "$character/rig" | Out-Null; Copy-Item assets/art/character/rig/*.png "$character/rig" -Force }
     $icons = "$runtime/mods/Alchemy/art/icons"
     if (Test-Path $icons) { Remove-Item $icons -Recurse -Force }
     New-Item -ItemType Directory -Force $icons | Out-Null

@@ -10,6 +10,9 @@ try {
     & "$env:DOTNET_ROOT/dotnet.exe" build tests/Alchemy.RigProbe/Alchemy.RigProbe.csproj -c Release --disable-build-servers -p:UseSharedCompilation=false
     if ($LASTEXITCODE -ne 0) { throw 'ビルドに失敗しました。' }
     Copy-Item src/Alchemy/bin/Release/net9.0/Alchemy.dll, src/Alchemy/Alchemy.json "$runtime/mods/Alchemy" -Force
+    $rig = "$runtime/mods/Alchemy/art/character/rig"
+    if (Test-Path $rig) { Remove-Item $rig -Recurse -Force }
+    if (Test-Path assets/art/character/rig) { New-Item -ItemType Directory -Force $rig | Out-Null; Copy-Item assets/art/character/rig/*.png $rig -Force }
     New-Item -ItemType Directory -Force "$runtime/mods/AlchemyRigProbe" | Out-Null
     Copy-Item tests/Alchemy.RigProbe/bin/Release/net9.0/AlchemyRigProbe.dll, tests/Alchemy.RigProbe/AlchemyRigProbe.json "$runtime/mods/AlchemyRigProbe" -Force
     $out = Join-Path $root "artifacts/rig-probe/$Name"

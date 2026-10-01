@@ -2,6 +2,7 @@
 using BaseLib.Utils.NodeFactories;
 using HarmonyLib;
 using Godot;
+using MegaCrit.Sts2.Core.Animation;
 using MegaCrit.Sts2.Core.Entities.Characters;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
@@ -29,8 +30,18 @@ public sealed class AlchemistCharacter : PlaceholderCharacterModel
         ModelDb.Card<EarthenGuard>(), ModelDb.Card<SoothingMist>(), ModelDb.Card<InstantAlchemy>()];
     public override IReadOnlyList<RelicModel> StartingRelics => [ModelDb.Relic<MaterialBox>()];
     // 2026-09-30: the alchemist's own look (CharacterArt). Rest site and merchant: RestMerchantArt (2026-10-01).
+    // 2026-10-01: the Necrobinder's rig repainted as the alchemist (NecroRig); the still sprite only without its art.
     public override NCreatureVisuals? CreateCustomVisuals()
-        => CharacterArt.Body is { } body ? NodeFactory<NCreatureVisuals>.CreateFromResource(body) : null;
+        => NecroRig.CreateVisuals()
+           ?? (CharacterArt.Body is { } body ? NodeFactory<NCreatureVisuals>.CreateFromResource(body) : null);
+    // The Necrobinder's own mapping, so its animations play for the triggers the game sends.
+    protected override List<(AnimState, string)> AnimationStates =>
+    [
+        (new AnimState("attack"), "Attack"),
+        (new AnimState("hurt"), "Hit"),
+        (new AnimState("cast_mighty"), "PowerUp"),
+        (new AnimState("cast_mighty"), "Cast"),
+    ];
     // Same shape as the base game's scenes/ui/character_icons/*_icon.tscn: a full-rect TextureRect.
     public override Control? CustomIcon => CharacterArt.Icon is { } icon
         ? new TextureRect

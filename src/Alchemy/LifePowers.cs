@@ -276,12 +276,15 @@ public static class SpriteMotion
     }
 
     /// 相転移 (2026-10-01): the alchemist glows in the destination phase's colour (the dial's) and swells a little.
+    /// With the Necrobinder rig (NecroRig) the glow goes on the Spine body and the swell is left to the animation.
     public static void Pulse(NCreature node, Color colour)
     {
-        if (Sprite(node) is not { } sprite) return;
-        var tween = sprite.CreateTween().SetParallel();
-        sprite.SelfModulate = Colors.White.Lerp(colour, 0.6f) * 1.25f;
-        tween.TweenProperty(sprite, "self_modulate", Colors.White, 0.4).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
+        CanvasItem? body = Sprite(node) ?? (node.Entity.Player?.Character is AlchemistCharacter ? node.Visuals.Body as CanvasItem : null);
+        if (body is null) return;
+        var tween = body.CreateTween().SetParallel();
+        body.SelfModulate = Colors.White.Lerp(colour, 0.6f) * 1.25f;
+        tween.TweenProperty(body, "self_modulate", Colors.White, 0.4).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
+        if (body is not Sprite2D sprite) return;
         tween.TweenProperty(sprite, "scale", new Vector2(1.04f, 1.04f), 0.08).SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
         tween.TweenProperty(sprite, "scale", Vector2.One, 0.25).SetDelay(0.08).SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
     }

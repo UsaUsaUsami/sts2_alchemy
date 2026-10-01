@@ -661,8 +661,11 @@ public static class Smoke
             // 2026-09-30: the alchemist's own sprite and icons (CharacterArt) instead of the Ironclad's.
             var alchemistBody=NCombatRoom.Instance?.GetCreatureNode(player.Creature)?.Visuals.Body;
             var character=player.Character;
-            Check(alchemistBody is Sprite2D { Texture: { } bodyTex } && bodyTex.GetHeight()==CharacterArt.BodyHeight,
-                $"the alchemist is shown as their own sprite (body {alchemistBody?.GetType().Name ?? "missing"})");
+            // 2026-10-01: the Necrobinder's rig repainted from a new atlas in user://alchemy_rig (NecroRig).
+            string? rigAtlas=alchemistBody?.GetClass()=="SpineSprite"
+                ? alchemistBody.Call("get_skeleton_data_res").AsGodotObject()?.Get("atlas_res").AsGodotObject()?.Call("get_source_path").AsString() : null;
+            Check(rigAtlas is not null && rigAtlas.Contains("alchemy_rig"),
+                $"the alchemist is the Necrobinder's rig on the repainted atlas (body {alchemistBody?.GetClass() ?? "missing"}, atlas {rigAtlas})");
             Check(character.IconTexture==CharacterArt.Icon && character.IconOutlineTexture==CharacterArt.IconOutline && CharacterArt.Icon is not null,
                 "the alchemist's head icon and outline replace the borrowed ones");
             Check(character.CharacterSelectIcon is { } selectIcon && selectIcon.GetWidth()==132 && selectIcon.GetHeight()==195
@@ -696,17 +699,15 @@ public static class Smoke
             restChar.QueueFree(); merchantChar.QueueFree();
             // 2026-10-01: taking a hit knocks the alchemist back and flushes it red; a phase transition glows in the phase's colour.
             var alchemistNode=NCombatRoom.Instance!.GetCreatureNode(player.Creature)!;
-            var alchemistSprite=(Sprite2D)alchemistNode.Visuals.Body;
+            var alchemistBodyItem=(CanvasItem)alchemistNode.Visuals.Body;
             alchemistNode.SetAnimationTrigger("Hit");
-            await Task.Delay(60);
-            var hitTint=alchemistSprite.SelfModulate; float hitX=alchemistSprite.Position.X;
-            await Task.Delay(500);
-            Check(hitTint.G<0.9f && hitX<-5f && alchemistSprite.SelfModulate.IsEqualApprox(Colors.White) && Math.Abs(alchemistSprite.Position.X)<0.01f,
-                $"a hit knocks the alchemist back and flushes it red, then it recovers (tint {hitTint}, x {hitX})");
+            await Task.Delay(100);
+            string? hitAnim=alchemistNode.Visuals.SpineAnimation.GetCurrentAnimationName();
+            Check(hitAnim=="hurt",$"a hit plays the rig's hurt animation (now {hitAnim})");
             SpriteMotion.Pulse(alchemistNode,PhaseDial.Colour(AlchemyPhase.Fire));
-            var pulseTint=alchemistSprite.SelfModulate;
+            var pulseTint=alchemistBodyItem.SelfModulate;
             await Task.Delay(600);
-            Check(pulseTint.R>pulseTint.B+0.2f && alchemistSprite.SelfModulate.IsEqualApprox(Colors.White) && alchemistSprite.Scale.IsEqualApprox(Vector2.One),
+            Check(pulseTint.R>pulseTint.B+0.2f && alchemistBodyItem.SelfModulate.IsEqualApprox(Colors.White),
                 $"a phase transition glows in the destination phase's colour, then fades (tint {pulseTint})");
             // The sounds are base game FMOD events; ask FMOD whether each one exists when its server is reachable.
             string[] sounds=[AlchemySfx.PhaseShift,AlchemySfx.Furnace,AlchemySfx.Craft,AlchemySfx.Modify,AlchemySfx.Inscribe,AlchemySfx.Brew];
