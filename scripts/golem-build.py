@@ -17,27 +17,29 @@ from riglib import bone_anim, move, place, prepare, rot, scale, shadow, write_ri
 ROOT = Path(__file__).resolve().parent.parent
 PARTS = ROOT / "assets/art/character/rig/alchemist/parts"
 OUT = ROOT / "assets/art/pets/rig"
-# The golem stands about 190 px on screen beside the alchemist's ~265 (PetArt.GolemHeight); its parts are about
-# 610 sheet px tall against the alchemist's 1250 at scale 1.
-SCALE = 1.2
-FAR = "a8a8b0"
+# Laid out over the original picture (assets/art/pets/golem.png, 340x360; user 2026-10-02: "follow the original
+# image closely"): 1 px of it is 1.58 sheet px, its ground (y 318) is y 0 here, its x 170 is x 0. Squat: a round
+# boulder body as wide as tall, stubby legs mostly behind it, short arms with big fists near the ground.
+# On screen it stands as tall as the old still sprite (PetArt.GolemHeight 190 px): measured, one sheet px times
+# SCALE is about 0.31 px, and the golem is about 455 sheet px tall.
+SCALE = 1.34
+FAR = "c8c8cc"
 
 BONES = {
     "root": (None, 0, 0, 0),
-    "body": ("root", 0, 386, 90),
-    # The near arm hangs from the socket drawn on the body's left (the golem faces right), the far one behind.
-    "arm_b": ("body", -112, 426, -92),
-    "arm_f": ("body", 110, 430, -88),
-    "leg_b": ("root", -45, 226, -90),
-    "leg_f": ("root", 55, 226, -90),
+    "body": ("root", 55, 249, 90),
+    "arm_b": ("body", -168, 290, -102),
+    "arm_f": ("body", 222, 285, -76),
+    "leg_b": ("root", -95, 132, -90),
+    "leg_f": ("root", 125, 132, -90),
     # Chips knocked off when hit (hidden otherwise).
-    "chip1": ("body", 70, 470, 0),
-    "chip2": ("body", -40, 520, 0),
-    "chip3": ("body", 120, 380, 0),
+    "chip1": ("body", 120, 330, 0),
+    "chip2": ("body", -20, 400, 0),
+    "chip3": ("body", 170, 230, 0),
 }
 
-SHOULDER_OVERLAP = 55  # the arm's round shoulder stone sits over the body's socket
-HIP_OVERLAP = 40
+SHOULDER_OVERLAP = 0  # the arms' top stone is drawn whole, in front of the body
+HIP_OVERLAP = 0
 
 
 def arm_slot(slot, bone, part, flip, tint, images):
@@ -48,7 +50,7 @@ def arm_slot(slot, bone, part, flip, tint, images):
 
 T = 2.6
 DIE_END = {  # the fallen pose: rotations and moves at the end of die, held by dead_loop, undone by revive
-    "body": {"rotate": -80, "translate": (-50, -215)},
+    "body": {"rotate": -70, "translate": (40, -45)},
     "arm_b": {"rotate": 55},
     "arm_f": {"rotate": -35},
     "leg_b": {"rotate": 25},
@@ -87,8 +89,8 @@ def revive(duration=0.8):
 def punch(reach, lunge):
     """The near arm swings forward into a punch with a lunge (attack, and a smaller attack_poke)."""
     return bone_anim(
-        root=move((0, 0, 0), (0.12, -30, 0), (0.25, lunge, 0), (0.45, lunge, 0), (0.7, 0, 0)),
-        body=rot((0, 0), (0.12, 8), (0.25, -12), (0.45, -12), (0.7, 0)),
+        root=move((0, 0, 0), (0.12, -25, 0), (0.25, lunge, 0), (0.45, lunge, 0), (0.7, 0, 0)),
+        body=rot((0, 0), (0.12, 6), (0.25, -10), (0.45, -10), (0.7, 0)),
         arm_b=rot((0, 0), (0.12, -40), (0.25, reach), (0.45, reach), (0.7, 0)),
         arm_f=rot((0, 0), (0.12, 15), (0.25, -20), (0.7, 0)),
     )
@@ -100,14 +102,14 @@ ANIMATIONS = {
         arm_b=rot((0, 0), (T / 2, 3), (T, 0)),
         arm_f=rot((0, 0), (T / 2, -3), (T, 0)),
     ),
-    "attack": punch(100, 90),
-    "attack_poke": punch(70, 50),
+    "attack": punch(100, 70),
+    "attack_poke": punch(70, 40),
     # Both arms up, then slammed down with the body squashing.
     "cast": bone_anim(
-        body=[move((0, 0, 0), (0.3, 0, 25), (0.55, 0, 25), (0.65, 0, -15), (0.9, 0, 0)),
+        body=[move((0, 0, 0), (0.3, 0, 20), (0.55, 0, 20), (0.65, 0, -10), (0.9, 0, 0)),
               scale((0, 1, 1), (0.55, 0.97, 1.04), (0.65, 1.08, 0.92), (0.9, 1, 1))],
-        arm_b=rot((0, 0), (0.3, 150), (0.55, 150), (0.65, -10), (0.9, 0)),
-        arm_f=rot((0, 0), (0.3, 150), (0.55, 150), (0.65, 10), (0.9, 0)),
+        arm_b=rot((0, 0), (0.3, -150), (0.55, -150), (0.65, 10), (0.9, 0)),
+        arm_f=rot((0, 0), (0.3, 150), (0.55, 150), (0.65, -10), (0.9, 0)),
     ),
     # Knocked back, the body shakes, the arms flail.
     "hurt": bone_anim(
@@ -138,19 +140,20 @@ SLOT_COLORS = {"hurt": {s: [(0, WHITE), (0.04, RED), (0.3, WHITE)] for s in STON
 
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
-    images = {"shadow": shadow(360, 56)}
-    slots = [("shadow", "root", 10, 8, 0)]
-    slots.append(arm_slot("arm_f", "arm_f", "GOLEM_ARM", False, FAR, images))
+    images = {"shadow": shadow(460, 60)}
+    slots = [("shadow", "root", 30, 8, 0)]
     slots.append(arm_slot("leg_f", "leg_f", "GOLEM_LEG", False, FAR, images))
     slots.append(arm_slot("leg_b", "leg_b", "GOLEM_LEG", False, None, images))
     images["body"] = prepare(PARTS / "GOLEM_BODY.png")
-    slots.append(("body", "body", 0, 386, 0))
+    slots.append(("body", "body", *BONES["body"][1:3], 0))
+    # In the original both arms hang in front of the body's sides; the far one a little darker.
+    slots.append(arm_slot("arm_f", "arm_f", "GOLEM_ARM", True, FAR, images))
     slots.append(arm_slot("arm_b", "arm_b", "GOLEM_ARM", False, None, images))
     for i, chip in enumerate(("chip1", "chip2", "chip3")):
         images[chip] = prepare(PARTS / f"PEBBLE_{i + 1}.png")
         slots.append((chip, chip, *BONES[chip][1:3], 0))
     size, n_slots, n_bones = write_rig(OUT, "golem", BONES, slots, images, ANIMATIONS, SCALE, None, SLOT_KEYS,
-                                       ROOT / "artifacts/rig-custom/golem-setup.png", (700, 800), (350, 760),
+                                       ROOT / "artifacts/rig-custom/golem-setup.png", (700, 600), (330, 560),
                                        hidden=("chip1", "chip2", "chip3"), slot_colors=SLOT_COLORS)
     print(f"page {size}, {n_slots} slots, {n_bones} bones, animations {list(ANIMATIONS)}")
 

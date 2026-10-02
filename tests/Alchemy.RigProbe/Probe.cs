@@ -96,6 +96,12 @@ public static class RigProbe
             else if (mode == "golem")
             {
                 // The golem as combat makes it (HomunculusPet), beside the alchemist for scale.
+                visuals.QueueFree();
+                visuals = MegaCrit.Sts2.Core.Models.ModelDb.Character<Alchemy.AlchemistCharacter>().CreateVisuals();
+                viewport.AddChild(visuals);
+                await Frames(tree, 3);
+                body = visuals.SpineBody!;
+                for (int i = 0; i < 120 && body.TryGetAnimationState() is null; i++) await Frames(tree, 1);
                 visuals.Scale = Vector2.One * 1.25f * Zoom;
                 visuals.Position = new Vector2(230, 620) * Zoom;
                 var pet = MegaCrit.Sts2.Core.Models.ModelDb.Monster<Alchemy.HomunculusPet>().CreateCustomVisuals()!;

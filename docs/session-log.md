@@ -18,8 +18,10 @@
 4. スモーク：ゴーレム・休憩所・商人の確認項目を骨格用に書き換え（`smoke.ps1`はpets/rigもコピー）。
 5. 確認用：`artifacts/rig-probe/golem-v1-sheet.png`（左はネクロバインダー＝大きさの目安）、`artifacts/rig-probe/rest2-cmp.png`、`artifacts/rig-probe/merchant1-cmp.png`。
 
+6. ユーザー「ゴーレムがデカくてやだ。元画像に丁寧に沿って」→ `rig-parts.py --set golem2`で、元の絵（`assets/art/pets/golem.png`）と同じずんぐりした形の部品を生成し直し（1回）、元の絵に重ねて配置（元の絵の1px＝1.58シート px、脚は胴の後ろ、腕は胴の両脇の手前）。画面の高さは元の1枚絵と同じ190px（SCALE 1.34）。比較：`artifacts/rig-custom/golem-cmp.png`、ゲームでの大きさ：`artifacts/rig-probe/golem-v2-sheet.png`。スモーク405件PASS。**ゲームが起動中で未反映**（終了後に`scripts/update.ps1`）。
+
 ### 次にやること・返答待ち
-1. **ユーザーが実画面で確認**：ゴーレムの大きさ（`golem-build.py`のSCALE=1.2、錬金術師の約7割の想定）と位置、休憩所の位置（火との距離、思考の吹き出し）、商人の大きさ。
+1. **ユーザーが実画面で確認**：ゴーレムの大きさと位置、休憩所の位置（火との距離、思考の吹き出し）、商人の大きさ。
 2. キャラ選択画面はまだ1枚絵（背景に合成）。骨格にするかは未相談。
 3. 不要になった素材：`NecroRig`とネクロバインダー用の絵、`RestMerchantArt.Apply`の1枚絵（骨格がないときの予備として残している）。
 

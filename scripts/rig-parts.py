@@ -144,6 +144,25 @@ REST2 = [
      "on the ground, dark brown boots at the front. No sockets, no cut ends: everything that shows is finished."),
 ]
 
+# 2026-10-02 (v2): the first golem parts made it tall and long-legged; the user wants it to follow the original
+# picture closely (assets/art/pets/golem.png): squat, the body a huge round boulder as wide as tall, stubby legs
+# that barely show, short arms hanging from the middle of the body with big fists near the ground.
+GOLEM2 = [
+    ("GOLEM_BODY", "the golem's body exactly as in the FIRST attached image: one huge round boulder, about as wide as "
+     "it is tall, that is head and torso in one, built of large smooth ochre stones with glowing seams (orange on "
+     "the left, green low in the middle, blue on the right), the big glowing gold sigil (circle, triangle, small "
+     "circle) on its front-right. Same stone shapes, colours and soft painterly style as that image. WITHOUT the "
+     "arms and WITHOUT the legs: where they were, just more of the boulder's stones (no sockets, no holes, no flat "
+     "discs), the bottom of the boulder rounded."),
+    ("GOLEM_ARM", "one golem arm exactly as in the FIRST attached image, hanging straight down, shoulder at the top: "
+     "a short upper stone with the gold band and triangular gold plate, then a big round stone fist made of a few "
+     "chunky stones. Short and chunky, about half the height of the body."),
+    ("GOLEM_LEG", "one golem leg exactly as in the FIRST attached image: a very short stubby stone, with the gold "
+     "band and triangular gold plate at its top, ending in a rounded stone foot pointing RIGHT. About a quarter of "
+     "the body's height."),
+    ("PEBBLES", "three small loose ochre stone chips of different sizes, side by side, for flying debris."),
+]
+
 BRIEF = (
     "Create a CHARACTER PARTS SHEET for a 2D skeletal (cut-out) animation rig of the Alchemist, a playable character "
     "in a Slay the Spire 2 mod. The first attached image is the Alchemist's key visual: match its design, colours "
@@ -173,6 +192,9 @@ elif arg("--set") == "rest2":
 elif arg("--set") == "rest":
     PARTS = REST
     REFS = REFS + [OUT / "parts-v1.png", ROOT / "assets/art/pets/golem.png", ROOT / "assets/art/character/rest_site.png"]
+elif arg("--set") == "golem2":
+    PARTS = GOLEM2
+    REFS = [ROOT / "assets/art/pets/golem.png", ROOT / "artifacts/hs-alchemist-page.png"]
 elif arg("--set") == "golem":
     PARTS = GOLEM
     REFS = [ROOT / "assets/art/pets/golem.png", ROOT / "artifacts/hs-alchemist-page.png", OUT / "parts-v1.png"]
