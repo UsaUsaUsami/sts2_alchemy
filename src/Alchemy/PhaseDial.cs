@@ -6,8 +6,8 @@ namespace Alchemy;
 
 /// <summary>
 /// The current phase at a glance. 2026-10-03 (user: the first dial was too plain): the four elements as coloured
-/// orbs on a ring, top, right, bottom, left in the PhaseWheel order earth, water, fire, air, joined by arrows in that
-/// order like a four-way cycle; in front of them the alchemist's face sigil (a large ring and triangle); in the middle
+/// orbs on a ring, top, right, bottom, left in the PhaseWheel order earth, water, fire, air (the arrows between them
+/// were dropped, 2026-10-03); in front of them the alchemist's face sigil (a large ring and triangle); in the middle
 /// the number of transitions this turn as a Roman numeral (0, I, II, III, ...). The current phase's orb glows, the
 /// others stay dark; the number pops when it goes up. Shown under the material strip in the alchemist's combats only.
 /// Each orb carries a small face sigil (2026-10-03, user; the element marks before).
@@ -119,21 +119,11 @@ public static class PhaseDial
         run.AddChild(dial);
     }
 
-    /// The disc, the cycle arrows between the orbs, and the orbs (the current one glowing).
+    /// The disc and the orbs (the current one glowing).
     private static void PaintUnder(Control c)
     {
         c.DrawCircle(Centre, Radius, Back);
-        float ring = Radius * OrbRing;
-        var arrow = new Color(0.82f, 0.74f, 0.55f, 0.75f);
-        for (int i = 0; i < 4; i++)
-        {
-            float a0 = -Mathf.Pi / 2 + i * Mathf.Pi / 2 + 0.42f, a1 = -Mathf.Pi / 2 + (i + 1) * Mathf.Pi / 2 - 0.42f;
-            c.DrawArc(Centre, ring, a0, a1, 16, arrow, 2.2f, true);
-            var tip = Centre + new Vector2(Mathf.Cos(a1), Mathf.Sin(a1)) * ring;
-            var along = new Vector2(-Mathf.Sin(a1), Mathf.Cos(a1));
-            var side = new Vector2(Mathf.Cos(a1), Mathf.Sin(a1));
-            c.DrawColoredPolygon([tip + along * 6, tip - along * 3 + side * 5, tip - along * 3 - side * 5], arrow);
-        }
+        // The cycle arrows between the orbs were dropped (2026-10-03, user).
         for (int i = 0; i < 4; i++)
         {
             var phase = Order[i];
