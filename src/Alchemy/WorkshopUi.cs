@@ -74,15 +74,22 @@ public static class WorkshopUi
         if (runNode != node || !GodotObject.IsInstanceValid(launcher))
         {
             runNode = node;
-            overlay = null;
-            busy = false;
-            workshop = false;
+            // A screen opened before the launcher was (a run loaded into a workshop) stays ours: forgetting it left
+            // it on screen with no way to close it (2026-10-02).
+            if (!IsOpen)
+            {
+                overlay = null;
+                busy = false;
+                workshop = false;
+            }
             // Left of the battlefield, above the dial and the energy orb (2026-10-02: at the top it covered the
             // relic row).
             launcher = new Button { Position = LauncherPosition, Size = new(300, 76) };
             launcher.AddThemeFontSizeOverride("font_size", 19);
             launcher.Pressed += () => { if (!IsOpen) { mapWorkshop=false; Open(); } };
             node.AddChild(launcher);
+            // Under an open screen, not over it.
+            if (IsOpen && overlay!.GetParent() == node) node.MoveChild(launcher, overlay.GetIndex());
         }
         var combat = box.Combat;
         launcher!.Text = combat is null ? $"素材・工房  {box.Inventory.Total}/{box.Inventory.Capacity}"

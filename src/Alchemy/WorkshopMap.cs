@@ -85,9 +85,15 @@ public static class WorkshopRoomTypePatch
 [HarmonyPatch(typeof(RestSiteRoom),nameof(RestSiteRoom.EnterInternal))]
 public static class WorkshopRoomEntryPatch
 {
-    public static void Postfix(ref Task __result)
+    /// The rest site rooms entered as workshops. Their exit is decided by the room, not by the current map
+    /// coordinate: travelling on records the destination as current before the old room exits (2026-10-02: the exit
+    /// then took the rest site path, waited forever for the rest site sync, and the screen stayed black).
+    public static readonly System.Runtime.CompilerServices.ConditionalWeakTable<RestSiteRoom, object> Workshops = new();
+    public static void Postfix(RestSiteRoom __instance, ref Task __result)
     {
-        if(WorkshopMap.IsCurrentWorkshop()) __result=After(__result);
+        if(!WorkshopMap.IsCurrentWorkshop()) return;
+        Workshops.AddOrUpdate(__instance, true);
+        __result=After(__result);
     }
     private static async Task After(Task original)
     {
@@ -102,9 +108,9 @@ public static class WorkshopRoomEntryPatch
 [HarmonyPatch(typeof(RestSiteRoom),nameof(RestSiteRoom.Exit))]
 public static class WorkshopRoomExitPatch
 {
-    public static bool Prefix(ref Task __result)
+    public static bool Prefix(RestSiteRoom __instance, ref Task __result)
     {
-        if(!WorkshopMap.IsCurrentWorkshop()) return true;
+        if(!WorkshopRoomEntryPatch.Workshops.TryGetValue(__instance, out _) && !WorkshopMap.IsCurrentWorkshop()) return true;
         NRestSiteRoom.Instance?.BeforeExitingRoom();
         __result=Task.CompletedTask;
         return false;

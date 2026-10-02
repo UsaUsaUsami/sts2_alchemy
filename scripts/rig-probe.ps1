@@ -1,6 +1,6 @@
 ﻿# Development probe (tests/Alchemy.RigProbe): runs the isolated game WITH rendering, saves rig frames as PNG.
 # The smoke mod is set aside while it runs, so only the probe acts. Output: artifacts/rig-probe/<Name>/
-param([string]$Name = 'probe', [string]$Mode = '', [string]$Donor = '', [string]$Rig = '', [string]$Riders = '', [string]$Skel = '', [string]$Anims = '', [int]$Zoom = 1, [int]$Frames = 6000)
+param([string]$Name = 'probe', [string]$Mode = '', [string]$Donor = '', [string]$Rig = '', [string]$Riders = '', [string]$Skel = '', [string]$Anims = '', [int]$Zoom = 1, [string]$Save = '', [int]$Frames = 6000)
 $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot/env.ps1"
 $root = Split-Path $PSScriptRoot
@@ -23,6 +23,9 @@ try {
     New-Item -ItemType Directory -Force $out | Out-Null
     $smoke = "$runtime/mods/AlchemySmoke"; $parked = "$runtime/AlchemySmoke.parked"
     if (Test-Path $smoke) { Move-Item $smoke $parked }
+    # -Save path: a run save copied into the isolated profile (for -Mode continue); the user's own save is only read.
+    $saveDir = Join-Path $root 'artifacts/smoke/appdata/SlayTheSpire2/default/1/modded/profile1/saves'
+    if ($Save) { New-Item -ItemType Directory -Force $saveDir | Out-Null; Copy-Item $Save (Join-Path $saveDir 'current_run.save') -Force }
     $appdata = $env:APPDATA
     $env:APPDATA = Join-Path $root 'artifacts/smoke/appdata'
     $env:ALCHEMY_PROBE_OUT = $out

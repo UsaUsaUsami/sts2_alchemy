@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Bindings.MegaSpine;
@@ -129,6 +129,57 @@ public static class RigProbe
                     shot.SavePng($"{Out}/combat_{phase.ToString().ToLowerInvariant()}.png");
                     shot.GetRegion(new Rect2I(250, 300, 500, 500)).SavePng($"{Out}/close_{phase.ToString().ToLowerInvariant()}.png");
                     Log($"captured combat {phase}");
+                }
+            }
+            else if (mode == "continue")
+            {
+                // Continue the run saved in the isolated profile (rig-probe.ps1 -Save copies one in), the way the main
+                // menu's continue button does, then leave the workshop if the run stands in one; frames along the way.
+                viewport.QueueFree();
+                visuals.QueueFree();
+                await MegaCrit.Sts2.Core.Assets.PreloadManager.LoadCommonAndMainMenuAssets();
+                MegaCrit.Sts2.Core.Saves.SaveManager.Instance.SettingsSave.SeenEaDisclaimer = true;
+                var save = MegaCrit.Sts2.Core.Saves.SaveManager.Instance.LoadRunSave();
+                Log($"save loaded {save.Success} {save.Status}");
+                var serial = save.SaveData!;
+                var runState = MegaCrit.Sts2.Core.Runs.RunState.FromSerializable(serial);
+                await MegaCrit.Sts2.Core.Runs.RunManager.Instance.SetUpSavedSingleplayer(runState, serial);
+                MegaCrit.Sts2.Core.Nodes.NGame.Instance!.ReactionContainer.InitializeNetworking(new MegaCrit.Sts2.Core.Multiplayer.NetSingleplayerGameService());
+                await MegaCrit.Sts2.Core.Nodes.NGame.Instance.LoadRun(runState, serial.PreFinishedRoom);
+                await MegaCrit.Sts2.Core.Nodes.NGame.Instance.Transition.FadeIn();
+                if (MegaCrit.Sts2.Core.Nodes.CommonUi.NModalContainer.Instance is { } modals)
+                    foreach (var child in modals.GetChildren()) child.QueueFree();
+                await Frames(tree, 90);
+                void State(string tag)
+                {
+                    var map = MegaCrit.Sts2.Core.Nodes.Screens.Map.NMapScreen.Instance;
+                    Log($"state {tag}: room {runState.CurrentRoom?.GetType().Name} workshopOpen {Alchemy.WorkshopUi.IsOpen} map open {map?.IsOpen} visible {map?.Visible} traveling {map?.IsTraveling} transition {MegaCrit.Sts2.Core.Nodes.NGame.Instance.Transition.Modulate}");
+                }
+                State("entered");
+                tree.Root.GetTexture().GetImage().SavePng($"{Out}/continue_0_entered.png");
+                var leave = tree.Root.FindChildren("*", "Button", true, false).OfType<Button>().FirstOrDefault(b => b.Text == "工房を退出する" && b.IsVisibleInTree());
+                Log($"leave button {(leave is null ? "missing" : "found")}");
+                if (leave is not null)
+                {
+                    // Pressed as the player presses it.
+                    leave.EmitSignal(BaseButton.SignalName.Pressed);
+                    for (int f = 1; f <= 4; f++)
+                    {
+                        await Frames(tree, 45);
+                        State($"left {f}");
+                        tree.Root.GetTexture().GetImage().SavePng($"{Out}/continue_{f}_left.png");
+                    }
+                    // Then travel on, as the user did (ALCHEMY_PROBE_TRAVEL "col,row"; the save's log voted 3,11).
+                    var to = (System.Environment.GetEnvironmentVariable("ALCHEMY_PROBE_TRAVEL") is { Length: > 0 } t ? t : "3,11").Split(',').Select(int.Parse).ToArray();
+                    var coord = new MegaCrit.Sts2.Core.Map.MapCoord(to[0], to[1]);
+                    Log($"travel to {coord} type {runState.Map.GetPoint(coord)?.PointType}");
+                    var travel = MegaCrit.Sts2.Core.Runs.RunManager.Instance.EnterMapCoord(coord);
+                    for (int f = 5; f <= 10; f++)
+                    {
+                        await Frames(tree, 60);
+                        State($"travel {f} done {travel.IsCompleted} faulted {travel.Exception?.GetBaseException().Message}");
+                        tree.Root.GetTexture().GetImage().SavePng($"{Out}/continue_{f}_travel.png");
+                    }
                 }
             }
             else if (mode == "golem")
