@@ -1,6 +1,7 @@
 using Alchemy.Core;
 using Godot;
 using HarmonyLib;
+using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
@@ -88,6 +89,13 @@ public static class WorkshopUi
         // Unresolved reward slots are reached from the rewards screen button, so only overflow receipts
         // open this screen on their own.
         if (box.Inventory.Pending.Count > 0 && !CombatManager.Instance.IsInProgress && !IsOpen) Open();
+        // Left the workshop, then closed the map without travelling: back to the workshop (its facilities keep
+        // their per-visit state in the inventory).
+        if (leftWorkshop)
+        {
+            if (!WorkshopMap.IsCurrentWorkshop() || box.Owner.RunState.CurrentRoom is not RestSiteRoom) leftWorkshop = false;
+            else if (!IsOpen && NMapScreen.Instance is { IsOpen: false, IsTraveling: false }) { leftWorkshop = false; OpenMapWorkshop(); }
+        }
     }
 
     private static Color PhaseTint(AlchemyPhase phase) => phase switch
@@ -771,14 +779,18 @@ public static class WorkshopUi
     private static void FinishOffer(string id)
     {
         if (box!.Inventory.HasOffer(id)) { if (IsOpen) Refresh(); return; }
-        if (offerId == id)
+        bool fromRewardButton = offerId == id;
+        if (fromRewardButton)
         {
             offerId = null;
             var waiting = offerResult;
             offerResult = null;
             waiting?.TrySetResult(true);
         }
-        if (box.Inventory.Offers.Count == 0 && box.Inventory.Pending.Count == 0 && !workshop && !browsing) Close();
+        // Opened from one reward button, the picker closes once that slot is chosen, even if another slot is
+        // left (a boss gives two): showing the next slot here resolved it behind its own button, which then
+        // stayed on the rewards screen with nothing in it (2026-10-02, user).
+        if ((fromRewardButton || box.Inventory.Offers.Count == 0) && box.Inventory.Pending.Count == 0 && !workshop && !browsing) Close();
         else if (IsOpen) Refresh();
     }
     private static void Close()
@@ -797,12 +809,22 @@ public static class WorkshopUi
         offerResult = null;
         waiting?.TrySetResult(false);
     }
-    private static async Task LeaveMapWorkshop()
+    /// Leaving works as the rest site's proceed button does: travel is enabled and the map opens over the room.
+    /// (2026-10-02: it used to enter an empty MapRoom, so closing the map without travelling showed a black
+    /// screen.) Closing the map without travelling brings the workshop back (Tick).
+    private static Task LeaveMapWorkshop()
     {
-        if(busy) return;
+        if(busy) return Task.CompletedTask;
         Close();
-        await RunManager.Instance.EnterRoom(new MapRoom());
+        leftWorkshop=true;
+        if(NMapScreen.Instance is { } map)
+        {
+            map.SetTravelEnabled(true);
+            map.Open();
+        }
+        return Task.CompletedTask;
     }
+    private static bool leftWorkshop;
     private static void UpgradeCard(CardModel card)
     {
         if(box is null || busy || !workshop || !CanEnterWorkshop(box) || !CanModify(card) || !box.Owner.Deck.Cards.Contains(card)) return;

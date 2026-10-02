@@ -449,6 +449,13 @@ public static class Smoke
             Check(new[]{"錬成","改造","調薬","付与"}.All(f=>facilityButtons.Any(t=>t.StartsWith(f+"\n") && t.Contains("使用済み"))),
                 "all four facilities were usable in one visit and now read as used");
             await (Task)AccessTools.Method(typeof(WorkshopUi),"LeaveMapWorkshop").Invoke(null,null)!;
+            // 2026-10-02: leaving opens the map over the workshop room, as the rest site's proceed does (entering an
+            // empty MapRoom left a black screen when the map was closed without travelling).
+            Check(!WorkshopUi.IsOpen && player.RunState.CurrentRoom is RestSiteRoom && MegaCrit.Sts2.Core.Nodes.Screens.Map.NMapScreen.Instance is { IsOpen: true },
+                $"leaving the workshop opens the map over its room (room {player.RunState.CurrentRoom?.GetType().Name})");
+            MegaCrit.Sts2.Core.Nodes.Screens.Map.NMapScreen.Instance!.Close(false);
+            await Until(()=>WorkshopUi.IsOpen,"closing the map without travelling brings the workshop back");
+            await (Task)AccessTools.Method(typeof(WorkshopUi),"LeaveMapWorkshop").Invoke(null,null)!;
             await RunManager.Instance.EnterRoomDebug(RoomType.Monster,model:ModelDb.Encounter<BowlbugsWeak>().ToMutable(),showTransition:false);
             await Until(()=>box.Combat != null && player.PlayerCombatState?.Hand.Cards.Count>0,"second battle ready");
             Check(box.Combat!.Phases.Current==AlchemyPhase.None,"next battle resets the elemental phase");
@@ -1038,6 +1045,9 @@ public static class Smoke
             // Taking one slot must leave the other intact across a save and reload of the relic state.
             AccessTools.Method(typeof(WorkshopUi),"TakeOffer").Invoke(null,[bossSlots[0].OfferId,box.Inventory.Offers.Single(o=>o.Id==bossSlots[0].OfferId).Candidates[0]]);
             Check(await choosingBoss,"the boss rewards screen is released once its slot is resolved");
+            // 2026-10-02: the picker closes after its own slot; the other slot is chosen from its own button (shown
+            // here, it was resolved behind that button, which then stayed with nothing in it).
+            Check(!WorkshopUi.IsOpen && box.Inventory.HasOffer(bossSlots[1].OfferId),"the picker closes after its slot, leaving the other boss slot to its button");
             var reloadedBox=(MaterialBox)RelicModel.FromSerializable(box.ToSerializable());
             Check(reloadedBox.Inventory.Offers.Count==1 && reloadedBox.Inventory.HasOffer(bossSlots[1].OfferId)
                 && !reloadedBox.Inventory.Settled,"a half-claimed boss reward survives serialization");
