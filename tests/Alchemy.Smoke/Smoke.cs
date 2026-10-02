@@ -656,8 +656,13 @@ public static class Smoke
                 $"a card that mentions 相転移 explains it, one that does not stays clean ({string.Join(" / ",sparkTips.Select(t=>t.Title+":"+t.Description))})");
             // 2026-09-29: the pet is shown as a golem, one still sprite (art/pets/golem.png) that GolemMotion animates.
             var golemBody=NCombatRoom.Instance?.GetCreatureNode(pet) is { } revivedNode ? revivedNode.Visuals.Body : null;
-            Check(golemBody is Sprite2D { Texture: { } golemTex } && golemTex.GetHeight()==PetArt.GolemHeight && pet.Name=="ゴーレム",
-                $"the homunculus is shown as the golem sprite and named ゴーレム (body {golemBody?.GetType().Name ?? "missing"}, name {pet.Name})");
+            // 2026-10-02: the golem's own rig (golem-build.py) with Osty's animation names, incl. its hit and revival.
+            var golemData=golemBody?.GetClass()=="SpineSprite" ? golemBody.Call("get_skeleton_data_res").AsGodotObject() : null;
+            var golemAnims=golemData is null ? [] : new MegaCrit.Sts2.Core.Bindings.MegaSpine.MegaSkeletonDataResource(golemData).GetAnimationNames();
+            string? golemAtlas=golemData?.Get("atlas_res").AsGodotObject()?.Call("get_source_path").AsString();
+            Check(golemAtlas is not null && golemAtlas.Replace('\\','/').EndsWith("pets/rig/golem.atlas")
+                && new[] { "idle_loop", "attack", "attack_poke", "cast", "hurt", "die", "dead_loop", "revive" }.All(golemAnims.Contains) && pet.Name=="ゴーレム",
+                $"the homunculus is the golem rig and named ゴーレム (body {golemBody?.GetClass() ?? "missing"}, atlas {golemAtlas}, animations {string.Join(",", golemAnims)}, name {pet.Name})");
             // 2026-09-30: the alchemist's own sprite and icons (CharacterArt) instead of the Ironclad's.
             var alchemistBody=NCombatRoom.Instance?.GetCreatureNode(player.Creature)?.Visuals.Body;
             var character=player.Character;
@@ -681,24 +686,25 @@ public static class Smoke
             var markerByPath=markerPath is null ? null : ResourceLoader.Load<CompressedTexture2D>(markerPath);
             Check(byPath is { } bp && bp.GetWidth()==132 && bp.GetHeight()==195 && markerByPath is { } mp && mp.GetWidth()==49,
                 $"the game's loader reads the alchemist's select portrait and map marker from their paths ({selectPath}, {byPath?.GetSize()}, {markerByPath?.GetSize()})");
-            // 2026-10-01: the rest site and merchant figures replace the borrowed Ironclad's, fitted to its bounds.
+            // 2026-10-02: the rest site and the merchant show our own rigs on the Ironclad's scenes (rest-build.py's
+            // seated rig; the combat rig relaxed in the shop), replacing the still pictures of 2026-10-01.
             var sceneRoot=((SceneTree)Engine.GetMainLoop()).Root;
             var restChar=MegaCrit.Sts2.Core.Nodes.RestSite.NRestSiteCharacter.Create(player,0);
             sceneRoot.AddChild(restChar);
             var merchantChar=PreloadManager.Cache.GetScene(player.Character.MerchantAnimPath).Instantiate<MegaCrit.Sts2.Core.Nodes.Screens.Shops.NMerchantCharacter>();
             sceneRoot.AddChild(merchantChar);
-            RestMerchantArt.Apply(merchantChar,CharacterArt.Merchant);
+            bool merchantReskinned=merchantChar.GetChild(0) is Node2D merchantSpine && AlchemistRig.Reskin(merchantSpine,"relaxed_loop");
             await Task.Delay(500);
-            var restArt=restChar.GetNodeOrNull<Sprite2D>(RestMerchantArt.NodeName);
-            var merchantArt=merchantChar.GetNodeOrNull<Sprite2D>(RestMerchantArt.NodeName);
-            Check(restArt is { Visible: true, Texture: not null } && restArt.Scale.Y>0.05f && merchantArt is { Visible: true, Texture: not null } && merchantArt.Scale.Y>0.05f,
-                $"the alchemist's rest site and merchant pictures replace the Ironclad (rest {restArt?.Position} x{restArt?.Scale.Y}, merchant {merchantArt?.Position} x{merchantArt?.Scale.Y})");
-            // 2026-10-01: the pictures breathe (a slow upward stretch) with their feet kept on the ground.
-            float Bottom(Sprite2D sp)=>sp.Position.Y+sp.Texture.GetHeight()*sp.Scale.Y;
-            float scale0=restArt!.Scale.Y, bottom0=Bottom(restArt);
-            await Task.Delay(700);
-            Check(Math.Abs(restArt.Scale.Y-scale0)>0.0001f && Math.Abs(Bottom(restArt)-bottom0)<0.5f,
-                $"the rest site picture breathes with its feet in place (scale {scale0}->{restArt.Scale.Y}, bottom {bottom0}->{Bottom(restArt)})");
+            static string? AtlasOf(Node? n)=>n?.GetClass()=="SpineSprite"
+                ? n.Call("get_skeleton_data_res").AsGodotObject()?.Get("atlas_res").AsGodotObject()?.Call("get_source_path").AsString()?.Replace('\\','/') : null;
+            string? restAtlas=AtlasOf(restChar.GetChildren().FirstOrDefault(n=>n.GetClass()=="SpineSprite"));
+            string? merchantAtlas=AtlasOf(merchantChar.GetChild(0));
+            Check(restAtlas is not null && restAtlas.EndsWith("rig/rest/rest.atlas") && merchantReskinned && merchantAtlas is not null && merchantAtlas.EndsWith("rig/alchemist/alchemist.atlas"),
+                $"the alchemist's rest site and merchant figures are our rigs (rest {restAtlas}, merchant {merchantAtlas})");
+            // The rest rig plays the act's loop (the scene asks overgrowth/hive/glory by act).
+            string? restAnim=restChar.GetChildren().OfType<Node2D>().FirstOrDefault(n=>n.GetClass()=="SpineSprite") is { } restSpine
+                ? new MegaCrit.Sts2.Core.Bindings.MegaSpine.MegaSprite(restSpine).GetAnimationState().GetCurrent(0)?.GetAnimationName() : null;
+            Check(restAnim is "overgrowth_loop" or "hive_loop" or "glory_loop",$"the rest rig plays the act's loop (now {restAnim})");
             restChar.QueueFree(); merchantChar.QueueFree();
             // 2026-10-01: taking a hit knocks the alchemist back and flushes it red; a phase transition glows in the phase's colour.
             var alchemistNode=NCombatRoom.Instance!.GetCreatureNode(player.Creature)!;

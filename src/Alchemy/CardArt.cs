@@ -157,6 +157,10 @@ public static class PetArt
 
     public static bool HasGolem => File.Exists(GolemPath);
 
+    /// The golem's own rig (scripts/golem-build.py): art/pets/rig/golem.*.
+    public static MegaCrit.Sts2.Core.Bindings.MegaSpine.MegaSkeletonDataResource? Rig
+        => AlchemistRig.LoadRig(Path.Combine(Path.GetDirectoryName(GolemPath) ?? "", "rig"), "golem");
+
     public static Texture2D? Golem
     {
         get

@@ -104,6 +104,46 @@ RAISE = [
      "overlaps the wrist."),
 ]
 
+# 2026-10-02: the golem's own rig (user: the golem too, with a hit reaction). Parts after assets/art/pets/golem.png.
+GOLEM = [
+    ("GOLEM_BODY", "the golem's body: one big rounded boulder that is head and torso in one, made of a few smooth "
+     "ochre stones, facing RIGHT in three-quarter view, the glowing gold alchemical sigil (circle, triangle, small "
+     "circle) on its front as its face, thin glowing seams in the four element colours (red, blue, green, white) "
+     "between the stones, a gold band or two. NO arms and NO legs: flat stone sockets where they attach."),
+    ("GOLEM_ARM", "one golem arm hanging straight down, shoulder at the top: a round shoulder stone with a gold band, "
+     "a thick forearm stone, and a big round stone fist at the bottom."),
+    ("GOLEM_LEG", "one short stubby golem leg, straight and vertical, hip end at the top: a thick stone with a gold "
+     "band at the ankle and a flat stone foot pointing RIGHT."),
+    ("PEBBLES", "three small loose ochre stone chips of different sizes, side by side, for flying debris."),
+]
+
+# 2026-10-02: the rest site (user). The alchemist sits by the fire, facing RIGHT, with a steaming cup, the golem
+# resting beside; the hood is the standing rig's HOOD.
+REST = [
+    ("REST_BODY", "the Alchemist SITTING on the ground facing RIGHT in three-quarter view, NO head and NO arms: the "
+     "charcoal robe over the torso with the scarf and gold ring clasp at the neck, the vertical front band with "
+     "element symbols, brown sash with the two small flasks, and the legs folded with knees up in front, robe "
+     "draped over them with the gold-striped hem on the ground, dark brown boots showing at the front. Flat "
+     "shoulder area where arms attach."),
+    ("REST_ARMS", "both of the Alchemist's forearms and gloved hands together, held in front of the chest, wide "
+     "charcoal bell sleeves with gold-striped cuffs, the dark brown gloved hands coming out of the cuffs holding a "
+     "small round wooden cup with a thin wisp of steam, seen from the side facing RIGHT. No upper arms, no body."),
+    ("GOLEM_REST", "the stone golem companion (the one in the attached golem image) RESTING: sitting slumped on the "
+     "ground with its stone arms around its knees, the gold sigil face glowing softly, facing RIGHT. Whole, alone."),
+]
+
+# 2026-10-02: the first rest body had flat sockets at the shoulders that no arm piece covered convincingly; the
+# seated figure is drawn whole (arms and cup included), only the head separate.
+REST2 = [
+    ("REST_SEATED", "the Alchemist SITTING on the ground facing RIGHT in three-quarter view, complete EXCEPT the "
+     "head: no head and no hood, the neck ends in the charcoal scarf with the gold ring clasp (an empty dark neck "
+     "opening on top, where the separate hood will sit). Both arms are drawn: wide charcoal bell sleeves with "
+     "gold-striped cuffs, the dark brown gloved hands coming out of the cuffs and holding a small round wooden cup "
+     "in front of the chest, resting on the raised knees. Charcoal robe with the vertical front band and element "
+     "symbols, brown sash with the two small flasks, the robe draped over the folded legs with the gold-striped hem "
+     "on the ground, dark brown boots at the front. No sockets, no cut ends: everything that shows is finished."),
+]
+
 BRIEF = (
     "Create a CHARACTER PARTS SHEET for a 2D skeletal (cut-out) animation rig of the Alchemist, a playable character "
     "in a Slay the Spire 2 mod. The first attached image is the Alchemist's key visual: match its design, colours "
@@ -127,6 +167,15 @@ tag = arg("--tag", "v1")
 if arg("--set") == "forearms":
     PARTS = FOREARMS
     REFS = REFS + [OUT / "parts-v1.png"]
+elif arg("--set") == "rest2":
+    PARTS = REST2
+    REFS = REFS + [OUT / "parts-v1.png", OUT / "parts-rest-v1.png", ROOT / "assets/art/character/rest_site.png"]
+elif arg("--set") == "rest":
+    PARTS = REST
+    REFS = REFS + [OUT / "parts-v1.png", ROOT / "assets/art/pets/golem.png", ROOT / "assets/art/character/rest_site.png"]
+elif arg("--set") == "golem":
+    PARTS = GOLEM
+    REFS = [ROOT / "assets/art/pets/golem.png", ROOT / "artifacts/hs-alchemist-page.png", OUT / "parts-v1.png"]
 elif arg("--set") == "raise":
     PARTS = RAISE
     REFS = REFS + [OUT / "parts-v1.png", OUT / "parts-push-v1.png"]

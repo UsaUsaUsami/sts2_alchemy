@@ -22,6 +22,7 @@ try {
     if (Test-Path $pets) { Remove-Item $pets -Recurse -Force }
     New-Item -ItemType Directory -Force $pets | Out-Null
     Copy-Item assets/art/pets/*.png $pets -Force
+    if (Test-Path assets/art/pets/rig) { Copy-Item assets/art/pets/rig "$pets/rig" -Recurse -Force }
     $character = "$runtime/mods/Alchemy/art/character"
     if (Test-Path $character) { Remove-Item $character -Recurse -Force }
     New-Item -ItemType Directory -Force $character | Out-Null

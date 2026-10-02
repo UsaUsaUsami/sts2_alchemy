@@ -85,6 +85,9 @@ public static class RestMerchantArt
     }
 
     public static bool IsAlchemist(Player? player) => player?.Character is AlchemistCharacter;
+
+    /// The rest-site rig (scripts/rest-build.py), beside the combat rig's folder.
+    public static MegaSkeletonDataResource? RestRig => AlchemistRig.LoadRig(Path.Combine(CharacterArt.ArtDirectory, "rig", "rest"), "rest");
 }
 
 [HarmonyPatch(typeof(NRestSiteCharacter), nameof(NRestSiteCharacter._Ready))]
@@ -93,7 +96,15 @@ public static class AlchemistRestSitePatch
     public static void Postfix(NRestSiteCharacter __instance)
     {
         if (!RestMerchantArt.IsAlchemist(__instance.Player)) return;
-        try { RestMerchantArt.Apply(__instance, CharacterArt.RestSite, alignFront: true); }
+        try
+        {
+            // 2026-10-02: our own seated rig (scripts/rest-build.py: the alchemist with a cup, the golem resting),
+            // with the act's loop the scene asks for; the still picture only without it.
+            string act = __instance.Player.RunState.CurrentActIndex switch { 1 => "hive_loop", 2 => "glory_loop", _ => "overgrowth_loop" };
+            if (__instance.GetChildren().OfType<Node2D>().FirstOrDefault(n => n.GetClass() == "SpineSprite") is { } spine
+                && AlchemistRig.Reskin(spine, act, RestMerchantArt.RestRig, alignFront: true)) return;
+            RestMerchantArt.Apply(__instance, CharacterArt.RestSite, alignFront: true);
+        }
         catch (Exception ex) { GD.PushWarning($"[Alchemy] rest site art skipped: {ex.Message}"); }
     }
 }
@@ -123,7 +134,14 @@ public static class AlchemistMerchantPatch
             var players = Traverse.Create(__instance).Field<List<Player>>("_players").Value;
             var visuals = __instance.PlayerVisuals;
             for (int i = 0; i < Math.Min(players.Count, visuals.Count); i++)
-                if (RestMerchantArt.IsAlchemist(players[i])) RestMerchantArt.Apply(visuals[i], CharacterArt.Merchant);
+                if (RestMerchantArt.IsAlchemist(players[i]))
+                {
+                    // 2026-10-02: the combat rig itself, relaxed (as HelloSpire does); the still picture only
+                    // without it.
+                    if (visuals[i].GetChild(0) is Node2D spine && spine.GetClass() == "SpineSprite"
+                        && AlchemistRig.Reskin(spine, "relaxed_loop")) continue;
+                    RestMerchantArt.Apply(visuals[i], CharacterArt.Merchant);
+                }
         }
         catch (Exception ex) { GD.PushWarning($"[Alchemy] merchant art skipped: {ex.Message}"); }
     }

@@ -1,0 +1,11 @@
+rest.png
+size:2048,1024
+filter:Linear,Linear
+shadow
+bounds:2,550,1040,210
+golem
+bounds:770,2,368,326
+head
+bounds:1044,550,189,193
+body
+bounds:2,2,766,546

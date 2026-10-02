@@ -13,6 +13,9 @@ try {
     $rigDir = "$runtime/mods/Alchemy/art/character/rig"
     if (Test-Path $rigDir) { Remove-Item $rigDir -Recurse -Force }
     if (Test-Path assets/art/character/rig) { Copy-Item assets/art/character/rig $rigDir -Recurse -Force }
+    $petRig = "$runtime/mods/Alchemy/art/pets/rig"
+    if (Test-Path $petRig) { Remove-Item $petRig -Recurse -Force }
+    if (Test-Path assets/art/pets/rig) { New-Item -ItemType Directory -Force "$runtime/mods/Alchemy/art/pets" | Out-Null; Copy-Item assets/art/pets/rig $petRig -Recurse -Force }
     New-Item -ItemType Directory -Force "$runtime/mods/AlchemyRigProbe" | Out-Null
     Copy-Item tests/Alchemy.RigProbe/bin/Release/net9.0/AlchemyRigProbe.dll, tests/Alchemy.RigProbe/AlchemyRigProbe.json "$runtime/mods/AlchemyRigProbe" -Force
     $out = Join-Path $root "artifacts/rig-probe/$Name"

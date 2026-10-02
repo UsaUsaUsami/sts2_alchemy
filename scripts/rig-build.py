@@ -10,14 +10,12 @@ parts by the world position of their centre (drawn upright). The script turns th
 placement can be changed by its numbers on screen. The root bone scales the whole rig to the game's size.
 Animations key rotation (degrees, added to the setup pose) and translation (sheet pixels) of named bones.
 """
-import json
 import math
-
-import numpy as np
+import sys
 from pathlib import Path
 
-from PIL import Image, ImageChops, ImageOps
-from scipy import ndimage
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from riglib import bone_anim, move, picture_point as point_on, place, prepare as prepare_file, rot, shadow, turn, write_rig  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 DIR = ROOT / "assets/art/character/rig/alchemist"
@@ -101,30 +99,6 @@ SLOT_KEYS = {"attack": {"fore_f": [(0, "fore_f"), (0.22, "fore_f_push"), (0.7, "
              "cast": {"fore_f": [(0, "fore_f"), (0.15, "fore_f_raise"), (0.85, "fore_f")]}}
 
 
-def key(t, **v):
-    return {"time": round(t, 4), **v} if t else dict(v)
-
-
-def rot(*frames):
-    """Rotation keys: (time, degrees) pairs."""
-    return {"rotate": [key(t, value=a) for t, a in frames]}
-
-
-def move(*frames):
-    """Translation keys: (time, x, y) triples."""
-    return {"translate": [key(t, x=x, y=y) for t, x, y in frames]}
-
-
-def bone_anim(**tracks):
-    out = {}
-    for name, timelines in tracks.items():
-        merged = {}
-        for tl in timelines if isinstance(timelines, list) else [timelines]:
-            merged.update(tl)
-        out[name] = merged
-    return out
-
-
 T = 2.4  # idle period
 ANIMATIONS = {
     "idle_loop": bone_anim(
@@ -136,6 +110,15 @@ ANIMATIONS = {
         arm_b=rot((0, 0), (T / 2, 3), (T, 0)),
         arm_f=rot((0, 0), (T / 2, -2), (T, 0)),
         fore_b=rot((0, 0), (T / 2, 4), (T, 0)),
+    ),
+    # The merchant room plays this (NMerchantCharacter); the idle, slower and softer.
+    "relaxed_loop": bone_anim(
+        hip=move((0, 0, 0), (T * 0.75, 0, -7), (T * 1.5, 0, 0)),
+        torso=rot((0, 0), (T * 0.75, -1), (T * 1.5, 0)),
+        head=rot((0, 0), (T * 0.75, 2), (T * 1.5, 0)),
+        cape=rot((0, 0), (T * 0.75, 3), (T * 1.5, 0)),
+        arm_b=rot((0, 0), (T * 0.75, 2), (T * 1.5, 0)),
+        arm_f=rot((0, 0), (T * 0.75, -1.5), (T * 1.5, 0)),
     ),
     # Draw the hand back to the chest, then lunge and thrust it at the enemy, a cast thrown from the open hand.
     # Keys add to the setup angles: arm_f is -80, the forearm -85; arm 75 and forearm 10 put both level (forward).
@@ -186,64 +169,16 @@ ANIMATIONS = {
 }
 
 
-def world_matrix(name, cache={}):
-    if name in cache:
-        return cache[name]
-    parent, x, y, angle = BONES[name]
-    cache[name] = (x, y, angle)
-    return cache[name]
-
-
-def to_local(bone, wx, wy, wangle):
-    """World point and angle in the given bone's frame (bones carry no scale below the root)."""
-    bx, by, ba = world_matrix(bone)
-    a = math.radians(ba)
-    dx, dy = wx - bx, wy - by
-    return dx * math.cos(a) + dy * math.sin(a), -dx * math.sin(a) + dy * math.cos(a), wangle - ba
-
-
-def pack(images):
-    """Shelf packing on one page; returns page size and each part's box."""
-    width, x, y, shelf, boxes = 2048, 2, 2, 0, {}
-    for name, im in sorted(images.items(), key=lambda kv: -kv[1].height):
-        if x + im.width + 2 > width:
-            x, y, shelf = 2, y + shelf + 2, 0
-        boxes[name] = (x, y)
-        x += im.width + 2
-        shelf = max(shelf, im.height)
-    height = 1 << math.ceil(math.log2(y + shelf + 2))
-    return (width, height), boxes
-
-
-def turn(dx, dy, degrees):
-    """A picture offset (x right, y up) turned by the slot's rotation (counter-clockwise)."""
-    a = math.radians(degrees)
-    return dx * math.cos(a) - dy * math.sin(a), dx * math.sin(a) + dy * math.cos(a)
-
-
 def picture_point(slot_index, images, px, py):
     """World position of a pixel (from the top left) of a placed slot's picture."""
     slot, _, _, cx, cy, r, *_ = SLOTS[slot_index]
-    im = images[slot]
-    dx, dy = turn(px - im.width / 2, im.height / 2 - py, r)
-    return cx + dx, cy + dy
-
-
-def top_centre(im, row=8):
-    """The middle of the picture's opaque pixels on a row near its top: where the limb joins its parent."""
-    xs = np.nonzero(np.asarray(im.getchannel("A"))[row] > 8)[0]  # > 8: the forearms' top is faded (FEATHER)
-    return xs.mean(), row
+    return point_on((cx, cy), r, images[slot], px, py)
 
 
 def hang(i, images, pivot, r, overlap):
     """Places slot i so its top centre sits at the pivot, pushed `overlap` up into the parent to hide the joint."""
     slot, bone, part, _, _, _, flip, tint = SLOTS[i]
-    im = images[slot]
-    tx, ty = top_centre(im)
-    ux, uy = turn(0, 1, r)
-    jx, jy = pivot[0] + ux * overlap, pivot[1] + uy * overlap
-    dx, dy = turn(im.width / 2 - tx, -(im.height / 2 - ty), r)
-    SLOTS[i] = (slot, bone, part, jx + dx, jy + dy, r, flip, tint)
+    SLOTS[i] = (slot, bone, part, *place(images[slot], pivot, r, overlap), r, flip, tint)
 
 
 def derive(images):
@@ -266,43 +201,9 @@ def derive(images):
         BONES[hand] = (parent, wx, wy, angle)
 
 
-def slot_timelines(animation):
-    """Attachment keys: the animation's own (SLOT_KEYS), and for every slot with extra pictures a key back to its
-    setup picture at the start, so an attack cut short does not leave the push hand on."""
-    keys = {slot: [(0, slot)] for slot in ALTS}
-    keys.update(SLOT_KEYS.get(animation, {}))
-    return {slot: {"attachment": [key(t, name=name) for t, name in frames]} for slot, frames in keys.items()}
-
-
-def place(im, pivot, r, overlap):
-    """Where a picture's centre goes so its top centre sits at the pivot, `overlap` up into the part above."""
-    tx, ty = top_centre(im)
-    ux, uy = turn(0, 1, r)
-    jx, jy = pivot[0] + ux * overlap, pivot[1] + uy * overlap
-    dx, dy = turn(im.width / 2 - tx, -(im.height / 2 - ty), r)
-    return jx + dx, jy + dy
-
-
 def prepare(part, flip, tint, degrees_cw=0):
-    im = Image.open(PARTS / f"{part}.png").convert("RGBA")
-    if degrees_cw:
-        im = im.rotate(-degrees_cw, expand=True, resample=Image.BICUBIC)
-        im = im.crop(im.getbbox())
-    if part in TRIM:
-        im = im.crop((0, TRIM[part], im.width, im.height))
-    if part in WIDTH:
-        im = im.resize((round(im.width * WIDTH[part]), im.height), Image.LANCZOS)
-    if part in FEATHER:
-        a = np.asarray(im).astype(np.float32)
-        ramp = np.clip(np.arange(im.height) / FEATHER[part], 0, 1)
-        a[..., 3] *= ramp[:, None]
-        im = Image.fromarray(a.astype(np.uint8), "RGBA")
-    if flip:
-        im = ImageOps.mirror(im)
-    if tint:
-        rgb = ImageChops.multiply(im.convert("RGB"), Image.new("RGB", im.size, "#" + tint))
-        im = Image.merge("RGBA", (*rgb.split(), im.getchannel("A")))
-    return im
+    return prepare_file(PARTS / f"{part}.png", flip, tint, degrees_cw, TRIM.get(part, 0), WIDTH.get(part, 1.0),
+                        FEATHER.get(part, 0))
 
 
 def main():
@@ -313,64 +214,21 @@ def main():
         for name, part, turns in alts:
             images[name] = prepare(part, flip, tint, turns)
     derive(images)
-    alt_place = {}
+    extra = {}
     for slot, alts in ALTS.items():
         bone = SLOTS[index[slot]][1]
         r = SLOTS[index[slot]][5]
-        for name, _, _ in alts:
-            # Deeper than the other forearms: the upper sleeve's open bottom showed as a dark oval through the
-            # push forearm's faded top (Codex, 2026-10-02).
-            alt_place[name] = (*place(images[name], BONES[bone][1:3], r, ELBOW_OVERLAP + 30), r)
-    size, boxes = pack(images)
-    page = Image.new("RGBA", size, (0, 0, 0, 0))
-    lines = ["alchemist.png", f"size:{size[0]},{size[1]}", "filter:Linear,Linear"]
-    for slot, im in images.items():
-        page.alpha_composite(im, boxes[slot])
-        lines += [slot, f"bounds:{boxes[slot][0]},{boxes[slot][1]},{im.width},{im.height}"]
-    page.save(DIR / "alchemist.png")
-    (DIR / "alchemist.atlas").write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-    bones = []
-    for name, (parent, x, y, angle) in BONES.items():
-        if parent is None:
-            bones.append({"name": name, "scaleX": SCALE, "scaleY": SCALE})
-            continue
-        lx, ly, la = to_local(parent, x, y, angle)
-        bones.append({"name": name, "parent": parent, "x": round(lx, 2), "y": round(ly, 2), "rotation": round(la, 2),
-                      "length": 60})
-    slots, skin = [], {}
-    for slot, bone, part, wx, wy, extra, flip, tint in SLOTS:
-        slots.append({"name": slot, "bone": bone, "attachment": slot})
-        lx, ly, la = to_local(bone, wx, wy, extra)
-        im = images[slot]
-        skin[slot] = {slot: {"x": round(lx, 2), "y": round(ly, 2), "rotation": round(la, 2), "width": im.width,
-                             "height": im.height}}
-        for name, _, _ in ALTS.get(slot, []):
-            ax, ay, ar = to_local(bone, *alt_place[name])
-            skin[slot][name] = {"x": round(ax, 2), "y": round(ay, 2), "rotation": round(ar, 2),
-                                "width": images[name].width, "height": images[name].height}
-    skeleton = {
-        "skeleton": {"hash": "alchemist", "spine": "4.2.43", "x": -300, "y": 0, "width": 700, "height": 1250,
-                     "images": "", "audio": ""},
-        "bones": bones,
-        "slots": slots,
-        "skins": [{"name": "default", "attachments": skin}],
-        "animations": {name: {"bones": tracks, "slots": slot_timelines(name)} for name, tracks in ANIMATIONS.items()},
-    }
-    (DIR / "alchemist.spine-json").write_text(json.dumps(skeleton, indent=1), encoding="utf-8")
-    # The setup pose as placed (no game needed): artifacts/rig-custom/setup.png, with bone pivots as dots.
-    from PIL import ImageDraw
-    view = Image.new("RGBA", (900, 1350), (58, 58, 68, 255))
-    ox, oy = 450, 1300
-    for slot, bone, part, wx, wy, extra, flip, tint in SLOTS:
-        im = images[slot].rotate(extra, expand=True, resample=Image.BICUBIC)
-        view.alpha_composite(im, (int(ox + wx - im.width / 2), int(oy - wy - im.height / 2)))
-    d = ImageDraw.Draw(view)
-    for name, (parent, x, y, angle) in BONES.items():
-        d.ellipse([ox + x - 4, oy - y - 4, ox + x + 4, oy - y + 4], outline=(0, 255, 255, 255))
-    (ROOT / "artifacts/rig-custom").mkdir(parents=True, exist_ok=True)
-    view.save(ROOT / "artifacts/rig-custom/setup.png")
-    print(f"page {size}, {len(slots)} slots, {len(bones)} bones, animations {list(ANIMATIONS)}")
+        # Deeper than the other forearms: the upper sleeve's open bottom showed as a dark oval through the
+        # push forearm's faded top (Codex, 2026-10-02).
+        extra[slot] = [(name, *place(images[name], BONES[bone][1:3], r, ELBOW_OVERLAP + 30), r) for name, _, _ in alts]
+    slots = [(slot, bone, wx, wy, r) for slot, bone, part, wx, wy, r, flip, tint in SLOTS]
+    # A soft shadow under the feet, on the root so it follows the lunges (the base game's rigs carry one; the
+    # merchant room showed ours without, 2026-10-02).
+    images["shadow"] = shadow(440, 64)
+    slots.insert(0, ("shadow", "root", 20, 8, 0))
+    size, n_slots, n_bones = write_rig(DIR, "alchemist", BONES, slots, images, ANIMATIONS, SCALE, extra, SLOT_KEYS,
+                                       ROOT / "artifacts/rig-custom/setup.png")
+    print(f"page {size}, {n_slots} slots, {n_bones} bones, animations {list(ANIMATIONS)}")
 
 
 main()

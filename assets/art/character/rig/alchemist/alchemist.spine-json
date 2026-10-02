@@ -2,10 +2,10 @@
  "skeleton": {
   "hash": "alchemist",
   "spine": "4.2.43",
-  "x": -300,
+  "x": -450,
   "y": 0,
-  "width": 700,
-  "height": 1250,
+  "width": 900,
+  "height": 1350,
   "images": "",
   "audio": ""
  },
@@ -146,6 +146,11 @@
  ],
  "slots": [
   {
+   "name": "shadow",
+   "bone": "root",
+   "attachment": "shadow"
+  },
+  {
    "name": "cape",
    "bone": "cape",
    "attachment": "cape"
@@ -200,6 +205,15 @@
   {
    "name": "default",
    "attachments": {
+    "shadow": {
+     "shadow": {
+      "x": 20.0,
+      "y": 8.0,
+      "rotation": 0,
+      "width": 568,
+      "height": 192
+     }
+    },
     "cape": {
      "cape": {
       "x": 345.0,
@@ -429,6 +443,112 @@
       },
       {
        "time": 2.4,
+       "value": 0
+      }
+     ]
+    }
+   },
+   "slots": {
+    "fore_f": {
+     "attachment": [
+      {
+       "name": "fore_f"
+      }
+     ]
+    }
+   }
+  },
+  "relaxed_loop": {
+   "bones": {
+    "hip": {
+     "translate": [
+      {
+       "x": 0,
+       "y": 0
+      },
+      {
+       "time": 1.8,
+       "x": 0,
+       "y": -7
+      },
+      {
+       "time": 3.6,
+       "x": 0,
+       "y": 0
+      }
+     ]
+    },
+    "torso": {
+     "rotate": [
+      {
+       "value": 0
+      },
+      {
+       "time": 1.8,
+       "value": -1
+      },
+      {
+       "time": 3.6,
+       "value": 0
+      }
+     ]
+    },
+    "head": {
+     "rotate": [
+      {
+       "value": 0
+      },
+      {
+       "time": 1.8,
+       "value": 2
+      },
+      {
+       "time": 3.6,
+       "value": 0
+      }
+     ]
+    },
+    "cape": {
+     "rotate": [
+      {
+       "value": 0
+      },
+      {
+       "time": 1.8,
+       "value": 3
+      },
+      {
+       "time": 3.6,
+       "value": 0
+      }
+     ]
+    },
+    "arm_b": {
+     "rotate": [
+      {
+       "value": 0
+      },
+      {
+       "time": 1.8,
+       "value": 2
+      },
+      {
+       "time": 3.6,
+       "value": 0
+      }
+     ]
+    },
+    "arm_f": {
+     "rotate": [
+      {
+       "value": 0
+      },
+      {
+       "time": 1.8,
+       "value": -1.5
+      },
+      {
+       "time": 3.6,
        "value": 0
       }
      ]

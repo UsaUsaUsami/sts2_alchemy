@@ -93,6 +93,65 @@ public static class RigProbe
                 DumpTree(visuals, 0);
                 await Capture(tree, viewport, body, "alchemist", ["idle_loop", "attack", "hurt", Alchemy.AlchemistRig.Available ? Alchemy.AlchemistRig.CastAnimation : Alchemy.NecroRig.CastAnimation, "die"]);
             }
+            else if (mode == "golem")
+            {
+                // The golem as combat makes it (HomunculusPet), beside the alchemist for scale.
+                visuals.Scale = Vector2.One * 1.25f * Zoom;
+                visuals.Position = new Vector2(230, 620) * Zoom;
+                var pet = MegaCrit.Sts2.Core.Models.ModelDb.Monster<Alchemy.HomunculusPet>().CreateCustomVisuals()!;
+                pet.Scale = Vector2.One * 1.25f * Zoom;
+                pet.Position = new Vector2(480, 620) * Zoom;
+                viewport.AddChild(pet);
+                await Frames(tree, 3);
+                var petBody = pet.SpineBody ?? throw new Exception("golem has no spine body");
+                for (int i = 0; i < 120 && petBody.TryGetAnimationState() is null; i++) await Frames(tree, 1);
+                body.GetAnimationState().SetAnimation("idle_loop", loop: true);
+                await Capture(tree, viewport, petBody, "golem", ["idle_loop", "attack", "cast", "hurt", "die", "dead_loop", "revive"]);
+            }
+            else if (mode == "rest")
+            {
+                // The rest site's figure: the Ironclad's scene Spine node alone (the scene script needs a run).
+                var scene = ResourceLoader.Load<PackedScene>(SceneHelper.GetScenePath("rest_site/characters/ironclad_rest_site"));
+                var root = scene.Instantiate<Node2D>(PackedScene.GenEditState.Disabled);
+                var spineNode = root.GetChildren().OfType<Node2D>().First(n => n.GetClass() == "SpineSprite");
+                root.RemoveChild(spineNode);
+                var holder = new Node2D { Position = new Vector2(600, 450) * Zoom, Scale = Vector2.One * 0.6f * Zoom };
+                viewport.Size = new Vector2I(1200, 900) * Zoom;
+                visuals.Visible = false;
+                viewport.AddChild(holder);
+                holder.AddChild(spineNode);
+                var ironSprite = new MegaSprite(spineNode);
+                holder.RunWhenSpineReady(ironSprite, s => s.SetAnimation("overgrowth_loop", true));
+                await Frames(tree, 30);
+                viewport.GetTexture().GetImage().SavePng($"{Out}/rest_ironclad.png");
+                Log($"rest bounds ironclad {Alchemy.RestMerchantArt.FigureBounds(spineNode)} pos {spineNode.Position} scale {spineNode.Scale}");
+                Log($"rest reskin {Alchemy.AlchemistRig.Reskin(spineNode, "overgrowth_loop", Alchemy.RestMerchantArt.RestRig, alignFront: true)}");
+                for (int f = 0; f < 6; f++)
+                {
+                    await Frames(tree, 25);
+                    viewport.GetTexture().GetImage().SavePng($"{Out}/rest_alchemist_{f}.png");
+                }
+                Log($"rest bounds alchemist {Alchemy.RestMerchantArt.FigureBounds(spineNode)} pos {spineNode.Position} scale {spineNode.Scale}");
+            }
+            else if (mode == "merchant")
+            {
+                // The merchant room's figure: the Ironclad's merchant scene as the game builds it, then reskinned.
+                var scene = ResourceLoader.Load<PackedScene>(SceneHelper.GetScenePath("merchant/characters/ironclad_merchant"));
+                var figure = scene.Instantiate<Node2D>(PackedScene.GenEditState.Disabled);
+                figure.Position = new Vector2(350, 600) * Zoom;
+                figure.Scale = Vector2.One * Zoom;
+                visuals.Visible = false;
+                viewport.AddChild(figure);
+                await Frames(tree, 30);
+                viewport.GetTexture().GetImage().SavePng($"{Out}/merchant_ironclad.png");
+                var spineNode = (Node2D)figure.GetChild(0);
+                Log($"merchant reskin {Alchemy.AlchemistRig.Reskin(spineNode, "relaxed_loop")}");
+                for (int f = 0; f < 4; f++)
+                {
+                    await Frames(tree, 20);
+                    viewport.GetTexture().GetImage().SavePng($"{Out}/merchant_alchemist_{f}.png");
+                }
+            }
             else if (mode == "custom")
             {
                 // A rig written by scripts (ALCHEMY_PROBE_SKEL: the .json or .skel; its .atlas beside it) on the

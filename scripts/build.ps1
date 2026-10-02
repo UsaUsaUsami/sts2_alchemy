@@ -26,5 +26,7 @@ try {
     # Relic, power, enchantment and map icons (IconArt in CardArt.cs).
     if (Test-Path assets/art/icons) { New-Item -ItemType Directory -Force dist/Alchemy/art/icons | Out-Null; Copy-Item assets/art/icons/*.ctex dist/Alchemy/art/icons }
     if (Test-Path assets/art/pets) { New-Item -ItemType Directory -Force dist/Alchemy/art/pets | Out-Null; Copy-Item assets/art/pets/*.png dist/Alchemy/art/pets }
+    # The golem's rig (golem-build.py).
+    if (Test-Path assets/art/pets/rig) { Copy-Item assets/art/pets/rig dist/Alchemy/art/pets/rig -Recurse -Force }
     Write-Output "配布ファイル: $root\dist\Alchemy"
 } finally { Pop-Location }

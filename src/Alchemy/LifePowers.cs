@@ -124,11 +124,26 @@ public sealed class HomunculusPet() : CustomPetModel(visibleHp: true), ILocaliza
     private static string BorrowedVisuals => SceneHelper.GetScenePath("creature_visuals/osty");
     public override int MinInitialHp => 1;
     public override int MaxInitialHp => 1;
-    public override IEnumerable<string> AssetPaths => PetArt.HasGolem ? [] : [BorrowedVisuals];
+    public override IEnumerable<string> AssetPaths => [BorrowedVisuals];
+    /// 2026-10-02: the golem's own rig (scripts/golem-build.py, Osty's animation names) in Osty's scene, which gives
+    /// it bounds and markers; Osty's own effects are hidden. Without the rig, the still sprite; without that, Osty.
     public override NCreatureVisuals? CreateCustomVisuals()
-        => PetArt.Golem is { } golem
+    {
+        if (PetArt.Rig is { } rig)
+        {
+            var visuals = PreloadManager.Cache.GetScene(BorrowedVisuals).Instantiate<NCreatureVisuals>(PackedScene.GenEditState.Disabled);
+            if (visuals.GetNodeOrNull<Node2D>("Visuals") is { } spine && spine.GetClass() == "SpineSprite")
+            {
+                new MegaSprite(spine).SetSkeletonDataRes(rig);
+                AlchemistRig.HideDonorEffects(spine);
+                return visuals;
+            }
+            visuals.QueueFree();
+        }
+        return PetArt.Golem is { } golem
             ? NodeFactory<NCreatureVisuals>.CreateFromResource(golem)
             : PreloadManager.Cache.GetScene(BorrowedVisuals).Instantiate<NCreatureVisuals>(PackedScene.GenEditState.Disabled);
+    }
     // Osty's own state machine: BaseLib's SetupAnimationState has no "Revive" trigger, so a pet that fell and
     // then regained HP stayed frozen on the last frame of "die". Osty's adds revive and dead_loop.
     public override CreatureAnimator? SetupCustomAnimationStates(MegaSprite controller)

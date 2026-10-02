@@ -28,8 +28,10 @@ tag = arg("--tag", "v1")
 # --scale: resize the cut parts (the forearm sheet was drawn larger than the first; 0.6 matches its sleeves).
 names = arg("--names", "").split(",") if arg("--names") else None
 scale = float(arg("--scale", "1"))
+# --bottom A,B,...: with --names, a two-row sheet: --names the top row, --bottom the bottom row.
+bottom_names = arg("--bottom", "").split(",") if arg("--bottom") else None
 if names:
-    TOP, BOTTOM = names, []
+    TOP, BOTTOM = names, bottom_names or []
 rgb = np.asarray(Image.open(DIR / f"parts-{tag}.png").convert("RGB")).astype(np.float32) / 255
 r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
 # Magenta-ness: red and blue high, green low. 1 on the background, 0 on the drawing.
@@ -49,7 +51,8 @@ sizes = ndimage.sum(solid, labels, range(1, count + 1))
 keep = [i + 1 for i in np.argsort(sizes)[::-1][:len(TOP) + len(BOTTOM)]]
 boxes = {i: ndimage.find_objects((labels == i).astype(int))[0] for i in keep}
 mid = rgb.shape[0] * 0.62  # the bottom row starts about here on a 1024-high sheet
-top = sorted((i for i in keep if names or boxes[i][0].start < mid * 0.6), key=lambda i: boxes[i][1].start)
+top = sorted((i for i in keep if (names and not bottom_names) or boxes[i][0].start < mid * 0.6),
+             key=lambda i: boxes[i][1].start)
 bottom = sorted((i for i in keep if i not in top), key=lambda i: boxes[i][1].start)
 if len(top) != len(TOP) or len(bottom) != len(BOTTOM):
     sys.exit(f"部品の数が合いません: 上段 {len(top)} / 下段 {len(bottom)}")

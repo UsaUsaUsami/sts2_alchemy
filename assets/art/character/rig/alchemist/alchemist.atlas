@@ -25,3 +25,5 @@ fore_f_push
 bounds:1700,2,345,381
 fore_f_raise
 bounds:1088,2,233,481
+shadow
+bounds:1020,761,568,192
