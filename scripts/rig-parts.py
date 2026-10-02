@@ -82,6 +82,17 @@ LEFT_OPEN = [
      "inside of the sleeve, the front edge of the cuff overlaps the wrist."),
 ]
 
+# 2026-10-02: the attack pushes the open palm at the enemy (user). Drawn as it is seen in the strike, sleeve
+# horizontal; rig-build.py turns it so the elbow is at the top like the other forearms, and swaps it in during attack.
+PUSH = [
+    ("FOREARM_PUSH_L", "the same wide bell sleeve as the FOREARM parts in the attached sheets, lying HORIZONTAL: the "
+     "elbow end on the LEFT, the open cuff on the RIGHT, gold trim stripes at the cuff, mustard lining. Out of the "
+     "INSIDE of the cuff comes a dark brown leather gloved LEFT hand, the wrist bent sharply UP: the fingers point "
+     "straight UP, the palm faces RIGHT as if pushing a spell forward, seen from the thumb side (the thumb towards "
+     "the viewer, lying along the index finger). The wrist disappears into the dark inside of the sleeve, the front "
+     "edge of the cuff overlaps the wrist."),
+]
+
 BRIEF = (
     "Create a CHARACTER PARTS SHEET for a 2D skeletal (cut-out) animation rig of the Alchemist, a playable character "
     "in a Slay the Spire 2 mod. The first attached image is the Alchemist's key visual: match its design, colours "
@@ -105,6 +116,9 @@ tag = arg("--tag", "v1")
 if arg("--set") == "forearms":
     PARTS = FOREARMS
     REFS = REFS + [OUT / "parts-v1.png"]
+elif arg("--set") == "push":
+    PARTS = PUSH
+    REFS = REFS + [OUT / "parts-v1.png", OUT / "parts-left-v1.png"]
 elif arg("--set") == "left":
     PARTS = LEFT_OPEN
     REFS = REFS + [OUT / "parts-v1.png", OUT / "parts-forearms-v1.png"]

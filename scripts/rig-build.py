@@ -88,7 +88,14 @@ TRIM = {"UPPER_ARM": 22}
 WIDTH = {"UPPER_ARM": 0.8}
 # The forearms' top fades in over these many pixels, so their outline does not draw a line across the upper sleeve
 # at the elbow (it lies inside ELBOW_OVERLAP, over the upper sleeve; Codex, 2026-10-02).
-FEATHER = {"FOREARM_OPEN": 28, "FOREARM_GRIP": 28}
+FEATHER = {"FOREARM_OPEN": 28, "FOREARM_GRIP": 28, "FOREARM_OPEN_L": 28, "FOREARM_PUSH_L": 28}
+# Extra pictures a slot can switch to during an animation: slot -> [(attachment, part, quarter turns clockwise)].
+# The palm push (2026-10-02, user) is drawn with the sleeve lying flat; one turn puts its elbow at the top like the
+# other forearms, so its fingers point up when the forearm points at the enemy. Its elbow end has a gold band: cut.
+ALTS = {"fore_f": [("fore_f_push", "FOREARM_PUSH_L", 1)]}
+TRIM["FOREARM_PUSH_L"] = 40
+# Which picture each slot shows, keyed in time per animation (the others start from the setup picture).
+SLOT_KEYS = {"attack": {"fore_f": [(0, "fore_f"), (0.22, "fore_f_push"), (0.7, "fore_f")]}}
 
 
 def key(t, **v):
@@ -256,26 +263,60 @@ def derive(images):
         BONES[hand] = (parent, wx, wy, angle)
 
 
+def slot_timelines(animation):
+    """Attachment keys: the animation's own (SLOT_KEYS), and for every slot with extra pictures a key back to its
+    setup picture at the start, so an attack cut short does not leave the push hand on."""
+    keys = {slot: [(0, slot)] for slot in ALTS}
+    keys.update(SLOT_KEYS.get(animation, {}))
+    return {slot: {"attachment": [key(t, name=name) for t, name in frames]} for slot, frames in keys.items()}
+
+
+def place(im, pivot, r, overlap):
+    """Where a picture's centre goes so its top centre sits at the pivot, `overlap` up into the part above."""
+    tx, ty = top_centre(im)
+    ux, uy = turn(0, 1, r)
+    jx, jy = pivot[0] + ux * overlap, pivot[1] + uy * overlap
+    dx, dy = turn(im.width / 2 - tx, -(im.height / 2 - ty), r)
+    return jx + dx, jy + dy
+
+
+def prepare(part, flip, tint, quarter_turns=0):
+    im = Image.open(PARTS / f"{part}.png").convert("RGBA")
+    if quarter_turns:
+        im = im.rotate(-90 * quarter_turns, expand=True)
+    if part in TRIM:
+        im = im.crop((0, TRIM[part], im.width, im.height))
+    if part in WIDTH:
+        im = im.resize((round(im.width * WIDTH[part]), im.height), Image.LANCZOS)
+    if part in FEATHER:
+        a = np.asarray(im).astype(np.float32)
+        ramp = np.clip(np.arange(im.height) / FEATHER[part], 0, 1)
+        a[..., 3] *= ramp[:, None]
+        im = Image.fromarray(a.astype(np.uint8), "RGBA")
+    if flip:
+        im = ImageOps.mirror(im)
+    if tint:
+        rgb = ImageChops.multiply(im.convert("RGB"), Image.new("RGB", im.size, "#" + tint))
+        im = Image.merge("RGBA", (*rgb.split(), im.getchannel("A")))
+    return im
+
+
 def main():
-    images = {}
-    for slot, _, part, *_rest, flip, tint in SLOTS:
-        im = Image.open(PARTS / f"{part}.png").convert("RGBA")
-        if part in TRIM:
-            im = im.crop((0, TRIM[part], im.width, im.height))
-        if part in WIDTH:
-            im = im.resize((round(im.width * WIDTH[part]), im.height), Image.LANCZOS)
-        if part in FEATHER:
-            a = np.asarray(im).astype(np.float32)
-            ramp = np.clip(np.arange(im.height) / FEATHER[part], 0, 1)
-            a[..., 3] *= ramp[:, None]
-            im = Image.fromarray(a.astype(np.uint8), "RGBA")
-        if flip:
-            im = ImageOps.mirror(im)
-        if tint:
-            rgb = ImageChops.multiply(im.convert("RGB"), Image.new("RGB", im.size, "#" + tint))
-            im = Image.merge("RGBA", (*rgb.split(), im.getchannel("A")))
-        images[slot] = im
+    images = {slot: prepare(part, flip, tint) for slot, _, part, *_rest, flip, tint in SLOTS}
+    index = {s[0]: i for i, s in enumerate(SLOTS)}
+    for slot, alts in ALTS.items():
+        _, _, _, *_r, flip, tint = SLOTS[index[slot]]
+        for name, part, turns in alts:
+            images[name] = prepare(part, flip, tint, turns)
     derive(images)
+    alt_place = {}
+    for slot, alts in ALTS.items():
+        bone = SLOTS[index[slot]][1]
+        r = SLOTS[index[slot]][5]
+        for name, _, _ in alts:
+            # Deeper than the other forearms: the upper sleeve's open bottom showed as a dark oval through the
+            # push forearm's faded top (Codex, 2026-10-02).
+            alt_place[name] = (*place(images[name], BONES[bone][1:3], r, ELBOW_OVERLAP + 30), r)
     size, boxes = pack(images)
     page = Image.new("RGBA", size, (0, 0, 0, 0))
     lines = ["alchemist.png", f"size:{size[0]},{size[1]}", "filter:Linear,Linear"]
@@ -300,13 +341,17 @@ def main():
         im = images[slot]
         skin[slot] = {slot: {"x": round(lx, 2), "y": round(ly, 2), "rotation": round(la, 2), "width": im.width,
                              "height": im.height}}
+        for name, _, _ in ALTS.get(slot, []):
+            ax, ay, ar = to_local(bone, *alt_place[name])
+            skin[slot][name] = {"x": round(ax, 2), "y": round(ay, 2), "rotation": round(ar, 2),
+                                "width": images[name].width, "height": images[name].height}
     skeleton = {
         "skeleton": {"hash": "alchemist", "spine": "4.2.43", "x": -300, "y": 0, "width": 700, "height": 1250,
                      "images": "", "audio": ""},
         "bones": bones,
         "slots": slots,
         "skins": [{"name": "default", "attachments": skin}],
-        "animations": {name: {"bones": tracks} for name, tracks in ANIMATIONS.items()},
+        "animations": {name: {"bones": tracks, "slots": slot_timelines(name)} for name, tracks in ANIMATIONS.items()},
     }
     (DIR / "alchemist.spine-json").write_text(json.dumps(skeleton, indent=1), encoding="utf-8")
     # The setup pose as placed (no game needed): artifacts/rig-custom/setup.png, with bone pivots as dots.

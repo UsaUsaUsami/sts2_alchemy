@@ -225,6 +225,13 @@
       "rotation": 90,
       "width": 193,
       "height": 414
+     },
+     "fore_f_push": {
+      "x": 107.5,
+      "y": 16.5,
+      "rotation": 90,
+      "width": 345,
+      "height": 381
      }
     },
     "foot_f": {
@@ -416,6 +423,15 @@
       {
        "time": 2.4,
        "value": 0
+      }
+     ]
+    }
+   },
+   "slots": {
+    "fore_f": {
+     "attachment": [
+      {
+       "name": "fore_f"
       }
      ]
     }
@@ -615,6 +631,23 @@
       }
      ]
     }
+   },
+   "slots": {
+    "fore_f": {
+     "attachment": [
+      {
+       "name": "fore_f"
+      },
+      {
+       "time": 0.22,
+       "name": "fore_f_push"
+      },
+      {
+       "time": 0.7,
+       "name": "fore_f"
+      }
+     ]
+    }
    }
   },
   "cast": {
@@ -771,6 +804,15 @@
       }
      ]
     }
+   },
+   "slots": {
+    "fore_f": {
+     "attachment": [
+      {
+       "name": "fore_f"
+      }
+     ]
+    }
    }
   },
   "hurt": {
@@ -865,6 +907,15 @@
       {
        "time": 0.45,
        "value": 0
+      }
+     ]
+    }
+   },
+   "slots": {
+    "fore_f": {
+     "attachment": [
+      {
+       "name": "fore_f"
       }
      ]
     }
@@ -990,6 +1041,15 @@
       {
        "time": 1.2,
        "value": 22
+      }
+     ]
+    }
+   },
+   "slots": {
+    "fore_f": {
+     "attachment": [
+      {
+       "name": "fore_f"
       }
      ]
     }
