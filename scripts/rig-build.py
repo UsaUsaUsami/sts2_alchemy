@@ -39,11 +39,9 @@ BONES = {
     "fore_b": ("arm_b", -150, 590, -95),
     "hand_b": ("fore_b", None, None, -95),
     "arm_f": ("torso", 105, 860, -80),
-    # The staff arm's forearm hangs nearly straight (-75) so the fist, closed round the upright staff, is not tilted
-    # far off it.
-    "fore_f": ("arm_f", 155, 590, -75),
-    "hand_f": ("fore_f", None, None, -75),
-    "staff": ("hand_f", None, None, 90),
+    # No staff (2026-10-02, user: it never looked held; the key visual has none): the far arm hangs at the side.
+    "fore_f": ("arm_f", 155, 590, -85),
+    "hand_f": ("fore_f", None, None, -85),
     # The legs hang from the root, not the hip: when the body sinks (death) the shoes stay on the ground.
     "leg_b": ("root", -60, 600, -90),
     "foot_b": ("leg_b", -70, 120, 0),
@@ -53,16 +51,15 @@ BONES = {
 
 # Slots in draw order (back to front): (slot, bone, part, world centre x, y, extra rotation, flip, tint).
 # The torso is drawn turned to the right (three-quarter view), so the near side is the LEFT of the picture: the left
-# arm and foot are drawn in front of the body, the right (enemy-side) arm that holds the staff behind it, darkened
+# arm and foot are drawn in front of the body, the right (enemy-side) arm behind it, darkened
 # by tint so it reads as farther (user, 2026-10-02: "the arms look the wrong way round").
 # Bone names: *_f = the forward (enemy-side, far) limbs, *_b = the back-side (near) limbs.
 FAR = "a8a8b0"
 SLOTS = [
     ("cape", "cape", "CAPE", -150, 560, 0, False, None),
-    ("staff", "staff", "STAFF", None, None, 0, False, None),
     ("arm_f", "arm_f", "UPPER_ARM", None, None, None, False, FAR),
-    # The forearms carry their hands (rig-parts.py --set forearms / --set grip): the left fist closed round the staff.
-    ("fore_f", "fore_f", "FOREARM_GRIP", None, None, None, False, FAR),
+    # The forearms carry their hands (rig-parts.py --set forearms / --set left): the left hand from the palm side.
+    ("fore_f", "fore_f", "FOREARM_OPEN_L", None, None, None, False, FAR),
     ("foot_f", "foot_f", "BOOT", 95, 108, 0, False, FAR),
     ("foot_b", "foot_b", "BOOT", -40, 112, 0, False, None),
     # The boots stay behind the robe: only the shoes show under the hem.
@@ -76,11 +73,10 @@ SLOTS = [
     ("fore_b", "fore_b", "FOREARM_OPEN", None, None, None, False, None),
 ]
 
-# The limbs are not placed by hand: each sleeve hangs from its joint (derive), turned along its bone; the staff goes
-# through the fist's hole. None in a slot is filled in there.
+# The limbs are not placed by hand: each sleeve hangs from its joint (derive), turned along its bone. None in a slot
+# is filled in there.
 # 2026-10-02: hands used to be separate parts fitted into the slanted cuffs by calculation; they kept looking stuck on
 # from outside the sleeve (user, Codex), so the forearms are now drawn with the hand coming out of the cuff.
-STAFF_ABOVE_GRIP = 235  # the staff's centre above the fist's hole
 LIMB_OVERLAP = 18  # how far an upper sleeve's top reaches up into the shoulder
 # The forearm reaches deeper: its top is narrower than the upper sleeve's cut end, which showed at a straightened
 # elbow as a gap (rig-probe at 2x and Gemini, 2026-10-02).
@@ -131,34 +127,28 @@ ANIMATIONS = {
         arm_f=rot((0, 0), (T / 2, -2), (T, 0)),
         fore_b=rot((0, 0), (T / 2, 4), (T, 0)),
     ),
-    # Draw the staff back, then thrust it forward with a lunge, the sigil head pointing at the enemy.
-    # Keys add to the setup angles: arm_f is -80 in the setup pose, the forearm -75, the staff 90; so arm 75 puts
-    # the arm and forearm about level, staff -165 lays it along the forearm, pointing at the enemy.
+    # Draw the hand back to the chest, then lunge and thrust it at the enemy, a cast thrown from the open hand.
+    # Keys add to the setup angles: arm_f is -80, the forearm -85; arm 75 and forearm 10 put both level (forward).
     # Moves across the floor go on the root (the legs hang from it); the hip only rises and sinks.
     "attack": bone_anim(
         root=move((0, 0, 0), (0.15, -40, 0), (0.3, 120, 0), (0.55, 120, 0), (0.85, 0, 0)),
         hip=move((0, 0, 0), (0.3, 0, -15), (0.55, 0, -15), (0.85, 0, 0)),
         torso=rot((0, 0), (0.15, 8), (0.3, -12), (0.55, -12), (0.85, 0)),
         head=rot((0, 0), (0.15, 5), (0.3, -6), (0.85, 0)),
-        arm_f=rot((0, 0), (0.15, 30), (0.3, 75), (0.55, 75), (0.85, 0)),
-        # The staff lies along the forearm, as the fist holds it (forearm -75+30+40 = -5, staff 90+70-165 = -5).
-        fore_f=rot((0, 0), (0.15, 40), (0.3, 0), (0.55, 0), (0.85, 0)),
-        staff=rot((0, 0), (0.15, -165), (0.3, -165), (0.55, -165), (0.85, 0)),
+        arm_f=rot((0, 0), (0.15, -15), (0.3, 75), (0.55, 75), (0.85, 0)),
+        fore_f=rot((0, 0), (0.15, 60), (0.3, 10), (0.55, 10), (0.85, 0)),
         arm_b=rot((0, 0), (0.15, -20), (0.3, 30), (0.85, 0)),
         cape=rot((0, 0), (0.3, 18), (0.55, 10), (0.85, 0)),
         skirt=rot((0, 0), (0.3, 6), (0.85, 0)),
     ),
-    # Raise the staff high, hold, lower.
     "cast": bone_anim(
         hip=move((0, 0, 0), (0.3, 0, 30), (0.75, 0, 30), (1.0, 0, 0)),
         torso=rot((0, 0), (0.3, 6), (0.75, 6), (1.0, 0)),
         head=rot((0, 0), (0.3, 12), (0.75, 12), (1.0, 0)),
-        # Raise the staff forward and up: arm level (10), forearm up at 45 and the staff along it (the fist holds the
-        # staff along the forearm). Setup: forearm -75, staff 90. Straight up turned the bell sleeve's opening
-        # upwards like a cup (2026-10-02).
+        # Arm level (10), forearm up at 45 (setup -85). Straight up turned the bell sleeve's opening upwards like
+        # a cup (2026-10-02).
         arm_f=rot((0, 0), (0.3, 90), (0.75, 90), (1.0, 0)),
-        fore_f=rot((0, 0), (0.3, 30), (0.75, 30), (1.0, 0)),
-        staff=rot((0, 0), (0.3, -165), (0.75, -165), (1.0, 0)),
+        fore_f=rot((0, 0), (0.3, 40), (0.75, 40), (1.0, 0)),
         # The near arm opens out and down; held level, the hand read as turned the wrong way (Gemini, 2026-10-02).
         arm_b=rot((0, 0), (0.3, -40), (0.75, -40), (1.0, 0)),
         fore_b=rot((0, 0), (0.3, -10), (0.75, -10), (1.0, 0)),
@@ -173,14 +163,13 @@ ANIMATIONS = {
         arm_b=rot((0, 0), (0.1, 25), (0.45, 0)),
         cape=rot((0, 0), (0.1, -12), (0.45, 0)),
     ),
-    # Sink to the knees and slump; the staff falls forward. The last pose holds.
+    # Sink to the knees and slump. The last pose holds.
     "die": bone_anim(
         hip=move((0, 0, 0), (0.25, -20, 10), (0.8, -30, -330), (1.2, -30, -330)),
         torso=rot((0, 0), (0.25, 10), (0.8, -35), (1.2, -38)),
         head=rot((0, 0), (0.25, 15), (0.8, -30), (1.2, -32)),
         arm_f=rot((0, 0), (0.8, 25), (1.2, 28)),
         fore_f=rot((0, 0), (0.8, -40), (1.2, -40)),
-        staff=rot((0, 0), (0.6, -40), (1.0, -95), (1.2, -92)),
         arm_b=rot((0, 0), (0.8, 30), (1.2, 32)),
         cape=rot((0, 0), (0.8, 25), (1.2, 22)),
     ),
@@ -247,19 +236,9 @@ def hang(i, images, pivot, r, overlap):
     SLOTS[i] = (slot, bone, part, jx + dx, jy + dy, r, flip, tint)
 
 
-def fist_centre(im):
-    """The middle of the fist, in picture pixels: the opaque pixels of the picture's lowest quarter (the fist hangs
-    below the cuff). The staff is drawn behind the forearm through this point, so it shows above and below the
-    fingers that close round it (the first grip had a hole facing the viewer, which read as an OK sign)."""
-    alpha = np.asarray(im.getchannel("A")) > 128
-    h = alpha.shape[0]
-    ys, xs = np.nonzero(alpha[int(h * 0.75):])
-    return xs.mean(), int(h * 0.75) + ys.mean()
-
-
 def derive(images):
     """Fills in the arms from the bones: each sleeve hangs from its joint, turned along its bone (upper arms from
-    shoulder to elbow), and the staff goes through the fist."""
+    shoulder to elbow)."""
     index = {s[0]: i for i, s in enumerate(SLOTS)}
     for upper, lower in (("arm_b", "fore_b"), ("arm_f", "fore_f")):
         sx, sy = BONES[upper][1:3]
@@ -269,19 +248,12 @@ def derive(images):
         hang(index[upper], images, (sx, sy), r, LIMB_OVERLAP)
         hang(index[lower], images, (ex, ey), BONES[lower][3] + 90, ELBOW_OVERLAP)
     for hand, sleeve in (("hand_b", "fore_b"), ("hand_f", "fore_f")):
+        # The hand bones sit at the wrist, about where the sleeve's lower third starts (nothing hangs from them now;
+        # kept for later props).
         im = images[sleeve]
-        # The hand bones sit at the wrist (the cuff, about where the sleeve's lower third starts); the staff hangs
-        # from the fist's hole.
-        point = fist_centre(im) if hand == "hand_f" else (im.width / 2, im.height * 0.6)
-        wx, wy = picture_point(index[sleeve], images, *point)
+        wx, wy = picture_point(index[sleeve], images, im.width / 2, im.height * 0.6)
         parent, _, _, angle = BONES[hand]
         BONES[hand] = (parent, wx, wy, angle)
-    # The staff stands upright through the fist. (Laid along the fist it leaned back behind the body; with the
-    # forearm nearly straight the fist is only 15 degrees off the staff.)
-    gx, gy = BONES["hand_f"][1:3]
-    BONES["staff"] = ("hand_f", gx, gy, 90)
-    st = index["staff"]
-    SLOTS[st] = SLOTS[st][:3] + (gx, gy + STAFF_ABOVE_GRIP, 0) + SLOTS[st][6:]
 
 
 def main():

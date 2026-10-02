@@ -71,6 +71,17 @@ GRIP = [
      "The wrist disappears into the dark inside of the sleeve."),
 ]
 
+# 2026-10-02: the staff is dropped (user: the fist never looked like it held it; the key visual has no staff). The
+# far arm gets an open LEFT hand, seen from the palm side so it does not read as a second right hand.
+LEFT_OPEN = [
+    ("FOREARM_OPEN_L", "the same wide bell sleeve as the FOREARM parts in the attached sheets, straight and vertical, "
+     "elbow end at the top, gold trim stripes at the cuff, mustard lining. Out of the INSIDE of the cuff comes a dark "
+     "brown leather gloved LEFT hand, open and relaxed, hanging down, fingers slightly curled, seen from the PALM "
+     "side (the palm and the inside of the fingers towards the viewer), thumb pointing to the RIGHT. It is the mirror "
+     "partner of the right hand in the attached forearm sheet, not a copy of it. The wrist disappears into the dark "
+     "inside of the sleeve, the front edge of the cuff overlaps the wrist."),
+]
+
 BRIEF = (
     "Create a CHARACTER PARTS SHEET for a 2D skeletal (cut-out) animation rig of the Alchemist, a playable character "
     "in a Slay the Spire 2 mod. The first attached image is the Alchemist's key visual: match its design, colours "
@@ -94,6 +105,9 @@ tag = arg("--tag", "v1")
 if arg("--set") == "forearms":
     PARTS = FOREARMS
     REFS = REFS + [OUT / "parts-v1.png"]
+elif arg("--set") == "left":
+    PARTS = LEFT_OPEN
+    REFS = REFS + [OUT / "parts-v1.png", OUT / "parts-forearms-v1.png"]
 elif arg("--set") == "grip":
     PARTS = GRIP
     REFS = REFS + [OUT / "parts-v1.png", OUT / "parts-forearms-v1.png"]
