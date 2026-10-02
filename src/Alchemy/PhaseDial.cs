@@ -1,4 +1,4 @@
-using Alchemy.Core;
+﻿using Alchemy.Core;
 using Godot;
 using MegaCrit.Sts2.Core.Nodes;
 
@@ -7,7 +7,7 @@ namespace Alchemy;
 /// <summary>
 /// The current phase at a glance. 2026-10-03 (user: the first dial was too plain): the four elements as coloured
 /// orbs on a ring, top, right, bottom, left in the PhaseWheel order earth, water, fire, air (the arrows between them
-/// were dropped, 2026-10-03); in front of them the alchemist's face sigil (a large ring and triangle); in the middle
+/// were dropped, 2026-10-03); a large ring in front (its triangle dropped 2026-10-03); in the middle
 /// the number of transitions this turn as a Roman numeral (0, I, II, III, ...). The current phase's orb glows, the
 /// others stay dark; the number pops when it goes up. Shown under the material strip in the alchemist's combats only.
 /// Each orb carries a small face sigil (2026-10-03, user; the element marks before).
@@ -156,20 +156,13 @@ public static class PhaseDial
         c.DrawCircle(at, r * 0.12f, colour);
     }
 
-    /// The face sigil in front: the large ring, the triangle through the ring, and the inner ring round the numeral.
+    /// In front: the large ring and the inner ring round the numeral.
     private static void PaintFront(Control c)
     {
         var gold = shown == AlchemyPhase.None ? GoldDim : Gold;
         float r = Radius - 1;
         c.DrawArc(Centre, r, 0, Mathf.Tau, 72, gold, 2.6f, true);
-        var tri = new Vector2[4];
-        for (int k = 0; k < 3; k++)
-        {
-            float a = -Mathf.Pi / 2 + k * Mathf.Tau / 3;
-            tri[k] = Centre + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r;
-        }
-        tri[3] = tri[0];
-        c.DrawPolyline(tri, gold, 2.2f, true);
+        // The large triangle through the ring was dropped (2026-10-03, user); the orbs carry the sigil.
         c.DrawCircle(Centre, 27, Back with { A = 1 });
         c.DrawArc(Centre, 27, 0, Mathf.Tau, 48, gold, 2.2f, true);
         c.DrawArc(Centre, 23, 0, Mathf.Tau, 48, gold with { A = 0.55f }, 1f, true);
