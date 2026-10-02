@@ -67,10 +67,9 @@ public static class Smoke
                 Check(character.Title.GetFormattedText() == "錬金術師","Japanese character localization");
                 var player = Player.CreateForNewRun(character,UnlockState.all,1);
                 var run = RunState.CreateForNewRun([player],ActModel.GetDefaultList().Select(a=>a.ToMutable()).ToList(),[],GameMode.Standard,0,"ALCHEMIST_SMOKE_01");
-                Check(player.Deck.Cards.Count==9,"starting deck nine");
-                Check(player.Deck.Cards.Count(c=>c is StrikeAlchemist)==3 && player.Deck.Cards.Count(c=>c is DefendAlchemist)==3
-                    && player.Deck.Cards.Count(c=>c is EarthenGuard)==1 && player.Deck.Cards.Count(c=>c is SoothingMist)==1
-                    && player.Deck.Cards.Count(c=>c is InstantAlchemy)==1,"deck composition 3/3/earth/water/instant");
+                Check(player.Deck.Cards.Count==13 && player.Deck.Cards.Count(c=>c is StrikeAlchemist)==5 && player.Deck.Cards.Count(c=>c is DefendAlchemist)==5,"starting deck: Strike 5, Defend 5 and three starter cards");
+                Check(player.Deck.Cards.Count(c=>c is EarthenGuard)==1 && player.Deck.Cards.Count(c=>c is SoothingMist)==1
+                    && player.Deck.Cards.Count(c=>c is InstantAlchemy)==1,"deck composition earth/water/instant");
                 // v0.24: Neow's transform picks from the card's own pool; the borrowed Ironclad Strike gave Ironclad cards.
                 var transformFrom=player.Deck.Cards.First(c=>c is StrikeAlchemist);
                 var transformOptions=MegaCrit.Sts2.Core.Factories.CardFactory.GetDefaultTransformationOptions(transformFrom,false).ToArray();

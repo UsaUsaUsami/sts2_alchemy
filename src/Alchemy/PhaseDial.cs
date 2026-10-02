@@ -9,14 +9,14 @@ namespace Alchemy;
 /// the four element marks on the circle at angles of n·π/2, clockwise from the top in the PhaseWheel order earth,
 /// water, fire, air. Each mark sits on its own quarter of the disc in its colour (earth brown, water blue, fire red,
 /// air light blue); the current phase's quarter and mark light up, the others stay dim. In the neutral phase all four
-/// are dim. Shown above the energy orb during the alchemist's combats only. The marks are art/icons/phase_*.ctex (scripts/generate-icons.py materials); without them, plain dots.
+/// are dim. Shown under the material button during the alchemist's combats only. The marks are art/icons/phase_*.ctex (scripts/generate-icons.py materials); without them, plain dots.
 /// </summary>
 public static class PhaseDial
 {
     public const float Size = 128;
-    /// Just above the energy orb, as the base game puts character counters there (2026-10-02: it floated under the
-    /// top bar). 1920x1080 layout; the HUD scales with the window.
-    public static readonly Vector2 Position = new(100, 640);
+    /// Under the material button, top left below the relic row (2026-10-03, user). 1920x1080 layout; the HUD scales
+    /// with the window.
+    public static readonly Vector2 Position = new(102, 242);
     private static readonly AlchemyPhase[] Order = [AlchemyPhase.Earth, AlchemyPhase.Water, AlchemyPhase.Fire, AlchemyPhase.Air];
     private static Control? dial;
     private static readonly Dictionary<AlchemyPhase, TextureRect> marks = [];

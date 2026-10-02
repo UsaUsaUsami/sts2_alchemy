@@ -22,11 +22,13 @@ public sealed class AlchemistCharacter : PlaceholderCharacterModel
     public override CardPoolModel CardPool => ModelDb.CardPool<AlchemyCardPool>();
     public override RelicPoolModel RelicPool => ModelDb.RelicPool<AlchemyRelicPool>();
     public override PotionPoolModel PotionPool => ModelDb.PotionPool<AlchemyPotionPool>();
+    // 2026-10-03 (user): Strike 5 and Defend 5, as the base game's characters start (was 3 and 3), plus the three
+    // starter cards: 13 cards.
     public override IEnumerable<CardModel> StartingDeck => [
+        ModelDb.Card<StrikeAlchemist>(), ModelDb.Card<StrikeAlchemist>(), ModelDb.Card<StrikeAlchemist>(),
         ModelDb.Card<StrikeAlchemist>(), ModelDb.Card<StrikeAlchemist>(),
-        ModelDb.Card<StrikeAlchemist>(),
+        ModelDb.Card<DefendAlchemist>(), ModelDb.Card<DefendAlchemist>(), ModelDb.Card<DefendAlchemist>(),
         ModelDb.Card<DefendAlchemist>(), ModelDb.Card<DefendAlchemist>(),
-        ModelDb.Card<DefendAlchemist>(),
         ModelDb.Card<EarthenGuard>(), ModelDb.Card<SoothingMist>(), ModelDb.Card<InstantAlchemy>()];
     public override IReadOnlyList<RelicModel> StartingRelics => [ModelDb.Relic<MaterialBox>()];
     // 2026-09-30: the alchemist's own look (CharacterArt). Rest site and merchant: RestMerchantArt (2026-10-01).

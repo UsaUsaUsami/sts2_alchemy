@@ -49,7 +49,7 @@ public static class WorkshopUi
     private static readonly int[] infuseInputs = new int[4];
     private static readonly List<CardModel> previewCards = [];
     public static bool IsOpen => GodotObject.IsInstanceValid(overlay);
-    public static readonly Vector2 LauncherPosition = new(24, 545);
+    public static readonly Vector2 LauncherPosition = new(16, 158);
     public static bool IsBusy => busy;
 
     public static MaterialBox? CurrentBox()
@@ -82,8 +82,7 @@ public static class WorkshopUi
                 busy = false;
                 workshop = false;
             }
-            // Left of the battlefield, above the dial and the energy orb (2026-10-02: at the top it covered the
-            // relic row).
+            // Top left, just under the relic row (2026-10-03, user); the phase dial sits under it in combat.
             launcher = new Button { Position = LauncherPosition, Size = new(300, 76) };
             launcher.AddThemeFontSizeOverride("font_size", 19);
             launcher.Pressed += () => { if (!IsOpen) { mapWorkshop=false; Open(); } };
