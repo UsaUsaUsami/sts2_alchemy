@@ -488,8 +488,7 @@ public static class Smoke
                 $"water to fire adds the fire transition's damage (dealt {hpBefore-foe.CurrentHp})");
             // 2026-10-01: the phase dial follows the current phase in combat, with the four marks loaded.
             await Task.Delay(100);
-            Check(PhaseDial.Node is { Visible: true } && PhaseDial.Shown==AlchemyPhase.Fire
-                && PhaseDial.Node.GetChildren().OfType<TextureRect>().Count(t=>t.Texture is not null)==4,
+            Check(PhaseDial.Node is { Visible: true } && PhaseDial.Shown==AlchemyPhase.Fire,
                 $"the phase dial lights the current phase (shown {PhaseDial.Shown}, dial {(PhaseDial.Node is null ? "missing" : "present")})");
             // 2026-10-03: the middle counts this turn's transitions in Roman numerals.
             int turnShifts=box.Combat!.Phases.TransitionsThisTurn;
@@ -832,13 +831,13 @@ public static class Smoke
             Check((player.Creature.GetPower<WeakPower>()?.Amount ?? 0)==foeWeakBefore && player.Creature.GetPower<VulnerablePower>()?.Amount==foeVulnerable
                 && foe.GetPower<WeakPower>()?.Amount==2 && foe.GetPower<VulnerablePower>() is null && box.Inventory.Counts[0]==0,
                 $"spending a material swaps the listed debuffs (enemy weak was {foeWeakBefore})");
-            // With a receipt still pending nothing can be spent, so the material screen is not offered at all.
+            // 2026-10-03: a waiting receipt no longer blocks spending, so the material screen is offered as usual.
             box.Inventory.Counts=[1,0,0,0];
             box.Inventory.Pending.Add(new Harvest("smoke-pending",MaterialChoice.Normal(Alchemy.Core.Material.Herb)));
             var unsettledPicker=new PickSelector(_=>true);
             using(CardSelectCmd.UseSelector(unsettledPicker))
                 await Play(cs.CreateCard<DebuffTransferCard>(player),foe);
-            Check(unsettledPicker.Offered.Count==0 && box.Inventory.Counts[0]==1,"with a pending receipt the shift copies without asking for a material");
+            Check(unsettledPicker.Offered.Count>0 && box.Inventory.Counts[0]==0,"with a pending receipt the shift still offers and spends a material");
             box.Inventory.Pending.Clear(); box.Inventory.Counts=[0,0,0,0];
             foreach(var own in player.Creature.Powers.Where(x=>x.TypeForCurrentAmount==PowerType.Debuff).ToArray()) await PowerCmd.Remove(own);
             // F-1: self drain feeds your own homunculus, doubled.
@@ -857,12 +856,19 @@ public static class Smoke
             Check((foe.GetPower<LifeDrainPower>()?.Amount ?? 0)-streamDrainBefore==2+streamTransitions,
                 $"clear stream drains 2 plus 1 per transition ({streamTransitions} transitions)");
             await PowerCmd.Remove(foe.GetPower<LifeDrainPower>()!);
-            // F-2: count × 3 × kinds.
+            // F-2 (2026-10-03: multi-hit): one hit of 3 × kinds per material spent.
             box.Inventory.Counts=[2,1,0,0];
             foe.SetCurrentHpInternal(999);
             using(CardSelectCmd.UseSelector(new PickSelector(_=>true)))
                 await Play(cs.CreateCard<AlchAlkahest>(player),foe);
-            Check(999-foe.CurrentHp>=18 && box.Inventory.Counts.Sum()==0,$"alkahest pours three materials of two kinds into 3x3x2 (dealt {999-foe.CurrentHp})");
+            Check(999-foe.CurrentHp>=18 && box.Inventory.Counts.Sum()==0,$"alkahest pours three materials of two kinds into 3 hits of 3x2 (dealt {999-foe.CurrentHp})");
+            // A waiting overflow (full box) does not lock the material cards (2026-10-03, user).
+            box.Inventory.Counts=[AlchemyState.BaseCapacity,0,0,0];
+            box.Inventory.Grant("smoke-overflow",Alchemy.Core.Material.Herb);
+            var overflowCard=cs.CreateCard<AlchAlkahest>(player);
+            await CardPileCmd.AddGeneratedCardsToCombat([overflowCard],PileType.Hand,player);
+            Check(box.Inventory.Pending.Count==1 && overflowCard.CanPlay(),"material cards stay playable while an overflow waits");
+            box.Inventory.Pending.Clear(); box.Inventory.Counts=[0,0,0,0];
             // F-3: cost falls by the kinds held.
             box.Inventory.Counts=[1,1,1,0];
             var blade=cs.CreateCard<AirElementBlade>(player);

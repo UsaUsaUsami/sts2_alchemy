@@ -294,9 +294,13 @@ public sealed class AlchemyState
     }
     public int Count(MaterialChoice material) => material.Class == MaterialClass.Normal
         ? Counts[(int)material.NormalMaterial] : RareCounts[(int)material.RareMaterial];
+    /// Held materials can be spent by combat cards while a furnace overflow waits in Pending (2026-10-03, user: a
+    /// full box locked every material card for the rest of the fight). Pending stays a claim, not storage: spending
+    /// only frees room for it when it is resolved after combat. An open reward slot still blocks.
+    public bool CanSpendHeld => Offers.Count == 0;
     public bool TryConsume(Material material, int amount = 1)
     {
-        if (!Settled || amount < 1 || Counts[(int)material] < amount) return false;
+        if (!CanSpendHeld || amount < 1 || Counts[(int)material] < amount) return false;
         Counts[(int)material] -= amount; Revision++; return true;
     }
     private void Add(MaterialChoice material, int amount)

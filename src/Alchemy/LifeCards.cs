@@ -113,8 +113,8 @@ public sealed class DebuffTransferCard() : ElementCard(2,CardType.Skill,CardRari
     {
         var target=p.Target!;
         var mine=Owner.Creature.Powers.ToArray();
-        // Only offer the swap when a material can really be spent: an unresolved receipt blocks spending, and
-        // picking one only to get the copy would be misleading.
+        // Only offer the swap when a material can really be spent (an open reward slot blocks it; a waiting
+        // overflow does not, 2026-10-03).
         bool swap=HasNormalMaterial && await ChooseMaterial(c,ownedOnly:true,optional:true) is { } m && TrySpend(m);
         if(!swap)
         {

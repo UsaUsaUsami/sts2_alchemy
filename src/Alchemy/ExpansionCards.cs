@@ -48,13 +48,17 @@ public sealed class SelfCultivationPower : AlchemyPower
     }
 }
 
-/// <summary>F-2（仮名：アルカヘスト）. Pours up to ten materials into one hit that grows with count and variety.</summary>
+/// <summary>
+/// F-2（仮名：アルカヘスト）. Pours up to ten materials into the enemy. 2026-10-03 (user): a multi-hit attack, one hit
+/// per material spent, each hit PerMaterial × kinds spent (the same total as the old single hit; strength and the
+/// like now count once per hit).
+/// </summary>
 public sealed class AlchAlkahest() : ElementCard(2,CardType.Attack,CardRarity.Rare,TargetType.AnyEnemy,AlchemyPhase.Fire)
 {
     public const int MaxMaterials = 10;
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new DynamicVar("PerMaterial",3),new DynamicVar("MaxMaterials",MaxMaterials)];
     public override List<(string,string)> Localization=>new CardLoc("アルカヘスト",
-        "通常素材を1〜{MaxMaterials}個選んで消費する。消費した素材の数×{PerMaterial:diff()}×消費した素材の種類数のダメージを与える。",
+        "通常素材を1〜{MaxMaterials}個選んで消費する。{PerMaterial:diff()}×消費した素材の種類数のダメージを、消費した素材の数だけ与える。",
         ("selectionScreenPrompt","注ぎ込む素材を選択（最大10個）"));
     // design-axes 4.3 F-2 (未決, settled here): with no material the card cannot be played at all, rather than
     // spending two energy on nothing.
@@ -77,7 +81,7 @@ public sealed class AlchAlkahest() : ElementCard(2,CardType.Attack,CardRarity.Ra
         int total=0;
         foreach(var (m,count) in spent) if(box.Inventory.TryConsume(m,count)) total+=count;
         int kinds=spent.Count(x=>x.Count>0);
-        if(total>0) await Hit(c,p,total*DynamicVars["PerMaterial"].IntValue*kinds);
+        if(total>0) await Hit(c,p,DynamicVars["PerMaterial"].IntValue*kinds,hits:total);
     }
     protected override void OnUpgrade()=>DynamicVars["PerMaterial"].UpgradeValueBy(1);
 }

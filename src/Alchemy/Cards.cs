@@ -84,8 +84,8 @@ public abstract class AlchemyCard(int cost, CardType type, CardRarity rarity, Ta
     /// Checked inside OnPlay, before MaterialBox moves the phase to this card's element.
     internal bool WillTransition => PhaseRules.IsElement(Element) && PhaseRules.IsElement(CurrentPhase) && CurrentPhase != Element;
     internal bool InOwnPhase => PhaseRules.IsElement(Element) && CurrentPhase == Element;
-    protected bool HasNormalMaterial => Box?.Inventory is { Settled: true } inventory && inventory.Counts.Any(n => n > 0);
-    protected bool HasMaterial(Material m) => Box?.Inventory is { Settled: true } inventory && inventory.Counts[(int)m] > 0;
+    protected bool HasNormalMaterial => Box?.Inventory is { CanSpendHeld: true } inventory && inventory.Counts.Any(n => n > 0);
+    protected bool HasMaterial(Material m) => Box?.Inventory is { CanSpendHeld: true } inventory && inventory.Counts[(int)m] > 0;
     /// Spends one of the material the card names (design-axes 6.2). No selection screen: the kind is fixed.
     protected bool TrySpend(Material m) => Box?.Inventory.TryConsume(m) == true;
 

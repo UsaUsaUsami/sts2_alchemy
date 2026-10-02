@@ -181,6 +181,15 @@ for(int i=0;i<AlchemyState.BaseCapacity;i++) fullBox.Grant($"f{i}",Material.Iron
 fullBox.Offer("eliteFull",eliteRoll); fullBox.TakeOffer("eliteFull",eliteRoll[0]);
 Check(fullBox.Total==AlchemyState.BaseCapacity && fullBox.Pending.Count==1 && fullBox.Offers.Count==0,
     "a full box defers every unit of the doubled yield to the shared receipt path");
+// 2026-10-03: a waiting receipt does not lock combat spending; spending frees room the receipt then takes.
+var overflow=new AlchemyState();
+for(int i=0;i<AlchemyState.BaseCapacity;i++) overflow.Grant($"o{i}",Material.Iron);
+overflow.Grant("o-furnace",Material.Herb);
+Check(overflow.Pending.Count==1 && overflow.TryConsume(Material.Iron) && overflow.Total==AlchemyState.BaseCapacity-1 && overflow.Pending.Count==1,
+    "materials can be spent while an overflow waits, and the waiting unit stays a claim");
+overflow.Resolve(true);
+Check(overflow.Settled && overflow.Count(MaterialChoice.Normal(Material.Herb))==1 && overflow.Total==AlchemyState.BaseCapacity,
+    "the freed room takes the waiting unit once it is resolved");
 while (fullBox.Pending.Count>0) fullBox.Resolve(true,MaterialChoice.Normal(Material.Iron));
 Check(fullBox.Count(eliteRoll[0])==(eliteRoll[0]==MaterialChoice.Normal(Material.Iron)?AlchemyState.BaseCapacity:1) && fullBox.Settled,
     "deferred choice resolves by exchange, once per unit");

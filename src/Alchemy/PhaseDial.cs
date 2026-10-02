@@ -10,7 +10,7 @@ namespace Alchemy;
 /// order like a four-way cycle; in front of them the alchemist's face sigil (a large ring and triangle); in the middle
 /// the number of transitions this turn as a Roman numeral (0, I, II, III, ...). The current phase's orb glows, the
 /// others stay dark; the number pops when it goes up. Shown under the material strip in the alchemist's combats only.
-/// The orb marks are art/icons/phase_*.ctex (scripts/generate-icons.py); without them, plain orbs.
+/// Each orb carries a small face sigil (2026-10-03, user; the element marks before).
 /// </summary>
 public static class PhaseDial
 {
@@ -23,7 +23,6 @@ public static class PhaseDial
     private static readonly Color Gold = new("f0c860"), GoldDim = new("a89870"), Back = new(0.055f, 0.07f, 0.095f, 0.92f);
     private static Control? dial;
     private static Label? numeral;
-    private static readonly Dictionary<AlchemyPhase, TextureRect> marks = [];
     private static AlchemyPhase shown = AlchemyPhase.None;
     private static int shownCount = -1;
 
@@ -80,17 +79,6 @@ public static class PhaseDial
         if (phase == shown) return;
         shown = phase;
         dial.TooltipText = $"現在相：{MaterialBox.PhaseName(phase)}\nこのターンの相転移：{count}回";
-        foreach (var (p, mark) in marks)
-        {
-            bool on = p == phase;
-            mark.Modulate = on ? Colors.White : new Color(0.55f, 0.55f, 0.55f, 0.8f);
-            mark.Scale = Vector2.One;
-            if (on)
-            {
-                mark.Scale = new Vector2(1.45f, 1.45f);
-                mark.CreateTween().TweenProperty(mark, "scale", Vector2.One, 0.35).SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
-            }
-        }
         dial.QueueRedraw();
     }
 
@@ -104,31 +92,13 @@ public static class PhaseDial
 
     private static void Build(NRun run)
     {
-        marks.Clear();
         shown = AlchemyPhase.None;
         shownCount = -1;
         dial = new Control { Position = Position, Size = new Vector2(Size, Size), MouseFilter = Control.MouseFilterEnum.Pass, Name = "AlchemyPhaseDial" };
-        // The marks sit over the orbs; the sigil is drawn over both by a second canvas item in front.
+        // The orbs, then the large sigil drawn over them by a second canvas item in front.
         var under = new Control { MouseFilter = Control.MouseFilterEnum.Ignore, Size = dial.Size };
         under.Draw += () => PaintUnder(under);
         dial.AddChild(under);
-        const float markSize = 26;
-        for (int i = 0; i < Order.Length; i++)
-        {
-            var phase = Order[i];
-            var mark = new TextureRect
-            {
-                ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-                MouseFilter = Control.MouseFilterEnum.Ignore, Modulate = new Color(0.55f, 0.55f, 0.55f, 0.8f),
-            };
-            mark.Size = new Vector2(markSize, markSize);
-            mark.Position = OrbAt(i) - mark.Size / 2;
-            mark.PivotOffset = mark.Size / 2;
-            if (IconArt.Big("phase_" + phase.ToString().ToLowerInvariant()) is { } path)
-                mark.Texture = ResourceLoader.Load<Texture2D>(path);
-            dial.AddChild(mark);
-            marks[phase] = mark;
-        }
         var front = new Control { MouseFilter = Control.MouseFilterEnum.Ignore, Size = dial.Size };
         front.Draw += () => PaintFront(front);
         dial.AddChild(front);
@@ -175,7 +145,25 @@ public static class PhaseDial
                     c.DrawCircle(at, OrbRadius + k * 3.2f, new Color(colour, 0.06f + 0.02f * (6 - k)));
             c.DrawCircle(at, OrbRadius, on ? colour : colour.Darkened(0.55f));
             c.DrawArc(at, OrbRadius, 0, Mathf.Tau, 32, on ? Gold : new Color("6e5f3c"), 2f, true);
+            // In each orb the alchemist's face sigil (2026-10-03, user, in place of the element marks).
+            Sigil(c, at, OrbRadius - 5, on ? new Color("fff0b8") : new Color("c8b07a", 0.55f), on ? 1.8f : 1.4f);
         }
+    }
+
+    /// The face sigil from the key visual, small: ring, triangle, inner circle and dot.
+    private static void Sigil(Control c, Vector2 at, float r, Color colour, float width)
+    {
+        c.DrawArc(at, r, 0, Mathf.Tau, 32, colour, width, true);
+        var tri = new Vector2[4];
+        for (int k = 0; k < 3; k++)
+        {
+            float a = -Mathf.Pi / 2 + k * Mathf.Tau / 3;
+            tri[k] = at + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r * 0.86f;
+        }
+        tri[3] = tri[0];
+        c.DrawPolyline(tri, colour, width * 0.9f, true);
+        c.DrawArc(at, r * 0.36f, 0, Mathf.Tau, 24, colour, width * 0.8f, true);
+        c.DrawCircle(at, r * 0.12f, colour);
     }
 
     /// The face sigil in front: the large ring, the triangle through the ring, and the inner ring round the numeral.
