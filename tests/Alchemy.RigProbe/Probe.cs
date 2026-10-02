@@ -93,6 +93,44 @@ public static class RigProbe
                 DumpTree(visuals, 0);
                 await Capture(tree, viewport, body, "alchemist", ["idle_loop", "attack", "hurt", Alchemy.AlchemistRig.Available ? Alchemy.AlchemistRig.CastAnimation : Alchemy.NecroRig.CastAnimation, "die"]);
             }
+            else if (mode == "combat")
+            {
+                // A real alchemist run and battle (as the smoke loop starts one), the whole window captured once
+                // per phase: for the HUD layout and the phase effects (PhaseAura).
+                viewport.QueueFree();
+                visuals.QueueFree();
+                await MegaCrit.Sts2.Core.Assets.PreloadManager.LoadCommonAndMainMenuAssets();
+                MegaCrit.Sts2.Core.Saves.SaveManager.Instance.SetFtuesEnabled(false);
+                var player = MegaCrit.Sts2.Core.Entities.Players.Player.CreateForNewRun<Alchemy.AlchemistCharacter>(MegaCrit.Sts2.Core.Unlocks.UnlockState.all, 1);
+                var run = MegaCrit.Sts2.Core.Runs.RunState.CreateForNewRun([player], MegaCrit.Sts2.Core.Models.ActModel.GetDefaultList().Select(a => a.ToMutable()).ToList(), [], MegaCrit.Sts2.Core.Runs.GameMode.Standard, 0, "ALCHEMY_PROBE_01");
+                MegaCrit.Sts2.Core.Runs.RunManager.Instance.SetUpNewSingleplayer(run, false);
+                await (Task)AccessTools.Method(typeof(MegaCrit.Sts2.Core.Nodes.NGame), "StartRun").Invoke(MegaCrit.Sts2.Core.Nodes.NGame.Instance, [run])!;
+                await Frames(tree, 30);
+                await MegaCrit.Sts2.Core.Runs.RunManager.Instance.EnterRoomDebug(MegaCrit.Sts2.Core.Rooms.RoomType.Monster,
+                    model: MegaCrit.Sts2.Core.Models.ModelDb.Encounter<MegaCrit.Sts2.Core.Models.Encounters.BowlbugsWeak>().ToMutable(), showTransition: false);
+                var box = player.GetRelic<Alchemy.MaterialBox>()!;
+                for (int i = 0; i < 600 && (box.Combat is null || player.PlayerCombatState?.Hand.Cards.Count is not > 0); i++) await Frames(tree, 1);
+                await Frames(tree, 30);
+                // The main menu's early-access notice is still up in a fresh profile; take it down.
+                MegaCrit.Sts2.Core.Saves.SaveManager.Instance.SettingsSave.SeenEaDisclaimer = true;
+                foreach (var modal in tree.Root.FindChildren("*", "NEarlyAccessDisclaimer", true, false)) modal.QueueFree();
+                if (MegaCrit.Sts2.Core.Nodes.CommonUi.NModalContainer.Instance is { } modals)
+                    foreach (var child in modals.GetChildren()) child.QueueFree();
+                await Frames(tree, 60);
+                tree.Root.GetTexture().GetImage().SavePng($"{Out}/combat_none.png");
+                if (MegaCrit.Sts2.Core.Nodes.Rooms.NCombatRoom.Instance is { } combatRoom)
+                    foreach (var child in combatRoom.GetChildren())
+                        Log($"room child {child.GetIndex()} {child.GetClass()} {child.Name} {(child is CanvasItem ci ? ci.ZIndex.ToString() : "")}");
+                foreach (var phase in new[] { Alchemy.Core.AlchemyPhase.Earth, Alchemy.Core.AlchemyPhase.Water, Alchemy.Core.AlchemyPhase.Fire, Alchemy.Core.AlchemyPhase.Air })
+                {
+                    box.Combat!.Phases.Enter(phase);
+                    await Frames(tree, 70);
+                    var shot = tree.Root.GetTexture().GetImage();
+                    shot.SavePng($"{Out}/combat_{phase.ToString().ToLowerInvariant()}.png");
+                    shot.GetRegion(new Rect2I(250, 300, 500, 500)).SavePng($"{Out}/close_{phase.ToString().ToLowerInvariant()}.png");
+                    Log($"captured combat {phase}");
+                }
+            }
             else if (mode == "golem")
             {
                 // The golem as combat makes it (HomunculusPet), beside the alchemist for scale.

@@ -492,6 +492,10 @@ public static class Smoke
             Check(PhaseDial.Node is { Visible: true } && PhaseDial.Shown==AlchemyPhase.Fire
                 && PhaseDial.Node.GetChildren().OfType<TextureRect>().Count(t=>t.Texture is not null)==4,
                 $"the phase dial lights the current phase (shown {PhaseDial.Shown}, dial {(PhaseDial.Node is null ? "missing" : "present")})");
+            // 2026-10-02: the phase on the battlefield (PhaseAura): edge glow and the phase's particles.
+            await Task.Delay(300);
+            Check(PhaseAura.Shown==AlchemyPhase.Fire && PhaseAura.Vignette is { } auraEdge && auraEdge.GetParent()==NCombatRoom.Instance,
+                $"the battlefield shows the current phase's aura (shown {PhaseAura.Shown})");
             hpBefore=foe.CurrentHp;
             await Play(cs.CreateCard<FlashPowder>(player),null);
             Check(box.Combat.Phases.TransitionCount==2 && hpBefore-foe.CurrentHp==6,"a same-element card does not transition again");

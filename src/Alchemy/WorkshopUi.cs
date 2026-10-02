@@ -49,6 +49,7 @@ public static class WorkshopUi
     private static readonly int[] infuseInputs = new int[4];
     private static readonly List<CardModel> previewCards = [];
     public static bool IsOpen => GodotObject.IsInstanceValid(overlay);
+    public static readonly Vector2 LauncherPosition = new(24, 545);
     public static bool IsBusy => busy;
 
     public static MaterialBox? CurrentBox()
@@ -64,6 +65,7 @@ public static class WorkshopUi
     {
         // Every frame, so the dial lights the new phase as the transition happens.
         PhaseDial.Update(node, box);
+        PhaseAura.Update(box ?? CurrentBox());
         elapsed += delta;
         if (elapsed < 0.25) return;
         elapsed = 0;
@@ -75,8 +77,10 @@ public static class WorkshopUi
             overlay = null;
             busy = false;
             workshop = false;
-            launcher = new Button { Position = new(16, 125), Size = new(330, 76) };
-            launcher.AddThemeFontSizeOverride("font_size", 20);
+            // Left of the battlefield, above the dial and the energy orb (2026-10-02: at the top it covered the
+            // relic row).
+            launcher = new Button { Position = LauncherPosition, Size = new(300, 76) };
+            launcher.AddThemeFontSizeOverride("font_size", 19);
             launcher.Pressed += () => { if (!IsOpen) { mapWorkshop=false; Open(); } };
             node.AddChild(launcher);
         }
