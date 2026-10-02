@@ -131,6 +131,7 @@ public static class RigProbe
                     var shot = tree.Root.GetTexture().GetImage();
                     shot.SavePng($"{Out}/combat_{phase.ToString().ToLowerInvariant()}.png");
                     shot.GetRegion(new Rect2I(250, 300, 500, 500)).SavePng($"{Out}/close_{phase.ToString().ToLowerInvariant()}.png");
+                    shot.GetRegion(new Rect2I(60, 220, 260, 260)).SavePng($"{Out}/dial_{phase.ToString().ToLowerInvariant()}.png");
                     Log($"captured combat {phase}");
                 }
             }

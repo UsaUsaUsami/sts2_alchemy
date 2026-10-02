@@ -491,6 +491,11 @@ public static class Smoke
             Check(PhaseDial.Node is { Visible: true } && PhaseDial.Shown==AlchemyPhase.Fire
                 && PhaseDial.Node.GetChildren().OfType<TextureRect>().Count(t=>t.Texture is not null)==4,
                 $"the phase dial lights the current phase (shown {PhaseDial.Shown}, dial {(PhaseDial.Node is null ? "missing" : "present")})");
+            // 2026-10-03: the middle counts this turn's transitions in Roman numerals.
+            int turnShifts=box.Combat!.Phases.TransitionsThisTurn;
+            await Task.Delay(300);
+            Check(PhaseDial.Numeral==PhaseDial.Roman(turnShifts) && PhaseDial.Roman(3)=="III" && PhaseDial.Roman(0)=="0",
+                $"the dial shows this turn's transitions as a Roman numeral ({PhaseDial.Numeral} for {turnShifts})");
             // 2026-10-03: the materials always in sight under the material button (MaterialStrip): four normal cells,
             // and a second row only while a rare material is held.
             var strip=MaterialStrip.Node;
