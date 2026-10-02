@@ -69,14 +69,15 @@ SLOTS = [
     ("torso", "torso", "TORSO", 10, 690, 0, False, None),
     ("head", "head", "HOOD", 25, 1030, 0, False, None),
     ("arm_b", "arm_b", "UPPER_ARM", -125, 720, 10, True, None),
-    ("hand_b", "hand_b", "HAND_OPEN", None, None, None, True, None),
+    # Not mirrored: this is the character's right hand seen from outside, thumb forward (to the right).
+    ("hand_b", "hand_b", "HAND_OPEN", None, None, None, False, None),
     ("fore_b", "fore_b", "FOREARM", -160, 460, 5, True, None),
 ]
 
 # Hands are not placed by hand: each wrist goes a little inside its sleeve's opening (derive_hands), and the staff
 # through the fist's hole. None in a slot or bone is filled in there.
 HANDS = {"hand_b": "fore_b", "hand_f": "fore_f"}
-WRIST_INSET = 34      # how far the wrist sits inside the sleeve, along the sleeve
+WRIST_INSET = 55      # how far the wrist sits inside the sleeve, along the sleeve (34 left the fist outside the cuff)
 GRIP_HOLE = (62, 112)  # the gap through the fist in HAND_GRIP, picture pixels from its top left
 STAFF_ABOVE_GRIP = 235  # the staff's centre above the fist's hole
 LIMB_OVERLAP = 18  # how far an upper sleeve's top reaches up into the shoulder
@@ -149,8 +150,9 @@ ANIMATIONS = {
         arm_f=rot((0, 0), (0.3, 90), (0.75, 90), (1.0, 0)),
         fore_f=rot((0, 0), (0.3, -20), (0.75, -20), (1.0, 0)),
         staff=rot((0, 0), (0.3, -70), (0.75, -70), (1.0, 0)),
-        arm_b=rot((0, 0), (0.3, -60), (0.75, -60), (1.0, 0)),
-        fore_b=rot((0, 0), (0.3, -30), (0.75, -30), (1.0, 0)),
+        # The near arm opens out and down; held level, the hand read as turned the wrong way (Gemini, 2026-10-02).
+        arm_b=rot((0, 0), (0.3, -40), (0.75, -40), (1.0, 0)),
+        fore_b=rot((0, 0), (0.3, -10), (0.75, -10), (1.0, 0)),
         cape=rot((0, 0), (0.3, 10), (1.0, 0)),
     ),
     "hurt": bone_anim(
@@ -236,6 +238,18 @@ def hang(i, images, pivot, r, overlap):
     SLOTS[i] = (slot, bone, part, jx + dx, jy + dy, r, flip, tint)
 
 
+def opening(im):
+    """The middle of a bell sleeve's opening, in picture pixels: the rim is the lowest opaque pixel of each column in
+    the lower part of the picture; the opening's middle is halfway between the rim's two ends, at the rim's mean
+    height. (The lowest rows alone are only the rim's lowest corner on a slanted cuff: the hand hung below that
+    corner, 2026-10-02.)"""
+    alpha = np.asarray(im.getchannel("A")) > 128
+    h = alpha.shape[0]
+    bottoms = np.array([np.nonzero(col)[0].max() if col.any() else -1 for col in alpha.T])
+    rim = np.nonzero(bottoms > h * 0.6)[0]
+    return (rim.min() + rim.max()) / 2, bottoms[rim].mean()
+
+
 def derive(images):
     """Fills in the limbs from the bones: each sleeve hangs from its joint (upper arms turned from shoulder to
     elbow), each wrist sits inside its sleeve opening, the staff goes through the fist."""
@@ -250,9 +264,7 @@ def derive(images):
     for hand, sleeve in HANDS.items():
         si = index[sleeve]
         im = images[sleeve]
-        alpha = np.asarray(im.getchannel("A")) > 128
-        ys, xs = np.nonzero(alpha[-45:])
-        ox, oy = picture_point(si, images, xs.mean(), im.height - 45 + ys.mean())  # the opening's middle
+        ox, oy = picture_point(si, images, *opening(im))
         r = SLOTS[si][5]
         ux, uy = turn(0, 1, r)  # up the sleeve
         wx, wy = ox + ux * WRIST_INSET, oy + uy * WRIST_INSET
