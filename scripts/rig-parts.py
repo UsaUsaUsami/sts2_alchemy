@@ -42,6 +42,21 @@ PARTS = [
      "same gold sigil (triangle and circle) as the face."),
 ]
 
+# 2026-10-02: forearms with the hand already coming out of the cuff. Separate hands had to be fitted to the slanted
+# cuff by calculation and kept looking stuck on from outside (user, Codex); drawn as one piece there is no seam.
+FOREARMS = [
+    ("FOREARM_OPEN", "one wide bell sleeve of the robe, straight and vertical, elbow end at the top, the opening at the "
+     "bottom with two gold trim stripes at the cuff, charcoal outside and mustard lining inside, exactly like the "
+     "FOREARM in the attached parts sheet. A dark brown leather gloved RIGHT hand comes out from INSIDE the cuff "
+     "opening, relaxed and hanging down, back of the hand towards the viewer, thumb pointing to the RIGHT; the wrist "
+     "disappears into the dark inside of the sleeve, the front edge of the cuff overlaps the wrist."),
+    ("FOREARM_GRIP", "the same bell sleeve, straight and vertical, elbow end at the top. A dark brown leather gloved "
+     "LEFT hand comes out from INSIDE the cuff opening and is closed in a fist, palm side towards the viewer, fingers "
+     "curled round towards the viewer, thumb wrapped over the fingers; through the fist runs an empty round "
+     "vertical gap where a staff will pass. The wrist disappears into the dark inside of the sleeve, the front edge "
+     "of the cuff overlaps the wrist. No staff drawn."),
+]
+
 BRIEF = (
     "Create a CHARACTER PARTS SHEET for a 2D skeletal (cut-out) animation rig of the Alchemist, a playable character "
     "in a Slay the Spire 2 mod. The first attached image is the Alchemist's key visual: match its design, colours "
@@ -61,6 +76,10 @@ def arg(name, default=None):
 
 
 tag = arg("--tag", "v1")
+# --set forearms: only the FOREARMS above, with the first parts sheet as a reference so the style and scale match.
+if arg("--set") == "forearms":
+    PARTS = FOREARMS
+    REFS = REFS + [OUT / "parts-v1.png"]
 note = arg("--note", "")
 codex = shutil.which("codex") or shutil.which("codex.cmd")
 if not codex:

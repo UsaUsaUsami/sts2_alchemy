@@ -82,8 +82,8 @@
   {
    "name": "hand_b",
    "parent": "fore_b",
-   "x": 142.34,
-   "y": -1.3,
+   "x": 197.2,
+   "y": 1.0,
    "rotation": 0,
    "length": 60
   },
@@ -106,16 +106,16 @@
   {
    "name": "hand_f",
    "parent": "fore_f",
-   "x": 139.95,
-   "y": 26.0,
+   "x": 260.33,
+   "y": 1.32,
    "rotation": 0,
    "length": 60
   },
   {
    "name": "staff",
    "parent": "hand_f",
-   "x": 104.0,
-   "y": 5.5,
+   "x": 0.0,
+   "y": 0.0,
    "rotation": 140,
    "length": 60
   },
@@ -164,11 +164,6 @@
    "attachment": "staff"
   },
   {
-   "name": "hand_f",
-   "bone": "hand_f",
-   "attachment": "hand_f"
-  },
-  {
    "name": "arm_f",
    "bone": "arm_f",
    "attachment": "arm_f"
@@ -209,11 +204,6 @@
    "attachment": "arm_b"
   },
   {
-   "name": "hand_b",
-   "bone": "hand_b",
-   "attachment": "hand_b"
-  },
-  {
    "name": "fore_b",
    "bone": "fore_b",
    "attachment": "fore_b"
@@ -241,31 +231,22 @@
       "height": 958
      }
     },
-    "hand_f": {
-     "hand_f": {
-      "x": 76.0,
-      "y": 5.5,
-      "rotation": 90,
-      "width": 124,
-      "height": 168
-     }
-    },
     "arm_f": {
      "arm_f": {
       "x": 115.5,
-      "y": 0.49,
+      "y": 0.99,
       "rotation": 90.49,
-      "width": 130,
+      "width": 104,
       "height": 283
      }
     },
     "fore_f": {
      "fore_f": {
-      "x": 85.5,
-      "y": 26.5,
+      "x": 136.5,
+      "y": -0.0,
       "rotation": 90,
-      "width": 228,
-      "height": 277
+      "width": 179,
+      "height": 379
      }
     },
     "foot_f": {
@@ -315,29 +296,20 @@
     },
     "arm_b": {
      "arm_b": {
-      "x": 115.51,
-      "y": 0.51,
+      "x": 115.5,
+      "y": 0.01,
       "rotation": 89.51,
-      "width": 130,
+      "width": 104,
       "height": 283
-     }
-    },
-    "hand_b": {
-     "hand_b": {
-      "x": 114.07,
-      "y": 29.76,
-      "rotation": 100,
-      "width": 136,
-      "height": 251
      }
     },
     "fore_b": {
      "fore_b": {
-      "x": 88.63,
-      "y": -10.27,
-      "rotation": 100,
-      "width": 228,
-      "height": 277
+      "x": 155.5,
+      "y": 1.0,
+      "rotation": 90,
+      "width": 180,
+      "height": 417
      }
     }
    }

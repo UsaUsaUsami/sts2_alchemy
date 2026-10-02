@@ -17,6 +17,7 @@ import numpy as np
 from pathlib import Path
 
 from PIL import Image, ImageChops, ImageOps
+from scipy import ndimage
 
 ROOT = Path(__file__).resolve().parent.parent
 DIR = ROOT / "assets/art/character/rig/alchemist"
@@ -57,9 +58,9 @@ FAR = "a8a8b0"
 SLOTS = [
     ("cape", "cape", "CAPE", -150, 560, 0, False, None),
     ("staff", "staff", "STAFF", None, None, 0, False, None),
-    ("hand_f", "hand_f", "HAND_GRIP", None, None, None, False, FAR),
-    ("arm_f", "arm_f", "UPPER_ARM", 130, 720, -10, False, FAR),
-    ("fore_f", "fore_f", "FOREARM", 245, 505, 40, False, FAR),
+    ("arm_f", "arm_f", "UPPER_ARM", None, None, None, False, FAR),
+    # The forearms carry their hands (rig-parts.py --set forearms): the fist with the staff through its hole.
+    ("fore_f", "fore_f", "FOREARM_GRIP", None, None, None, False, FAR),
     ("foot_f", "foot_f", "BOOT", 95, 108, 0, False, FAR),
     ("foot_b", "foot_b", "BOOT", -40, 112, 0, False, None),
     # The boots stay behind the robe: only the shoes show under the hem.
@@ -68,24 +69,28 @@ SLOTS = [
     # the hole showed). Its gold top band is trimmed (TRIM) so the shoulder does not read as a seam.
     ("torso", "torso", "TORSO", 10, 690, 0, False, None),
     ("head", "head", "HOOD", 25, 1030, 0, False, None),
-    ("arm_b", "arm_b", "UPPER_ARM", -125, 720, 10, True, None),
-    # Not mirrored: this is the character's right hand seen from outside, thumb forward (to the right).
-    ("hand_b", "hand_b", "HAND_OPEN", None, None, None, False, None),
-    ("fore_b", "fore_b", "FOREARM", -160, 460, 5, True, None),
+    ("arm_b", "arm_b", "UPPER_ARM", None, None, None, True, None),
+    # The right hand seen from outside, thumb forward (to the right), coming out of the cuff.
+    ("fore_b", "fore_b", "FOREARM_OPEN", None, None, None, False, None),
 ]
 
-# Hands are not placed by hand: each wrist goes a little inside its sleeve's opening (derive_hands), and the staff
-# through the fist's hole. None in a slot or bone is filled in there.
-HANDS = {"hand_b": "fore_b", "hand_f": "fore_f"}
-WRIST_INSET = 55      # how far the wrist sits inside the sleeve, along the sleeve (34 left the fist outside the cuff)
-GRIP_HOLE = (62, 112)  # the gap through the fist in HAND_GRIP, picture pixels from its top left
+# The limbs are not placed by hand: each sleeve hangs from its joint (derive), turned along its bone; the staff goes
+# through the fist's hole. None in a slot is filled in there.
+# 2026-10-02: hands used to be separate parts fitted into the slanted cuffs by calculation; they kept looking stuck on
+# from outside the sleeve (user, Codex), so the forearms are now drawn with the hand coming out of the cuff.
 STAFF_ABOVE_GRIP = 235  # the staff's centre above the fist's hole
 LIMB_OVERLAP = 18  # how far an upper sleeve's top reaches up into the shoulder
 # The forearm reaches deeper: its top is narrower than the upper sleeve's cut end, which showed at a straightened
 # elbow as a gap (rig-probe at 2x and Gemini, 2026-10-02).
 ELBOW_OVERLAP = 45
 # The sleeve parts were drawn with a gold band at the top; at the shoulder and elbow it read as a seam. Cut off.
-TRIM = {"FOREARM": 26, "UPPER_ARM": 22}
+TRIM = {"UPPER_ARM": 22}
+# The upper sleeve is narrowed to the forearms' top (drawn separately, about 87 px wide against its 110): at a
+# straightened elbow the joint pinched in (Codex, 2026-10-02).
+WIDTH = {"UPPER_ARM": 0.8}
+# The forearms' top fades in over these many pixels, so their outline does not draw a line across the upper sleeve
+# at the elbow (it lies inside ELBOW_OVERLAP, over the upper sleeve; Codex, 2026-10-02).
+FEATHER = {"FOREARM_OPEN": 28, "FOREARM_GRIP": 28}
 
 
 def key(t, **v):
@@ -223,7 +228,7 @@ def picture_point(slot_index, images, px, py):
 
 def top_centre(im, row=8):
     """The middle of the picture's opaque pixels on a row near its top: where the limb joins its parent."""
-    xs = np.nonzero(np.asarray(im.getchannel("A"))[row] > 128)[0]
+    xs = np.nonzero(np.asarray(im.getchannel("A"))[row] > 8)[0]  # > 8: the forearms' top is faded (FEATHER)
     return xs.mean(), row
 
 
@@ -238,21 +243,16 @@ def hang(i, images, pivot, r, overlap):
     SLOTS[i] = (slot, bone, part, jx + dx, jy + dy, r, flip, tint)
 
 
-def opening(im):
-    """The middle of a bell sleeve's opening, in picture pixels: the rim is the lowest opaque pixel of each column in
-    the lower part of the picture; the opening's middle is halfway between the rim's two ends, at the rim's mean
-    height. (The lowest rows alone are only the rim's lowest corner on a slanted cuff: the hand hung below that
-    corner, 2026-10-02.)"""
+def fist_hole(im):
+    """The middle of the see-through gap enclosed by the fist (where the staff passes), in picture pixels."""
     alpha = np.asarray(im.getchannel("A")) > 128
-    h = alpha.shape[0]
-    bottoms = np.array([np.nonzero(col)[0].max() if col.any() else -1 for col in alpha.T])
-    rim = np.nonzero(bottoms > h * 0.6)[0]
-    return (rim.min() + rim.max()) / 2, bottoms[rim].mean()
+    ys, xs = np.nonzero(ndimage.binary_fill_holes(alpha) & ~alpha)
+    return xs.mean(), ys.mean()
 
 
 def derive(images):
-    """Fills in the limbs from the bones: each sleeve hangs from its joint (upper arms turned from shoulder to
-    elbow), each wrist sits inside its sleeve opening, the staff goes through the fist."""
+    """Fills in the arms from the bones: each sleeve hangs from its joint, turned along its bone (upper arms from
+    shoulder to elbow), and the staff goes through the fist."""
     index = {s[0]: i for i, s in enumerate(SLOTS)}
     for upper, lower in (("arm_b", "fore_b"), ("arm_f", "fore_f")):
         sx, sy = BONES[upper][1:3]
@@ -260,27 +260,19 @@ def derive(images):
         # The picture's down (0, -1) turned by r points from shoulder to elbow: (sin r, -cos r).
         r = math.degrees(math.atan2(ex - sx, -(ey - sy)))
         hang(index[upper], images, (sx, sy), r, LIMB_OVERLAP)
-        hang(index[lower], images, (ex, ey), SLOTS[index[lower]][5], ELBOW_OVERLAP)
-    for hand, sleeve in HANDS.items():
-        si = index[sleeve]
+        hang(index[lower], images, (ex, ey), BONES[lower][3] + 90, ELBOW_OVERLAP)
+    for hand, sleeve in (("hand_b", "fore_b"), ("hand_f", "fore_f")):
         im = images[sleeve]
-        ox, oy = picture_point(si, images, *opening(im))
-        r = SLOTS[si][5]
-        ux, uy = turn(0, 1, r)  # up the sleeve
-        wx, wy = ox + ux * WRIST_INSET, oy + uy * WRIST_INSET
-        hi = index[hand]
-        slot, bone, part, _, _, _, flip, tint = SLOTS[hi]
-        him = images[hand]
-        top = np.nonzero(np.asarray(him.getchannel("A"))[8] > 128)[0]
-        dx, dy = turn(him.width / 2 - top.mean(), -(him.height / 2 - 8), r)
-        SLOTS[hi] = (slot, bone, part, wx + dx, wy + dy, r, flip, tint)
+        # The hand bones sit at the wrist (the cuff, about where the sleeve's lower third starts); the staff hangs
+        # from the fist's hole.
+        point = fist_hole(im) if hand == "hand_f" else (im.width / 2, im.height * 0.6)
+        wx, wy = picture_point(index[sleeve], images, *point)
         parent, _, _, angle = BONES[hand]
         BONES[hand] = (parent, wx, wy, angle)
-        if hand == "hand_f":
-            gx, gy = picture_point(hi, images, *GRIP_HOLE)
-            BONES["staff"] = ("hand_f", gx, gy, 90)
-            st = index["staff"]
-            SLOTS[st] = SLOTS[st][:3] + (gx, gy + STAFF_ABOVE_GRIP) + SLOTS[st][5:]
+    gx, gy = BONES["hand_f"][1:3]
+    BONES["staff"] = ("hand_f", gx, gy, 90)
+    st = index["staff"]
+    SLOTS[st] = SLOTS[st][:3] + (gx, gy + STAFF_ABOVE_GRIP) + SLOTS[st][5:]
 
 
 def main():
@@ -289,6 +281,13 @@ def main():
         im = Image.open(PARTS / f"{part}.png").convert("RGBA")
         if part in TRIM:
             im = im.crop((0, TRIM[part], im.width, im.height))
+        if part in WIDTH:
+            im = im.resize((round(im.width * WIDTH[part]), im.height), Image.LANCZOS)
+        if part in FEATHER:
+            a = np.asarray(im).astype(np.float32)
+            ramp = np.clip(np.arange(im.height) / FEATHER[part], 0, 1)
+            a[..., 3] *= ramp[:, None]
+            im = Image.fromarray(a.astype(np.uint8), "RGBA")
         if flip:
             im = ImageOps.mirror(im)
         if tint:
