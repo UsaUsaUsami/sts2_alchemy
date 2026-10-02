@@ -6,9 +6,9 @@ bounds:130,2,363,757
 staff
 bounds:2,2,126,958
 arm_f
-bounds:1867,2,104,283
+bounds:1873,2,104,283
 fore_f
-bounds:1398,2,179,379
+bounds:1398,2,185,378
 foot_f
 bounds:108,962,257,219
 foot_b
@@ -18,7 +18,7 @@ bounds:495,2,411,578
 torso
 bounds:908,2,306,556
 head
-bounds:1579,2,286,293
+bounds:1585,2,286,293
 arm_b
 bounds:2,962,104,283
 fore_b

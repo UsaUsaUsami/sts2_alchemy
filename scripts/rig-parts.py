@@ -57,6 +57,20 @@ FOREARMS = [
      "of the cuff overlaps the wrist. No staff drawn."),
 ]
 
+# 2026-10-02: the first FOREARM_GRIP read as a right hand making an OK sign with the staff through a hole facing the
+# viewer (user). Redrawn as a left fist closed round a vertical pole that is not drawn; the staff is a separate part
+# drawn behind the fist, so it shows above and below the fingers.
+GRIP = [
+    ("FOREARM_GRIP", "the same wide bell sleeve as the FOREARM parts in the attached sheets, straight and vertical, "
+     "elbow end at the top, gold trim stripes at the cuff, mustard lining. Out of the INSIDE of the cuff comes a dark "
+     "brown leather gloved LEFT hand clenched in a fist around a VERTICAL round pole about as thick as a finger. The "
+     "pole is NOT drawn. Seen from the palm side: the four curled fingers lie horizontally across the front of the "
+     "(invisible) pole, one above the other, their middle knuckles towards the viewer; the thumb comes round from the "
+     "LEFT and rests over the index finger at the top. The top and bottom of the fist curve round where the pole "
+     "enters and leaves, leaving a small notch of background above and below the fingers where the pole would be. "
+     "The wrist disappears into the dark inside of the sleeve."),
+]
+
 BRIEF = (
     "Create a CHARACTER PARTS SHEET for a 2D skeletal (cut-out) animation rig of the Alchemist, a playable character "
     "in a Slay the Spire 2 mod. The first attached image is the Alchemist's key visual: match its design, colours "
@@ -80,6 +94,9 @@ tag = arg("--tag", "v1")
 if arg("--set") == "forearms":
     PARTS = FOREARMS
     REFS = REFS + [OUT / "parts-v1.png"]
+elif arg("--set") == "grip":
+    PARTS = GRIP
+    REFS = REFS + [OUT / "parts-v1.png", OUT / "parts-forearms-v1.png"]
 note = arg("--note", "")
 codex = shutil.which("codex") or shutil.which("codex.cmd")
 if not codex:

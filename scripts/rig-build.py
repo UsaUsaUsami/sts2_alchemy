@@ -39,8 +39,10 @@ BONES = {
     "fore_b": ("arm_b", -150, 590, -95),
     "hand_b": ("fore_b", None, None, -95),
     "arm_f": ("torso", 105, 860, -80),
-    "fore_f": ("arm_f", 155, 590, -50),
-    "hand_f": ("fore_f", None, None, -50),
+    # The staff arm's forearm hangs nearly straight (-75) so the fist, closed round the upright staff, is not tilted
+    # far off it.
+    "fore_f": ("arm_f", 155, 590, -75),
+    "hand_f": ("fore_f", None, None, -75),
     "staff": ("hand_f", None, None, 90),
     # The legs hang from the root, not the hip: when the body sinks (death) the shoes stay on the ground.
     "leg_b": ("root", -60, 600, -90),
@@ -59,7 +61,7 @@ SLOTS = [
     ("cape", "cape", "CAPE", -150, 560, 0, False, None),
     ("staff", "staff", "STAFF", None, None, 0, False, None),
     ("arm_f", "arm_f", "UPPER_ARM", None, None, None, False, FAR),
-    # The forearms carry their hands (rig-parts.py --set forearms): the fist with the staff through its hole.
+    # The forearms carry their hands (rig-parts.py --set forearms / --set grip): the left fist closed round the staff.
     ("fore_f", "fore_f", "FOREARM_GRIP", None, None, None, False, FAR),
     ("foot_f", "foot_f", "BOOT", 95, 108, 0, False, FAR),
     ("foot_b", "foot_b", "BOOT", -40, 112, 0, False, None),
@@ -130,8 +132,8 @@ ANIMATIONS = {
         fore_b=rot((0, 0), (T / 2, 4), (T, 0)),
     ),
     # Draw the staff back, then thrust it forward with a lunge, the sigil head pointing at the enemy.
-    # Keys add to the setup angles: arm_f is -80 in the setup pose, the forearm 30 more, the staff 140 more than the
-    # hand; so arm 75 puts the arm level (-5), forearm -25 level (0), staff -130 level (pointing at the enemy).
+    # Keys add to the setup angles: arm_f is -80 in the setup pose, the forearm -75, the staff 90; so arm 75 puts
+    # the arm and forearm about level, staff -165 lays it along the forearm, pointing at the enemy.
     # Moves across the floor go on the root (the legs hang from it); the hip only rises and sinks.
     "attack": bone_anim(
         root=move((0, 0, 0), (0.15, -40, 0), (0.3, 120, 0), (0.55, 120, 0), (0.85, 0, 0)),
@@ -139,8 +141,9 @@ ANIMATIONS = {
         torso=rot((0, 0), (0.15, 8), (0.3, -12), (0.55, -12), (0.85, 0)),
         head=rot((0, 0), (0.15, 5), (0.3, -6), (0.85, 0)),
         arm_f=rot((0, 0), (0.15, 30), (0.3, 75), (0.55, 75), (0.85, 0)),
-        fore_f=rot((0, 0), (0.15, 40), (0.3, -25), (0.55, -25), (0.85, 0)),
-        staff=rot((0, 0), (0.15, -20), (0.3, -130), (0.55, -130), (0.85, 0)),
+        # The staff lies along the forearm, as the fist holds it (forearm -75+30+40 = -5, staff 90+70-165 = -5).
+        fore_f=rot((0, 0), (0.15, 40), (0.3, 0), (0.55, 0), (0.85, 0)),
+        staff=rot((0, 0), (0.15, -165), (0.3, -165), (0.55, -165), (0.85, 0)),
         arm_b=rot((0, 0), (0.15, -20), (0.3, 30), (0.85, 0)),
         cape=rot((0, 0), (0.3, 18), (0.55, 10), (0.85, 0)),
         skirt=rot((0, 0), (0.3, 6), (0.85, 0)),
@@ -150,11 +153,12 @@ ANIMATIONS = {
         hip=move((0, 0, 0), (0.3, 0, 30), (0.75, 0, 30), (1.0, 0, 0)),
         torso=rot((0, 0), (0.3, 6), (0.75, 6), (1.0, 0)),
         head=rot((0, 0), (0.3, 12), (0.75, 12), (1.0, 0)),
-        # Hold the staff up in front: arm level forward (10), forearm a little up (20), staff upright (90).
-        # A raised forearm turned the bell sleeve's opening upwards like a cup (2026-10-02), so the arm stays level.
+        # Raise the staff forward and up: arm level (10), forearm up at 45 and the staff along it (the fist holds the
+        # staff along the forearm). Setup: forearm -75, staff 90. Straight up turned the bell sleeve's opening
+        # upwards like a cup (2026-10-02).
         arm_f=rot((0, 0), (0.3, 90), (0.75, 90), (1.0, 0)),
-        fore_f=rot((0, 0), (0.3, -20), (0.75, -20), (1.0, 0)),
-        staff=rot((0, 0), (0.3, -70), (0.75, -70), (1.0, 0)),
+        fore_f=rot((0, 0), (0.3, 30), (0.75, 30), (1.0, 0)),
+        staff=rot((0, 0), (0.3, -165), (0.75, -165), (1.0, 0)),
         # The near arm opens out and down; held level, the hand read as turned the wrong way (Gemini, 2026-10-02).
         arm_b=rot((0, 0), (0.3, -40), (0.75, -40), (1.0, 0)),
         fore_b=rot((0, 0), (0.3, -10), (0.75, -10), (1.0, 0)),
@@ -243,11 +247,14 @@ def hang(i, images, pivot, r, overlap):
     SLOTS[i] = (slot, bone, part, jx + dx, jy + dy, r, flip, tint)
 
 
-def fist_hole(im):
-    """The middle of the see-through gap enclosed by the fist (where the staff passes), in picture pixels."""
+def fist_centre(im):
+    """The middle of the fist, in picture pixels: the opaque pixels of the picture's lowest quarter (the fist hangs
+    below the cuff). The staff is drawn behind the forearm through this point, so it shows above and below the
+    fingers that close round it (the first grip had a hole facing the viewer, which read as an OK sign)."""
     alpha = np.asarray(im.getchannel("A")) > 128
-    ys, xs = np.nonzero(ndimage.binary_fill_holes(alpha) & ~alpha)
-    return xs.mean(), ys.mean()
+    h = alpha.shape[0]
+    ys, xs = np.nonzero(alpha[int(h * 0.75):])
+    return xs.mean(), int(h * 0.75) + ys.mean()
 
 
 def derive(images):
@@ -265,14 +272,16 @@ def derive(images):
         im = images[sleeve]
         # The hand bones sit at the wrist (the cuff, about where the sleeve's lower third starts); the staff hangs
         # from the fist's hole.
-        point = fist_hole(im) if hand == "hand_f" else (im.width / 2, im.height * 0.6)
+        point = fist_centre(im) if hand == "hand_f" else (im.width / 2, im.height * 0.6)
         wx, wy = picture_point(index[sleeve], images, *point)
         parent, _, _, angle = BONES[hand]
         BONES[hand] = (parent, wx, wy, angle)
+    # The staff stands upright through the fist. (Laid along the fist it leaned back behind the body; with the
+    # forearm nearly straight the fist is only 15 degrees off the staff.)
     gx, gy = BONES["hand_f"][1:3]
     BONES["staff"] = ("hand_f", gx, gy, 90)
     st = index["staff"]
-    SLOTS[st] = SLOTS[st][:3] + (gx, gy + STAFF_ABOVE_GRIP) + SLOTS[st][5:]
+    SLOTS[st] = SLOTS[st][:3] + (gx, gy + STAFF_ABOVE_GRIP, 0) + SLOTS[st][6:]
 
 
 def main():
