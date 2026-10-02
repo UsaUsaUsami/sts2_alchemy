@@ -491,6 +491,13 @@ public static class Smoke
             Check(PhaseDial.Node is { Visible: true } && PhaseDial.Shown==AlchemyPhase.Fire
                 && PhaseDial.Node.GetChildren().OfType<TextureRect>().Count(t=>t.Texture is not null)==4,
                 $"the phase dial lights the current phase (shown {PhaseDial.Shown}, dial {(PhaseDial.Node is null ? "missing" : "present")})");
+            // 2026-10-03: the materials always in sight under the material button (MaterialStrip): four normal cells,
+            // and a second row only while a rare material is held.
+            var strip=MaterialStrip.Node;
+            int stripRows=strip?.GetChildren().OfType<Control>().Select(c=>c.Position.Y).Distinct().Count() ?? 0;
+            bool rareHeld=box.Inventory.RareCounts.Any(n=>n>0);
+            Check(strip is { Visible: true } && strip.GetChildren().OfType<Control>().Count(c=>c.Position.Y==0)==4 && stripRows==(rareHeld?2:1),
+                $"the material strip shows the four normal materials{(rareHeld?" and a rare row":"")} (rows {stripRows})");
             // 2026-10-02: the phase on the battlefield (PhaseAura): edge glow and the phase's particles.
             await Task.Delay(300);
             Check(PhaseAura.Shown==AlchemyPhase.Fire && PhaseAura.Vignette is { } auraEdge && auraEdge.GetParent()==NCombatRoom.Instance,

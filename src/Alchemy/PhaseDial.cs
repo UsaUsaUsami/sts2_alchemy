@@ -14,9 +14,9 @@ namespace Alchemy;
 public static class PhaseDial
 {
     public const float Size = 128;
-    /// Under the material button, top left below the relic row (2026-10-03, user). 1920x1080 layout; the HUD scales
-    /// with the window.
-    public static readonly Vector2 Position = new(102, 242);
+    /// Under the material button and its material strip (MaterialStrip), top left below the relic row (2026-10-03,
+    /// user); it moves down when the strip gains its rare row. 1920x1080 layout; the HUD scales with the window.
+    public static Vector2 Position => new(WorkshopUi.LauncherPosition.X + 86, MaterialStrip.Bottom + 8);
     private static readonly AlchemyPhase[] Order = [AlchemyPhase.Earth, AlchemyPhase.Water, AlchemyPhase.Fire, AlchemyPhase.Air];
     private static Control? dial;
     private static readonly Dictionary<AlchemyPhase, TextureRect> marks = [];
@@ -45,6 +45,7 @@ public static class PhaseDial
         }
         if (Node is null) Build(run);
         dial!.Visible = true;
+        dial.Position = Position;
         var phase = combat.Phases.Current;
         if (phase == shown) return;
         shown = phase;

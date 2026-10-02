@@ -121,6 +121,9 @@ public static class RigProbe
                 if (MegaCrit.Sts2.Core.Nodes.Rooms.NCombatRoom.Instance is { } combatRoom)
                     foreach (var child in combatRoom.GetChildren())
                         Log($"room child {child.GetIndex()} {child.GetClass()} {child.Name} {(child is CanvasItem ci ? ci.ZIndex.ToString() : "")}");
+                // Some materials, a rare one included, so the material strip shows both rows.
+                box.Inventory.Counts[0] = 2; box.Inventory.Counts[1] = 1; box.Inventory.Counts[3] = 3;
+                box.Inventory.RareCounts[0] = 1; box.Inventory.RareCounts[2] = 2;
                 foreach (var phase in new[] { Alchemy.Core.AlchemyPhase.Earth, Alchemy.Core.AlchemyPhase.Water, Alchemy.Core.AlchemyPhase.Fire, Alchemy.Core.AlchemyPhase.Air })
                 {
                     box.Combat!.Phases.Enter(phase);

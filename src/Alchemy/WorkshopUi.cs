@@ -64,6 +64,7 @@ public static class WorkshopUi
     public static void Tick(NRun node, double delta)
     {
         // Every frame, so the dial lights the new phase as the transition happens.
+        MaterialStrip.Update(node, box ?? CurrentBox(), launcher);
         PhaseDial.Update(node, box);
         PhaseAura.Update(box ?? CurrentBox());
         elapsed += delta;
