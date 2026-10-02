@@ -187,6 +187,9 @@ for(int i=0;i<AlchemyState.BaseCapacity;i++) overflow.Grant($"o{i}",Material.Iro
 overflow.Grant("o-furnace",Material.Herb);
 Check(overflow.Pending.Count==1 && overflow.TryConsume(Material.Iron) && overflow.Total==AlchemyState.BaseCapacity-1 && overflow.Pending.Count==1,
     "materials can be spent while an overflow waits, and the waiting unit stays a claim");
+overflow.RareCounts[0]=1;
+Check(overflow.TryConsumeRare(RareMaterial.Mercury) && overflow.RareCounts[0]==0 && !overflow.TryConsumeRare(RareMaterial.Mercury),
+    "a held rare material can be spent once in combat");
 overflow.Resolve(true);
 Check(overflow.Settled && overflow.Count(MaterialChoice.Normal(Material.Herb))==1 && overflow.Total==AlchemyState.BaseCapacity,
     "the freed room takes the waiting unit once it is resolved");

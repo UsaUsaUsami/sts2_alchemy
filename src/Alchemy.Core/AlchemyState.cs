@@ -303,6 +303,12 @@ public sealed class AlchemyState
         if (!CanSpendHeld || amount < 1 || Counts[(int)material] < amount) return false;
         Counts[(int)material] -= amount; Revision++; return true;
     }
+    /// Rare materials spent in combat (アルカヘスト, 2026-10-03): same rule as normal ones.
+    public bool TryConsumeRare(RareMaterial material, int amount = 1)
+    {
+        if (!CanSpendHeld || amount < 1 || RareCounts[(int)material] < amount) return false;
+        RareCounts[(int)material] -= amount; Revision++; return true;
+    }
     private void Add(MaterialChoice material, int amount)
     {
         if (material.Class == MaterialClass.Normal) Counts[(int)material.NormalMaterial] += amount;

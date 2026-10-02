@@ -862,6 +862,14 @@ public static class Smoke
             using(CardSelectCmd.UseSelector(new PickSelector(_=>true)))
                 await Play(cs.CreateCard<AlchAlkahest>(player),foe);
             Check(999-foe.CurrentHp>=18 && box.Inventory.Counts.Sum()==0,$"alkahest pours three materials of two kinds into 3 hits of 3x2 (dealt {999-foe.CurrentHp})");
+            // Rare materials count too, each rare kind as a kind (2026-10-03, user): 1 iron + 1 mercury = 2 hits of 3x2.
+            box.Inventory.Counts=[1,0,0,0]; var rareBeforeAlk=box.Inventory.RareCounts.ToArray(); box.Inventory.RareCounts=[1,0,0];
+            foe.SetCurrentHpInternal(999);
+            using(CardSelectCmd.UseSelector(new PickSelector(_=>true)))
+                await Play(cs.CreateCard<AlchAlkahest>(player),foe);
+            Check(999-foe.CurrentHp>=12 && box.Inventory.Counts.Sum()==0 && box.Inventory.RareCounts.Sum()==0,
+                $"alkahest takes rare materials as their own kind (dealt {999-foe.CurrentHp})");
+            box.Inventory.RareCounts=rareBeforeAlk;
             // A waiting overflow (full box) does not lock the material cards (2026-10-03, user).
             box.Inventory.Counts=[AlchemyState.BaseCapacity,0,0,0];
             box.Inventory.Grant("smoke-overflow",Alchemy.Core.Material.Herb);

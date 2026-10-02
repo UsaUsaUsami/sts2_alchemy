@@ -51,36 +51,44 @@ public sealed class SelfCultivationPower : AlchemyPower
 /// <summary>
 /// F-2（仮名：アルカヘスト）. Pours up to ten materials into the enemy. 2026-10-03 (user): a multi-hit attack, one hit
 /// per material spent, each hit PerMaterial × kinds spent (the same total as the old single hit; strength and the
-/// like now count once per hit).
+/// like now count once per hit). Rare materials may be poured in too (user, same day: holding them is an edge);
+/// each rare kind counts as a kind of its own, so the kinds go up to seven.
 /// </summary>
 public sealed class AlchAlkahest() : ElementCard(2,CardType.Attack,CardRarity.Rare,TargetType.AnyEnemy,AlchemyPhase.Fire)
 {
     public const int MaxMaterials = 10;
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new DynamicVar("PerMaterial",3),new DynamicVar("MaxMaterials",MaxMaterials)];
     public override List<(string,string)> Localization=>new CardLoc("アルカヘスト",
-        "通常素材を1〜{MaxMaterials}個選んで消費する。{PerMaterial:diff()}×消費した素材の種類数のダメージを、消費した素材の数だけ与える。",
+        "素材（希少素材も可）を1〜{MaxMaterials}個選んで消費する。{PerMaterial:diff()}×消費した素材の種類数のダメージを、消費した素材の数だけ与える。",
         ("selectionScreenPrompt","注ぎ込む素材を選択（最大10個）"));
     // design-axes 4.3 F-2 (未決, settled here): with no material the card cannot be played at all, rather than
     // spending two energy on nothing.
-    protected override bool IsPlayable=>HasNormalMaterial;
+    protected override bool IsPlayable=>HasNormalMaterial || Box?.Inventory is { CanSpendHeld: true } inv && inv.RareCounts.Any(n=>n>0);
     protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p)
     {
         if(Box is not { } box) return;
-        List<(Material Material,CardModel Card)> units=[];
-        foreach(var m in Enum.GetValues<Material>())
-            for(int i=0;i<Math.Min(box.Inventory.Counts[(int)m],MaxMaterials);i++)
+        List<(MaterialChoice Material,CardModel Card)> units=[];
+        void Offer(MaterialChoice m,int held,CardModel canonical)
+        {
+            for(int i=0;i<Math.Min(held,MaxMaterials);i++)
             {
-                var unit=MaterialCards.Canonical(m).ToMutable(); unit.Owner=Owner; unit.AfterCreated();
+                var unit=canonical.ToMutable(); unit.Owner=Owner; unit.AfterCreated();
                 units.Add((m,unit));
             }
+        }
+        foreach(var m in Enum.GetValues<Material>()) Offer(MaterialChoice.Normal(m),box.Inventory.Counts[(int)m],MaterialCards.Canonical(m));
+        foreach(var r in Enum.GetValues<RareMaterial>()) Offer(MaterialChoice.Rare(r),box.Inventory.RareCounts[(int)r],MaterialCards.Canonical(r));
         if(units.Count==0) return;
         var chosen=(await CardSelectCmd.FromSimpleGrid(c,units.Select(u=>u.Card).ToList(),Owner,
             new CardSelectorPrefs(SelectionScreenPrompt,1,Math.Min(MaxMaterials,units.Count)))).ToHashSet();
         foreach(var u in units) u.Card.Owner=null!;
         var spent=units.Where(u=>chosen.Contains(u.Card)).GroupBy(u=>u.Material).Select(g=>(g.Key,Count:g.Count())).ToArray();
-        int total=0;
-        foreach(var (m,count) in spent) if(box.Inventory.TryConsume(m,count)) total+=count;
-        int kinds=spent.Count(x=>x.Count>0);
+        int total=0,kinds=0;
+        foreach(var (m,count) in spent)
+        {
+            bool ok=m.Class==MaterialClass.Normal ? box.Inventory.TryConsume(m.NormalMaterial,count) : box.Inventory.TryConsumeRare(m.RareMaterial,count);
+            if(ok){ total+=count; kinds++; }
+        }
         if(total>0) await Hit(c,p,DynamicVars["PerMaterial"].IntValue*kinds,hits:total);
     }
     protected override void OnUpgrade()=>DynamicVars["PerMaterial"].UpgradeValueBy(1);
