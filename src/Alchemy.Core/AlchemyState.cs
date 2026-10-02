@@ -49,19 +49,18 @@ public static class Recipes
 
 public sealed class AlchemyState
 {
-    // v0.21: restored to two per furnace and a box of 20 (design-axes 0.1). v0.16 had cut them to 1 and 10 by
-    // following an outdated brief; they return together with material-spending cards and costlier recipes.
-    public const int BaseCapacity = 20;
-    /// 大きな素材鞄 (a shop relic, 2026-10-01) adds this. The game side sets BonusCapacity from the relics each
-    /// time the inventory is read, so it is not saved.
-    public const int LargeBagBonus = 10;
-    // The largest box any version allowed; save validation accepts up to this.
-    public const int LegacyCapacity = BaseCapacity + LargeBagBonus;
-    [System.Text.Json.Serialization.JsonIgnore] public int BonusCapacity { get; set; }
-    [System.Text.Json.Serialization.JsonIgnore] public int Capacity => BaseCapacity + BonusCapacity;
+    // 2026-10-03 (user, scripts/material-economy.py): one material per furnace and no box limit. Two per furnace
+    // with a box of 20 (v0.21, design-axes 0.1) left about 2.6 times what a workshop visit uses and filled the box
+    // in about six fights. Capacity stays a property so the overflow path (Pending, exchange) can still be tested
+    // with a small box and old saves holding a waiting receipt still resolve.
+    public const int Unlimited = int.MaxValue;
+    [System.Text.Json.Serialization.JsonIgnore] public int Capacity { get; set; } = Unlimited;
+    public bool IsUnlimited => Capacity == Unlimited;
     // Each furnace activation grants this many units. Elite and boss slots grant one chosen material
     // (AGENTS.md 4.4). Standard card rewards do not pass through this inventory.
-    public const int YieldPerEvent = 2;
+    public const int YieldPerEvent = 1;
+    /// Sanity bound for loading a save (any real run holds far fewer).
+    public const int LoadLimit = 9999;
     // 1: harvest-only. 2: reward slots. 3: rare inventory. 4: upgrade floor. 5: facility usage.
     public const int CurrentSchema = 5;
     public int Schema { get; set; } = CurrentSchema;
@@ -107,7 +106,7 @@ public sealed class AlchemyState
     public bool GrantHarvest(string id, Material material) => GrantHarvest(id, MaterialChoice.Normal(material));
 
     /// design-axes 6.4: small every-turn gains (Darv's relic) are simply not received when the box is full or
-    /// a receipt is still waiting. No exchange screen and no pending entry, so a full box cannot turn them
+    /// a receipt is still waiting (with no box limit, only the second; the per-combat cap is the caller's). No exchange screen and no pending entry, so a full box cannot turn them
     /// into a backlog. Returns false when nothing was added.
     public bool GrantIfRoom(string id, Material material)
     {
@@ -332,8 +331,8 @@ public sealed class AlchemyState
         }
         else s = JsonSerializer.Deserialize<AlchemyState>(json) ?? throw new InvalidDataException("錬金術のセーブが空です。");
         if (schema is not (1 or 2 or 3 or 4 or 5) || s.Counts is not { Length: 4 } || s.RareCounts is not { Length: 3 }
-            || s.Counts.Any(n => n < 0 || n > LegacyCapacity) || s.RareCounts.Any(n => n < 0 || n > LegacyCapacity)
-            || s.Total > LegacyCapacity || s.Pending is null || s.Received is null || s.Committed is null || s.WorkshopNodes is null
+            || s.Counts.Any(n => n < 0 || n > LoadLimit) || s.RareCounts.Any(n => n < 0 || n > LoadLimit)
+            || s.Pending is null || s.Received is null || s.Committed is null || s.WorkshopNodes is null
             || s.Offers is null || s.WorkshopFacilityUses is null
             || !Enum.IsDefined(s.NextCombatMaterial)
             || s.Pending.Any(p => p is null || !p.Material.IsValid || !s.Received.Contains(p.Id))

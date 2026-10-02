@@ -127,11 +127,12 @@ public sealed class WardensFoundation() : AlchemyRelic("white_beast_statue")
     }
 }
 
-/// <summary>大きな素材鞄: a bigger material box. MaterialBox.Inventory reads it; capacity is not supply.</summary>
+/// <summary>大きな素材鞄. 2026-10-03: the box has no limit any more, so instead of capacity (+10 before) the first
+/// furnace of each combat yields one more material (MaterialBox.GrantFromFurnace).</summary>
 [Pool(typeof(AlchemyRelicPool))]
 public sealed class LargeMaterialBag() : AlchemyRelic("bag_of_preparation")
 {
     public override RelicRarity Rarity => RelicRarity.Shop;
     public override List<(string,string)> Localization => new RelicLoc("大きな素材鞄",
-        $"素材ボックスの容量が{AlchemyState.LargeBagBonus}増える。", "詰め込めば、まだ入る。");
+        "各戦闘で最初の《炉の起動》で得る素材が1個増える。", "詰め込めば、まだ入る。");
 }

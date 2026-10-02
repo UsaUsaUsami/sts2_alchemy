@@ -47,12 +47,18 @@ public static class MaterialBoxReplacePatch
 /// </summary>
 public static class CrucibleTrickle
 {
+    public const int PerCombat = 3;
+    private static readonly string[] Sources = ["darv", "crucible"];
     public static bool Grant(Player owner, string source, int round)
     {
         if (owner.GetRelic<MaterialBox>() is not { Combat: { } combat } box
             || PhaseRules.MaterialFor(combat.Phases.Current) is not { } material) return false;
-        string id = $"{owner.RunState.TotalFloor}:{owner.RunState.CurrentRoom?.Id}:{source}{round}";
+        string room = $"{owner.RunState.TotalFloor}:{owner.RunState.CurrentRoom?.Id}:";
+        string id = $"{room}{source}{round}";
         if (box.Inventory.Received.Contains(id)) return false;
+        // 2026-10-03: with no box limit, a long fight would otherwise keep paying; at most PerCombat a combat,
+        // shared by every crucible source (AGENTS.md 4.1: dragging a fight out must not grow materials).
+        if (box.Inventory.Received.Count(r => r.StartsWith(room) && Sources.Any(src => r.StartsWith(room + src))) >= PerCombat) return false;
         if (box.Inventory.GrantIfRoom(id, material)) { box.RefreshCount(); return true; }
         // Cosmetic only, like the phase bubble.
         try { TalkCmd.Play(new LocString("relics", $"{box.Id.Entry}.boxFull"), owner.Creature, VfxColor.White, VfxDuration.VeryShort); }
@@ -74,7 +80,7 @@ public sealed class DarvCrucible : CustomRelicModel
         => IconArt.Outline("darv_crucible") ?? "res://images/atlases/relic_outline_atlas.sprites/philosophers_stone.tres";
     protected override string BigIconPath => IconArt.Big("darv_crucible") ?? "res://images/relics/philosophers_stone.png";
     public override List<(string,string)> Localization => new RelicLoc("ダーヴの坩堝（旧）",
-        "自分のターン開始時、現在相に対応する素材を1個得る。無相では得ない。素材ボックスが満杯なら得ない。",
+        "自分のターン開始時、現在相に対応する素材を1個得る。無相では得ない。1戦闘3個まで。",
         "古い坩堝は、今も火を覚えている。");
     public override Task AfterSideTurnStart(CombatSide side, IReadOnlyList<Creature> participants, ICombatState combatState)
     {

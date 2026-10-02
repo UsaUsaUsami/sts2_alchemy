@@ -29,7 +29,6 @@ public class MaterialBox : CustomRelicModel
         get
         {
             state ??= new();
-            state.BonusCapacity = IsMutable && Owner?.GetRelic<LargeMaterialBag>() is not null ? AlchemyState.LargeBagBonus : 0;
             return state;
         }
     }
@@ -56,7 +55,7 @@ public class MaterialBox : CustomRelicModel
         (PhaseTransitionTip.DescriptionKey, PhaseTransitionTip.Text),
         ("phaseShift.Earth", "地相へ転移"), ("phaseShift.Water", "水相へ転移"),
         ("phaseShift.Fire", "火相へ転移"), ("phaseShift.Air", "風相へ転移"),
-        ("boxFull", "素材ボックスが満杯"));
+        ("boxFull", "この戦闘ではもう得られない"));
     // Orobas (Touch of Orobas) refines the starter relic. Without this BaseLib falls back to the base game's
     // Circlet, which would take the whole material box with it (v0.21 bug).
     public override RelicModel? GetUpgradeReplacement() => ModelDb.Relic<RefinedMaterialBox>();
@@ -89,7 +88,14 @@ public class MaterialBox : CustomRelicModel
     public bool GrantFromFurnace()
     {
         if (Combat is null || Combat.FurnaceUsed < 1 || Combat.FurnaceUsed > Combat.Limit || AlchemyPhaseState.MaterialFor(Combat.Phases.Current) is not { } material) return false;
-        bool granted = Inventory.GrantHarvest($"{Owner.RunState.TotalFloor}:{Owner.RunState.CurrentRoom?.Id}:furnace{Combat.FurnaceUsed}", material);
+        string id = $"{Owner.RunState.TotalFloor}:{Owner.RunState.CurrentRoom?.Id}:furnace{Combat.FurnaceUsed}";
+        bool granted = Inventory.GrantHarvest(id, material);
+        // 大きな素材鞄 (2026-10-03): the first furnace of each combat yields one more.
+        if (granted && Combat.FurnaceUsed == 1 && Owner.GetRelic<LargeMaterialBag>() is { } bag)
+        {
+            Inventory.Grant(id + ":bag", material);
+            bag.Flash();
+        }
         if (granted) InvokeDisplayAmountChanged();
         return granted;
     }

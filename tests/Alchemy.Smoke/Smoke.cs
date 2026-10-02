@@ -343,7 +343,7 @@ public static class Smoke
             var uiContent=(Control?)AccessTools.Field(typeof(WorkshopUi),"content").GetValue(null);
             Check(uiOverlay is not null && uiOverlay.GetChildren().OfType<PanelContainer>().Any(),"workshop responsive frame created");
             var labels=Descendants<Label>(uiOverlay!).Select(x=>x.Text).ToArray();
-            Check(labels.Any(x=>x.Contains("錬金工房")) && labels.Any(x=>x.Contains("容量")),"workshop material sidebar visible");
+            Check(labels.Any(x=>x.Contains("錬金工房")) && labels.Any(x=>x.Contains("所持")),"workshop material sidebar visible");
             labels=Descendants<Label>(uiOverlay!).Select(x=>x.Text).ToArray();
             var buttons=Descendants<Button>(uiOverlay!).ToArray();
             Check(labels.Any(x=>x.Contains("完成カードを選ぶ")) && buttons.Any(x=>x.Text.Contains("作成可能のみ")),"workshop card gallery visible");
@@ -838,7 +838,7 @@ public static class Smoke
             using(CardSelectCmd.UseSelector(unsettledPicker))
                 await Play(cs.CreateCard<DebuffTransferCard>(player),foe);
             Check(unsettledPicker.Offered.Count>0 && box.Inventory.Counts[0]==0,"with a pending receipt the shift still offers and spends a material");
-            box.Inventory.Pending.Clear(); box.Inventory.Counts=[0,0,0,0];
+            box.Inventory.Pending.Clear(); box.Inventory.Counts=[0,0,0,0]; box.Inventory.Capacity=AlchemyState.Unlimited;
             foreach(var own in player.Creature.Powers.Where(x=>x.TypeForCurrentAmount==PowerType.Debuff).ToArray()) await PowerCmd.Remove(own);
             // F-1: self drain feeds your own homunculus, doubled.
             await ApplySelfPower<SelfCultivationPower>(ModelDb.Card<LifeSelfCultivation>().DynamicVars["SelfCultivationPower"].IntValue);
@@ -871,7 +871,7 @@ public static class Smoke
                 $"alkahest takes rare materials as their own kind (dealt {999-foe.CurrentHp})");
             box.Inventory.RareCounts=rareBeforeAlk;
             // A waiting overflow (full box) does not lock the material cards (2026-10-03, user).
-            box.Inventory.Counts=[AlchemyState.BaseCapacity,0,0,0];
+            box.Inventory.Capacity=20; box.Inventory.Counts=[20,0,0,0];
             box.Inventory.Grant("smoke-overflow",Alchemy.Core.Material.Herb);
             var overflowCard=cs.CreateCard<AlchAlkahest>(player);
             await CardPileCmd.AddGeneratedCardsToCombat([overflowCard],PileType.Hand,player);
@@ -1174,10 +1174,15 @@ public static class Smoke
             await crucible.AfterSideTurnStart(CombatSide.Player,[player.Creature],turnState);
             await crucible.AfterSideTurnStart(CombatSide.Player,[player.Creature],turnState);
             Check(box.Inventory.Counts[(int)phaseMaterial]==beforeTrickle+1,"the crucible grants one material of the current phase once per turn");
-            box.Inventory.Counts=[AlchemyState.BaseCapacity,0,0,0];
-            turnState.RoundNumber++;
-            await crucible.AfterSideTurnStart(CombatSide.Player,[player.Creature],turnState);
-            Check(box.Inventory.Total==AlchemyState.BaseCapacity && box.Inventory.Pending.Count==0,"a full box receives nothing from the crucible and queues nothing");
+            // 2026-10-03: with no box limit, at most CrucibleTrickle.PerCombat a combat.
+            int trickleTotal=box.Inventory.Total;
+            for(int round=0;round<6;round++)
+            {
+                turnState.RoundNumber++;
+                await crucible.AfterSideTurnStart(CombatSide.Player,[player.Creature],turnState);
+            }
+            Check(box.Inventory.Total-trickleTotal==CrucibleTrickle.PerCombat-1 && box.Inventory.Pending.Count==0,
+                $"the crucible stops at {CrucibleTrickle.PerCombat} a combat (got {box.Inventory.Total-trickleTotal} more after the first)");
             box.Inventory.Counts=[0,0,0,0];
             // 2026-10-01: the alchemist's own relics and potions replace the borrowed Ironclad pools.
             var alchemist=ModelDb.Character<AlchemistCharacter>();
@@ -1194,7 +1199,18 @@ public static class Smoke
             var relicFoe=turnState.HittableEnemies[0];
             relicFoe.SetCurrentHpInternal(999);
             await Gain<LargeMaterialBag>();
-            Check(box.Inventory.Capacity==AlchemyState.BaseCapacity+AlchemyState.LargeBagBonus,$"the large bag raises the box to 30 ({box.Inventory.Capacity})");
+            Check(box.Inventory.IsUnlimited,"the box has no limit (the large bag no longer changes it)");
+            // 2026-10-03: the bag makes the first furnace of a combat yield one more.
+            if(box.Combat.FurnaceUsed==0 && PhaseRules.IsElement(box.Combat.Phases.Current))
+            {
+                int bagBefore=box.Inventory.Total;
+                box.Combat.UseFurnace(); box.GrantFromFurnace();
+                int firstGain=box.Inventory.Total-bagBefore;
+                box.Combat.UseFurnace(); box.GrantFromFurnace();
+                Check(firstGain==AlchemyState.YieldPerEvent+1 && box.Inventory.Total-bagBefore==2*AlchemyState.YieldPerEvent+1,
+                    $"the large bag adds one to the first furnace of the combat only (first {firstGain}, both {box.Inventory.Total-bagBefore})");
+            }
+            else Check(false,$"bag check needs an unused furnace in an element (used {box.Combat.FurnaceUsed}, phase {box.Combat.Phases.Current})");
             await Gain<Quadrant>();
             var greatCrucible=await Gain<GreatCrucible>();
             // The furnace cards arrive before the turn's energy does; let the first turn start finish.

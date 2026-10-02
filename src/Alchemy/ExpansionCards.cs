@@ -146,7 +146,7 @@ public sealed class PhaseWheelPower : AlchemyPower
 public sealed class DarvCrucibleCard() : AlchemyCard(2,CardType.Power,CardRarity.Ancient,TargetType.Self), ITomeCard
 {
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<CruciblePower>()];
-    public override List<(string,string)> Localization=>new CardLoc("エレメント・リローデッド","自分のターン開始時、現在相に対応する素材を1個得る。素材ボックスが満杯なら得ない。");
+    public override List<(string,string)> Localization=>new CardLoc("エレメント・リローデッド","自分のターン開始時、現在相に対応する素材を1個得る。1戦闘3個まで。");
     protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>ApplySelf<CruciblePower>(c,1);
     protected override void OnUpgrade()=>EnergyCost.UpgradeBy(-1);
 }
@@ -156,8 +156,8 @@ public sealed class CruciblePower : AlchemyPower
     public override PowerStackType StackType => PowerStackType.Single;
     protected override PowerModel IconSource => ModelDb.Power<RegenPower>();
     public override List<(string,string)> Localization => new PowerLoc("エレメント・リローデッド",
-        "自分のターン開始時、現在相に対応する素材を1個得る。素材ボックスが満杯なら得ない。",
-        "自分のターン開始時、現在相に対応する素材を1個得る。素材ボックスが満杯なら得ない。");
+        "自分のターン開始時、現在相に対応する素材を1個得る。1戦闘3個まで。",
+        "自分のターン開始時、現在相に対応する素材を1個得る。1戦闘3個まで。");
     public override Task AfterSideTurnStart(CombatSide side, IReadOnlyList<Creature> participants, ICombatState combatState)
     {
         if (participants.Contains(Owner) && Owner.Player is { } player && CrucibleTrickle.Grant(player, "crucible", combatState.RoundNumber)) Flash();

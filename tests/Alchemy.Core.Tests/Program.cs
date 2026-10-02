@@ -50,30 +50,32 @@ kinds.StartTurn();
 Check(kinds.KindsEnteredThisTurn==0,"the distinct elements reset each turn");
 var compass=new AlchemyPhaseState{TriggerFromNone=true};
 Check(compass.Enter(AlchemyPhase.Water).Triggered && compass.KindsEnteredThisTurn==1,"方位盤 makes leaving the neutral phase a transition");
-var bag=new AlchemyState{BonusCapacity=AlchemyState.LargeBagBonus};
-for(int i=0;i<AlchemyState.BaseCapacity+AlchemyState.LargeBagBonus+1;i++) bag.Grant($"bag{i}",Material.Iron);
-var bagReloaded=AlchemyState.Load(bag.Save());
-Check(bag.Total==30 && bag.Pending.Count==1 && bagReloaded.Total==30 && bagReloaded.Capacity==AlchemyState.BaseCapacity,
-    "大きな素材鞄 raises the capacity to 30, a box of 30 loads, and the bonus is not saved");
-var inventory = new AlchemyState();
+// 2026-10-03: the box has no limit. A small box (TestBox) is set below where the overflow path is tested.
+const int TestBox=20;
+var open=new AlchemyState();
+for(int i=0;i<100;i++) open.Grant($"open{i}",Material.Iron);
+var openReloaded=AlchemyState.Load(open.Save());
+Check(open.IsUnlimited && open.Total==100 && open.Pending.Count==0 && openReloaded.Total==100 && openReloaded.IsUnlimited,
+    "the box holds any number of materials and a big box loads");
+var inventory = new AlchemyState{Capacity=TestBox};
 Check(inventory.Total == 0,"empty initial inventory");
 var legacyFull=new AlchemyState();
-legacyFull.Counts[0]=AlchemyState.LegacyCapacity;
+legacyFull.Counts[0]=30;
 var legacyLoaded=AlchemyState.Load(legacyFull.Save());
-Check(legacyLoaded.Total==AlchemyState.LegacyCapacity && legacyLoaded.Grant("after-load",Material.Herb) && legacyLoaded.Pending.Count==1
-    && legacyLoaded.Total==AlchemyState.LegacyCapacity,"a full box from any version loads and only queues new receipts");
-for (int i=0;i<AlchemyState.BaseCapacity;i++) inventory.Grant($"kill{i}",Material.Iron);
-Check(inventory.Total == AlchemyState.BaseCapacity,"capacity cap, same type counts individually");
+Check(legacyLoaded.Total==30 && legacyLoaded.Grant("after-load",Material.Herb) && legacyLoaded.Pending.Count==0 && legacyLoaded.Total==31,
+    "a box that was full under the old limit loads and keeps receiving");
+for (int i=0;i<TestBox;i++) inventory.Grant($"kill{i}",Material.Iron);
+Check(inventory.Total == TestBox,"capacity cap, same type counts individually");
 Check(!inventory.Grant("kill0",Material.Iron),"grant is idempotent");
 inventory.Grant("overflow",Material.Herb);
-Check(inventory.Total == AlchemyState.BaseCapacity && inventory.Pending.Count == 1,"overflow deferred");
+Check(inventory.Total == TestBox && inventory.Pending.Count == 1,"overflow deferred");
 Reject(()=>inventory.Resolve(true),"full acceptance needs exchange");
 inventory.Resolve(true,Material.Iron);
-Check(inventory.Counts[0] == AlchemyState.BaseCapacity-1 && inventory.Counts[1] == 1 && inventory.Pending.Count == 0,"exchange atomic");
+Check(inventory.Counts[0] == TestBox-1 && inventory.Counts[1] == 1 && inventory.Pending.Count == 0,"exchange atomic");
 inventory.Grant("decline",Material.Powder); inventory.Resolve(false);
-Check(inventory.Total == AlchemyState.BaseCapacity && inventory.Counts[2] == 0,"decline only pending reward");
+Check(inventory.Total == TestBox && inventory.Counts[2] == 0,"decline only pending reward");
 var saved = AlchemyState.Load(inventory.Save());
-Check(saved.Total == AlchemyState.BaseCapacity && !saved.Grant("overflow",Material.Herb),"save preserves receipt ids");
+Check(saved.Total == TestBox && !saved.Grant("overflow",Material.Herb),"save preserves receipt ids");
 Reject(()=>AlchemyState.Load("{\"Schema\":99}"),"unknown schema not reset");
 Reject(()=>AlchemyState.Load("{\"Counts\":[-1,0,0,0]}"),"negative count rejected");
 foreach (var a in Enum.GetValues<Material>()) foreach (var b in Enum.GetValues<Material>())
@@ -81,11 +83,11 @@ foreach (var a in Enum.GetValues<Material>()) foreach (var b in Enum.GetValues<M
 var recipe = Recipes.All[0]; int deck = 0;
 inventory.Commit(recipe,"op1",()=>deck++,()=>deck--);
 inventory.Commit(recipe,"op1",()=>deck++,()=>deck--);
-Check(deck==1 && inventory.Total==AlchemyState.BaseCapacity-2,"craft consumes two, duplicate ignored");
+Check(deck==1 && inventory.Total==TestBox-2,"craft consumes two, duplicate ignored");
 Reject(()=>inventory.Commit(recipe,"failure",()=>{deck++;throw new InvalidOperationException();},()=>deck--),"failed delivery throws");
-Check(deck==1 && inventory.Total==AlchemyState.BaseCapacity-2,"failed delivery rolled back");
+Check(deck==1 && inventory.Total==TestBox-2,"failed delivery rolled back");
 await inventory.CommitAsync(recipe,"async",()=>{deck++;return Task.CompletedTask;},()=>deck--);
-Check(deck==2 && inventory.Total==AlchemyState.BaseCapacity-4,"async delivery and cost agree");
+Check(deck==2 && inventory.Total==TestBox-4,"async delivery and cost agree");
 var empty = new AlchemyState();
 Reject(()=>empty.Commit(recipe,"empty",()=>deck++,()=>deck--),"insufficient ingredients do not deliver");
 Check(deck==2 && empty.Total==0,"no negative inventory");
@@ -137,13 +139,13 @@ var phaseSave=new AlchemyState { NextCombatMaterial=Material.Ether };
 phaseSave.WorkshopNodes[0]=["2,4","5,9"];
 var loadedPhase=AlchemyState.Load(phaseSave.Save());
 Check(loadedPhase.NextCombatMaterial==Material.Ether && loadedPhase.WorkshopNodes[0].SequenceEqual(["2,4","5,9"]),"phase and workshop map survive save");
-var pending = new AlchemyState(); for(int i=0;i<AlchemyState.BaseCapacity+2;i++) pending.Grant($"p{i}",Material.Iron);
+var pending = new AlchemyState{Capacity=TestBox}; for(int i=0;i<TestBox+2;i++) pending.Grant($"p{i}",Material.Iron);
 var reload = AlchemyState.Load(pending.Save());
 Check(reload.Pending.Count==2 && !reload.CanCraft(recipe),"pending saved and blocks storage abuse");
 // Furnace and material reward slots use the configured harvest yield; normal card rewards are separate.
 var harvestState=new AlchemyState();
 Check(harvestState.GrantHarvest("harvest0",Material.Powder) && harvestState.Count(MaterialChoice.Normal(Material.Powder))==AlchemyState.YieldPerEvent,
-    "a harvest event grants the doubled yield");
+    "a harvest event grants the furnace yield (one since 2026-10-03)");
 Check(!harvestState.GrantHarvest("harvest0",Material.Powder) && harvestState.Count(MaterialChoice.Normal(Material.Powder))==AlchemyState.YieldPerEvent,
     "a resent harvest event does not grant twice");
 // Elite and boss reward slots (AGENTS.md 4.4), counted apart from the kill cap.
@@ -176,25 +178,25 @@ Check(!offers.Offer("boss0",eliteRoll),"a resolved slot is never re-offered");
 offers.Offer("boss1",eliteRoll); offers.DeclineOffer("boss1");
 Check(offers.Total==1 && offers.Settled && !offers.Offer("boss1",eliteRoll),"declining closes the slot for good");
 Reject(()=>offers.DeclineOffer("boss1"),"a declined slot cannot be declined twice");
-var fullBox=new AlchemyState();
-for(int i=0;i<AlchemyState.BaseCapacity;i++) fullBox.Grant($"f{i}",Material.Iron);
+var fullBox=new AlchemyState{Capacity=TestBox};
+for(int i=0;i<TestBox;i++) fullBox.Grant($"f{i}",Material.Iron);
 fullBox.Offer("eliteFull",eliteRoll); fullBox.TakeOffer("eliteFull",eliteRoll[0]);
-Check(fullBox.Total==AlchemyState.BaseCapacity && fullBox.Pending.Count==1 && fullBox.Offers.Count==0,
+Check(fullBox.Total==TestBox && fullBox.Pending.Count==1 && fullBox.Offers.Count==0,
     "a full box defers every unit of the doubled yield to the shared receipt path");
 // 2026-10-03: a waiting receipt does not lock combat spending; spending frees room the receipt then takes.
-var overflow=new AlchemyState();
-for(int i=0;i<AlchemyState.BaseCapacity;i++) overflow.Grant($"o{i}",Material.Iron);
+var overflow=new AlchemyState{Capacity=TestBox};
+for(int i=0;i<TestBox;i++) overflow.Grant($"o{i}",Material.Iron);
 overflow.Grant("o-furnace",Material.Herb);
-Check(overflow.Pending.Count==1 && overflow.TryConsume(Material.Iron) && overflow.Total==AlchemyState.BaseCapacity-1 && overflow.Pending.Count==1,
+Check(overflow.Pending.Count==1 && overflow.TryConsume(Material.Iron) && overflow.Total==TestBox-1 && overflow.Pending.Count==1,
     "materials can be spent while an overflow waits, and the waiting unit stays a claim");
 overflow.RareCounts[0]=1;
 Check(overflow.TryConsumeRare(RareMaterial.Mercury) && overflow.RareCounts[0]==0 && !overflow.TryConsumeRare(RareMaterial.Mercury),
     "a held rare material can be spent once in combat");
 overflow.Resolve(true);
-Check(overflow.Settled && overflow.Count(MaterialChoice.Normal(Material.Herb))==1 && overflow.Total==AlchemyState.BaseCapacity,
+Check(overflow.Settled && overflow.Count(MaterialChoice.Normal(Material.Herb))==1 && overflow.Total==TestBox,
     "the freed room takes the waiting unit once it is resolved");
 while (fullBox.Pending.Count>0) fullBox.Resolve(true,MaterialChoice.Normal(Material.Iron));
-Check(fullBox.Count(eliteRoll[0])==(eliteRoll[0]==MaterialChoice.Normal(Material.Iron)?AlchemyState.BaseCapacity:1) && fullBox.Settled,
+Check(fullBox.Count(eliteRoll[0])==(eliteRoll[0]==MaterialChoice.Normal(Material.Iron)?TestBox:1) && fullBox.Settled,
     "deferred choice resolves by exchange, once per unit");
 var savedOffers=new AlchemyState();
 savedOffers.Offer("keep0",eliteRoll); savedOffers.Offer("keep1",MaterialOffers.Roll(7,"keep1"));
@@ -393,9 +395,9 @@ Check(refined.UseFurnace() && refined.UseFurnace() && refined.UseFurnace() && !r
 Check(new HarvestCombat().Limit==HarvestCombat.FurnaceLimit,"the ordinary box keeps two");
 Reject(()=>new HarvestCombat(4),"no furnace cap above the refined three");
 // v0.22 (6.4): every-turn gains are skipped, not queued, when the box is full.
-var trickle=new AlchemyState();
+var trickle=new AlchemyState{Capacity=TestBox};
 Check(trickle.GrantIfRoom("t1",Material.Iron) && trickle.Counts[0]==1 && !trickle.GrantIfRoom("t1",Material.Iron),"a trickle gain is received once per id");
-for(int i=0;trickle.Total<AlchemyState.BaseCapacity;i++) trickle.Grant($"fill{i}",Material.Herb);
-Check(!trickle.GrantIfRoom("t2",Material.Iron) && trickle.Pending.Count==0 && !trickle.Received.Contains("t2") && trickle.Total==AlchemyState.BaseCapacity,
+for(int i=0;trickle.Total<TestBox;i++) trickle.Grant($"fill{i}",Material.Herb);
+Check(!trickle.GrantIfRoom("t2",Material.Iron) && trickle.Pending.Count==0 && !trickle.Received.Contains("t2") && trickle.Total==TestBox,
     "a full box does not receive a trickle gain and queues nothing");
 Console.WriteLine($"{passed} checks passed.");

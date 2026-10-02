@@ -92,8 +92,8 @@ public static class WorkshopUi
             if (IsOpen && overlay!.GetParent() == node) node.MoveChild(launcher, overlay.GetIndex());
         }
         var combat = box.Combat;
-        launcher!.Text = combat is null ? $"素材・工房  {box.Inventory.Total}/{box.Inventory.Capacity}"
-            : $"素材 {box.Inventory.Total}/{box.Inventory.Capacity}  炉 {combat.FurnaceUsed}/{combat.Limit}\n現在相：{MaterialBox.PhaseName(combat.Phases.Current)}"+(combat.LastTransition.Length>0?$"　（{combat.LastTransition}）":"")
+        launcher!.Text = combat is null ? $"素材・工房  {box.Inventory.Total}個"
+            : $"素材 {box.Inventory.Total}個  炉 {combat.FurnaceUsed}/{combat.Limit}\n現在相：{MaterialBox.PhaseName(combat.Phases.Current)}"+(combat.LastTransition.Length>0?$"　（{combat.LastTransition}）":"")
               +(combat.Life.HomunculusAppeared?$"\nゴーレムHP：{LifeAxis.State(box.Owner)?.HomunculusHp ?? 0}":"");
         // Phase colour keeps the current phase readable at a glance; outside combat the button is neutral.
         launcher.AddThemeColorOverride("font_color", PhaseTint(combat?.Phases.Current ?? AlchemyPhase.None));
@@ -611,7 +611,7 @@ public static class WorkshopUi
         foreach (var child in sidebar.GetChildren()) { sidebar.RemoveChild(child); child.QueueFree(); }
         foreach (var child in content.GetChildren()) { content.RemoveChild(child); child.QueueFree(); }
         Text(workshop ? "錬金工房" : "素材ボックス", 34, sidebar, new Color("f2d18b"));
-        Text($"容量  {box.Inventory.Total} / {box.Inventory.Capacity}", 24, sidebar);
+        Text(box.Inventory.IsUnlimited ? $"所持  {box.Inventory.Total}個" : $"容量  {box.Inventory.Total} / {box.Inventory.Capacity}", 24, sidebar);
         Divider(sidebar);
         Text(MaterialSummary(), 22, sidebar);
         MaterialCardRow();
