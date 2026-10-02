@@ -88,14 +88,17 @@ TRIM = {"UPPER_ARM": 22}
 WIDTH = {"UPPER_ARM": 0.8}
 # The forearms' top fades in over these many pixels, so their outline does not draw a line across the upper sleeve
 # at the elbow (it lies inside ELBOW_OVERLAP, over the upper sleeve; Codex, 2026-10-02).
-FEATHER = {"FOREARM_OPEN": 28, "FOREARM_GRIP": 28, "FOREARM_OPEN_L": 28, "FOREARM_PUSH_L": 28}
-# Extra pictures a slot can switch to during an animation: slot -> [(attachment, part, quarter turns clockwise)].
-# The palm push (2026-10-02, user) is drawn with the sleeve lying flat; one turn puts its elbow at the top like the
-# other forearms, so its fingers point up when the forearm points at the enemy. Its elbow end has a gold band: cut.
-ALTS = {"fore_f": [("fore_f_push", "FOREARM_PUSH_L", 1)]}
+FEATHER = {"FOREARM_OPEN": 28, "FOREARM_GRIP": 28, "FOREARM_OPEN_L": 28, "FOREARM_PUSH_L": 28, "FOREARM_RAISE_L": 28}
+# Extra pictures a slot can switch to during an animation: slot -> [(attachment, part, degrees turned clockwise)].
+# They are drawn as seen in the pose; the turn puts the elbow at the top like the other forearms. The palm push
+# (attack) lies flat; the raised hand (cast) rises at about 38 degrees (measured from the sleeve's pixels). Their
+# elbow ends have a gold band: cut. (2026-10-02, user)
+ALTS = {"fore_f": [("fore_f_push", "FOREARM_PUSH_L", 90), ("fore_f_raise", "FOREARM_RAISE_L", 128)]}
 TRIM["FOREARM_PUSH_L"] = 40
+TRIM["FOREARM_RAISE_L"] = 40
 # Which picture each slot shows, keyed in time per animation (the others start from the setup picture).
-SLOT_KEYS = {"attack": {"fore_f": [(0, "fore_f"), (0.22, "fore_f_push"), (0.7, "fore_f")]}}
+SLOT_KEYS = {"attack": {"fore_f": [(0, "fore_f"), (0.22, "fore_f_push"), (0.7, "fore_f")]},
+             "cast": {"fore_f": [(0, "fore_f"), (0.15, "fore_f_raise"), (0.85, "fore_f")]}}
 
 
 def key(t, **v):
@@ -280,10 +283,11 @@ def place(im, pivot, r, overlap):
     return jx + dx, jy + dy
 
 
-def prepare(part, flip, tint, quarter_turns=0):
+def prepare(part, flip, tint, degrees_cw=0):
     im = Image.open(PARTS / f"{part}.png").convert("RGBA")
-    if quarter_turns:
-        im = im.rotate(-90 * quarter_turns, expand=True)
+    if degrees_cw:
+        im = im.rotate(-degrees_cw, expand=True, resample=Image.BICUBIC)
+        im = im.crop(im.getbbox())
     if part in TRIM:
         im = im.crop((0, TRIM[part], im.width, im.height))
     if part in WIDTH:

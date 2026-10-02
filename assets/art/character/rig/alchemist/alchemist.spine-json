@@ -232,6 +232,13 @@
       "rotation": 90,
       "width": 345,
       "height": 381
+     },
+     "fore_f_raise": {
+      "x": 157.5,
+      "y": -44.5,
+      "rotation": 90,
+      "width": 233,
+      "height": 481
      }
     },
     "foot_f": {
@@ -809,6 +816,14 @@
     "fore_f": {
      "attachment": [
       {
+       "name": "fore_f"
+      },
+      {
+       "time": 0.15,
+       "name": "fore_f_raise"
+      },
+      {
+       "time": 0.85,
        "name": "fore_f"
       }
      ]

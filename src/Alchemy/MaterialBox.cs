@@ -100,10 +100,14 @@ public class MaterialBox : CustomRelicModel
     }
     // Cards only declare an element; PhaseTransitions decides whether that is a transition and what it does.
     // Replays of the same play (IsFirstInSeries false) do not move the phase again.
-    public override Task BeforeCardPlayed(CardPlay cardPlay)
+    public override async Task BeforeCardPlayed(CardPlay cardPlay)
     {
         if(Combat is not null && cardPlay.Player==Owner && cardPlay.IsFirstInSeries) Combat.TransitionsAtPlayStart=Combat.Phases.TransitionCount;
-        return Task.CompletedTask;
+        // The alchemist's skills and powers play the cast (the hand raised): base-game cards each call TriggerAnim
+        // in their OnPlay ("Cast" for skills, "PowerUp" for powers); ours never did, so the body stood still
+        // (2026-10-02). Attacks animate from their damage. Once per play, before its effects, as the base game does.
+        if(cardPlay.Player==Owner && cardPlay.IsFirstInSeries && cardPlay.Card is AlchemyCard { Type: CardType.Skill or CardType.Power } card)
+            await CreatureCmd.TriggerAnim(Owner.Creature, card.Type==CardType.Power ? "PowerUp" : "Cast", Owner.Character.CastAnimDelay);
     }
     public override async Task AfterCardPlayed(PlayerChoiceContext context, CardPlay cardPlay)
     {

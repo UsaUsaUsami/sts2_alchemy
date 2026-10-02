@@ -6,7 +6,7 @@ bounds:2,2,363,757
 arm_f
 bounds:290,761,104,283
 fore_f
-bounds:1270,2,193,414
+bounds:1505,2,193,414
 foot_f
 bounds:502,761,257,219
 foot_b
@@ -20,6 +20,8 @@ bounds:2,761,286,293
 arm_b
 bounds:396,761,104,283
 fore_b
-bounds:1088,2,180,417
+bounds:1323,2,180,417
 fore_f_push
-bounds:1465,2,345,381
+bounds:1700,2,345,381
+fore_f_raise
+bounds:1088,2,233,481
