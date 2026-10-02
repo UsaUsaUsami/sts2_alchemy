@@ -12,6 +12,8 @@ Animations key rotation (degrees, added to the setup pose) and translation (shee
 """
 import json
 import math
+
+import numpy as np
 from pathlib import Path
 
 from PIL import Image, ImageChops, ImageOps
@@ -34,11 +36,11 @@ BONES = {
     "cape": ("torso", -55, 905, -90),
     "arm_b": ("torso", -100, 860, -100),
     "fore_b": ("arm_b", -150, 590, -95),
-    "hand_b": ("fore_b", -165, 330, -95),
+    "hand_b": ("fore_b", None, None, -95),
     "arm_f": ("torso", 105, 860, -80),
     "fore_f": ("arm_f", 155, 590, -50),
-    "hand_f": ("fore_f", 330, 420, -50),
-    "staff": ("hand_f", 345, 405, 90),
+    "hand_f": ("fore_f", None, None, -50),
+    "staff": ("hand_f", None, None, 90),
     # The legs hang from the root, not the hip: when the body sinks (death) the shoes stay on the ground.
     "leg_b": ("root", -60, 600, -90),
     "foot_b": ("leg_b", -70, 120, 0),
@@ -54,20 +56,35 @@ BONES = {
 FAR = "a8a8b0"
 SLOTS = [
     ("cape", "cape", "CAPE", -150, 560, 0, False, None),
-    ("staff", "staff", "STAFF", 345, 640, 0, False, None),
-    ("hand_f", "hand_f", "HAND_GRIP", 345, 400, 0, False, FAR),
+    ("staff", "staff", "STAFF", None, None, 0, False, None),
+    ("hand_f", "hand_f", "HAND_GRIP", None, None, None, False, FAR),
     ("arm_f", "arm_f", "UPPER_ARM", 130, 720, -10, False, FAR),
     ("fore_f", "fore_f", "FOREARM", 245, 505, 40, False, FAR),
     ("foot_f", "foot_f", "BOOT", 95, 108, 0, False, FAR),
     ("foot_b", "foot_b", "BOOT", -40, 112, 0, False, None),
     # The boots stay behind the robe: only the shoes show under the hem.
     ("skirt", "skirt", "SKIRT", 0, 345, 0, False, None),
+    # The near upper sleeve stays in front of the torso: the torso picture has an open arm hole there (behind it,
+    # the hole showed). Its gold top band is trimmed (TRIM) so the shoulder does not read as a seam.
     ("torso", "torso", "TORSO", 10, 690, 0, False, None),
     ("head", "head", "HOOD", 25, 1030, 0, False, None),
     ("arm_b", "arm_b", "UPPER_ARM", -125, 720, 10, True, None),
-    ("hand_b", "hand_b", "HAND_OPEN", -175, 230, 5, True, None),
+    ("hand_b", "hand_b", "HAND_OPEN", None, None, None, True, None),
     ("fore_b", "fore_b", "FOREARM", -160, 460, 5, True, None),
 ]
+
+# Hands are not placed by hand: each wrist goes a little inside its sleeve's opening (derive_hands), and the staff
+# through the fist's hole. None in a slot or bone is filled in there.
+HANDS = {"hand_b": "fore_b", "hand_f": "fore_f"}
+WRIST_INSET = 34      # how far the wrist sits inside the sleeve, along the sleeve
+GRIP_HOLE = (62, 112)  # the gap through the fist in HAND_GRIP, picture pixels from its top left
+STAFF_ABOVE_GRIP = 235  # the staff's centre above the fist's hole
+LIMB_OVERLAP = 18  # how far an upper sleeve's top reaches up into the shoulder
+# The forearm reaches deeper: its top is narrower than the upper sleeve's cut end, which showed at a straightened
+# elbow as a gap (rig-probe at 2x and Gemini, 2026-10-02).
+ELBOW_OVERLAP = 45
+# The sleeve parts were drawn with a gold band at the top; at the shoulder and elbow it read as a seam. Cut off.
+TRIM = {"FOREARM": 26, "UPPER_ARM": 22}
 
 
 def key(t, **v):
@@ -127,18 +144,20 @@ ANIMATIONS = {
         hip=move((0, 0, 0), (0.3, 0, 30), (0.75, 0, 30), (1.0, 0, 0)),
         torso=rot((0, 0), (0.3, 6), (0.75, 6), (1.0, 0)),
         head=rot((0, 0), (0.3, 12), (0.75, 12), (1.0, 0)),
-        # Arm up and forward (15), forearm up (80), staff upright (90) above the head.
-        arm_f=rot((0, 0), (0.3, 95), (0.75, 95), (1.0, 0)),
-        fore_f=rot((0, 0), (0.3, 35), (0.75, 35), (1.0, 0)),
-        staff=rot((0, 0), (0.3, -130), (0.75, -130), (1.0, 0)),
+        # Hold the staff up in front: arm level forward (10), forearm a little up (20), staff upright (90).
+        # A raised forearm turned the bell sleeve's opening upwards like a cup (2026-10-02), so the arm stays level.
+        arm_f=rot((0, 0), (0.3, 90), (0.75, 90), (1.0, 0)),
+        fore_f=rot((0, 0), (0.3, -20), (0.75, -20), (1.0, 0)),
+        staff=rot((0, 0), (0.3, -70), (0.75, -70), (1.0, 0)),
         arm_b=rot((0, 0), (0.3, -60), (0.75, -60), (1.0, 0)),
         fore_b=rot((0, 0), (0.3, -30), (0.75, -30), (1.0, 0)),
         cape=rot((0, 0), (0.3, 10), (1.0, 0)),
     ),
     "hurt": bone_anim(
         root=move((0, 0, 0), (0.1, -70, 0), (0.45, 0, 0)),
-        torso=rot((0, 0), (0.1, 12), (0.45, 0)),
-        head=rot((0, 0), (0.1, 15), (0.45, 0)),
+        # The torso leans little (its hem would slide off the skirt); the head takes the rest.
+        torso=rot((0, 0), (0.1, 5), (0.45, 0)),
+        head=rot((0, 0), (0.1, 20), (0.45, 0)),
         arm_f=rot((0, 0), (0.1, 20), (0.45, 0)),
         arm_b=rot((0, 0), (0.1, 25), (0.45, 0)),
         cape=rot((0, 0), (0.1, -12), (0.45, 0)),
@@ -186,16 +205,85 @@ def pack(images):
     return (width, height), boxes
 
 
+def turn(dx, dy, degrees):
+    """A picture offset (x right, y up) turned by the slot's rotation (counter-clockwise)."""
+    a = math.radians(degrees)
+    return dx * math.cos(a) - dy * math.sin(a), dx * math.sin(a) + dy * math.cos(a)
+
+
+def picture_point(slot_index, images, px, py):
+    """World position of a pixel (from the top left) of a placed slot's picture."""
+    slot, _, _, cx, cy, r, *_ = SLOTS[slot_index]
+    im = images[slot]
+    dx, dy = turn(px - im.width / 2, im.height / 2 - py, r)
+    return cx + dx, cy + dy
+
+
+def top_centre(im, row=8):
+    """The middle of the picture's opaque pixels on a row near its top: where the limb joins its parent."""
+    xs = np.nonzero(np.asarray(im.getchannel("A"))[row] > 128)[0]
+    return xs.mean(), row
+
+
+def hang(i, images, pivot, r, overlap):
+    """Places slot i so its top centre sits at the pivot, pushed `overlap` up into the parent to hide the joint."""
+    slot, bone, part, _, _, _, flip, tint = SLOTS[i]
+    im = images[slot]
+    tx, ty = top_centre(im)
+    ux, uy = turn(0, 1, r)
+    jx, jy = pivot[0] + ux * overlap, pivot[1] + uy * overlap
+    dx, dy = turn(im.width / 2 - tx, -(im.height / 2 - ty), r)
+    SLOTS[i] = (slot, bone, part, jx + dx, jy + dy, r, flip, tint)
+
+
+def derive(images):
+    """Fills in the limbs from the bones: each sleeve hangs from its joint (upper arms turned from shoulder to
+    elbow), each wrist sits inside its sleeve opening, the staff goes through the fist."""
+    index = {s[0]: i for i, s in enumerate(SLOTS)}
+    for upper, lower in (("arm_b", "fore_b"), ("arm_f", "fore_f")):
+        sx, sy = BONES[upper][1:3]
+        ex, ey = BONES[lower][1:3]
+        # The picture's down (0, -1) turned by r points from shoulder to elbow: (sin r, -cos r).
+        r = math.degrees(math.atan2(ex - sx, -(ey - sy)))
+        hang(index[upper], images, (sx, sy), r, LIMB_OVERLAP)
+        hang(index[lower], images, (ex, ey), SLOTS[index[lower]][5], ELBOW_OVERLAP)
+    for hand, sleeve in HANDS.items():
+        si = index[sleeve]
+        im = images[sleeve]
+        alpha = np.asarray(im.getchannel("A")) > 128
+        ys, xs = np.nonzero(alpha[-45:])
+        ox, oy = picture_point(si, images, xs.mean(), im.height - 45 + ys.mean())  # the opening's middle
+        r = SLOTS[si][5]
+        ux, uy = turn(0, 1, r)  # up the sleeve
+        wx, wy = ox + ux * WRIST_INSET, oy + uy * WRIST_INSET
+        hi = index[hand]
+        slot, bone, part, _, _, _, flip, tint = SLOTS[hi]
+        him = images[hand]
+        top = np.nonzero(np.asarray(him.getchannel("A"))[8] > 128)[0]
+        dx, dy = turn(him.width / 2 - top.mean(), -(him.height / 2 - 8), r)
+        SLOTS[hi] = (slot, bone, part, wx + dx, wy + dy, r, flip, tint)
+        parent, _, _, angle = BONES[hand]
+        BONES[hand] = (parent, wx, wy, angle)
+        if hand == "hand_f":
+            gx, gy = picture_point(hi, images, *GRIP_HOLE)
+            BONES["staff"] = ("hand_f", gx, gy, 90)
+            st = index["staff"]
+            SLOTS[st] = SLOTS[st][:3] + (gx, gy + STAFF_ABOVE_GRIP) + SLOTS[st][5:]
+
+
 def main():
     images = {}
     for slot, _, part, *_rest, flip, tint in SLOTS:
         im = Image.open(PARTS / f"{part}.png").convert("RGBA")
+        if part in TRIM:
+            im = im.crop((0, TRIM[part], im.width, im.height))
         if flip:
             im = ImageOps.mirror(im)
         if tint:
             rgb = ImageChops.multiply(im.convert("RGB"), Image.new("RGB", im.size, "#" + tint))
             im = Image.merge("RGBA", (*rgb.split(), im.getchannel("A")))
         images[slot] = im
+    derive(images)
     size, boxes = pack(images)
     page = Image.new("RGBA", size, (0, 0, 0, 0))
     lines = ["alchemist.png", f"size:{size[0]},{size[1]}", "filter:Linear,Linear"]

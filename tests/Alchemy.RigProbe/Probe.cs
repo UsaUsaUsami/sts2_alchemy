@@ -17,6 +17,7 @@ public static class RigProbe
 {
     public static void Initialize() => new Harmony("AlchemyRigProbe").PatchAll(Assembly.GetExecutingAssembly());
     private static void Log(string text) => GD.Print("ALCHEMY_PROBE " + text);
+    private static int Zoom => int.TryParse(System.Environment.GetEnvironmentVariable("ALCHEMY_PROBE_ZOOM"), out var z) && z > 0 ? z : 1;
     private static string Out => System.Environment.GetEnvironmentVariable("ALCHEMY_PROBE_OUT") ?? "user://probe";
 
     [HarmonyPatch(typeof(OneTimeInitialization), nameof(OneTimeInitialization.ExecuteDeferred))]
@@ -33,7 +34,8 @@ public static class RigProbe
             DirAccess.MakeDirRecursiveAbsolute(Out);
             var viewport = new SubViewport
             {
-                Size = new Vector2I(700, 700), TransparentBg = true, RenderTargetUpdateMode = SubViewport.UpdateMode.Always,
+                // ALCHEMY_PROBE_ZOOM (default 1): a bigger frame and figure, to look at joints up close.
+                Size = new Vector2I(700, 700) * Zoom, TransparentBg = true, RenderTargetUpdateMode = SubViewport.UpdateMode.Always,
                 Disable3D = true, OwnWorld3D = true,
             };
             tree.Root.AddChild(viewport);
@@ -55,7 +57,7 @@ public static class RigProbe
             var visuals = mode == "alchemist"
                 ? MegaCrit.Sts2.Core.Models.ModelDb.Character<Alchemy.AlchemistCharacter>().CreateVisuals()
                 : ResourceLoader.Load<PackedScene>(SceneHelper.GetScenePath("creature_visuals/" + (System.Environment.GetEnvironmentVariable("ALCHEMY_PROBE_DONOR") is { Length: > 0 } donor ? donor : "necrobinder"))).Instantiate<NCreatureVisuals>(PackedScene.GenEditState.Disabled);
-            visuals.Position = new Vector2(350, 620);
+            visuals.Position = new Vector2(350, 620) * Zoom;
             viewport.AddChild(visuals);
             await Frames(tree, 3);
             var body = visuals.SpineBody ?? throw new Exception("no spine body");
@@ -87,7 +89,7 @@ public static class RigProbe
             }
             else if (mode == "alchemist")
             {
-                visuals.Scale = Vector2.One * 1.25f;
+                visuals.Scale = Vector2.One * 1.25f * Zoom;
                 DumpTree(visuals, 0);
                 await Capture(tree, viewport, body, "alchemist", ["idle_loop", "attack", "hurt", Alchemy.AlchemistRig.Available ? Alchemy.AlchemistRig.CastAnimation : Alchemy.NecroRig.CastAnimation, "die"]);
             }
@@ -110,7 +112,7 @@ public static class RigProbe
                     + string.Join(",", new MegaSkeletonDataResource(customData).GetAnimationNames()));
                 body.SetSkeletonDataRes(new MegaSkeletonDataResource(customData));
                 await Frames(tree, 3);
-                visuals.Scale = Vector2.One * 1.25f;
+                visuals.Scale = Vector2.One * 1.25f * Zoom;
                 var names = (System.Environment.GetEnvironmentVariable("ALCHEMY_PROBE_ANIMS") ?? "idle_loop,attack,hurt,cast,die").Split(',');
                 await Capture(tree, viewport, body, "custom", names);
             }
