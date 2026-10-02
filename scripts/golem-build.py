@@ -149,7 +149,8 @@ def main():
     images = {"shadow": shadow(470, 60)}
     slots = [("shadow", "root", -10, 8, 0)]
     # Back to front as in the original: far arm and far leg behind the body, then the near leg and near arm.
-    slots.append(arm_slot("arm_f", "arm_f", "GOLEM_ARM", False, FAR, images, ARM_SCALE))
+    # The far arm is the near one mirrored (a left fist; unmirrored both read as right hands, user 2026-10-02).
+    slots.append(arm_slot("arm_f", "arm_f", "GOLEM_ARM", True, FAR, images, ARM_SCALE))
     slots.append(arm_slot("leg_f", "leg_f", "GOLEM_LEG", False, FAR, images, LEG_SCALE, LEG_WIDTH))
     images["body"] = prepare(PARTS / "GOLEM_BODY.png", scale_by=BODY_SCALE)
     slots.append(("body", "body", *BONES["body"][1:3], 0))

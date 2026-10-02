@@ -140,7 +140,7 @@
     "arm_f": {
      "arm_f": {
       "x": 114.0,
-      "y": 4.5,
+      "y": -3.5,
       "rotation": 90,
       "width": 136,
       "height": 244
@@ -299,21 +299,7 @@
       }
      ]
     },
-    "arm_b": {
-     "rgba": [
-      {
-       "color": "ffffffff"
-      }
-     ]
-    },
     "arm_f": {
-     "rgba": [
-      {
-       "color": "ffffffff"
-      }
-     ]
-    },
-    "leg_b": {
      "rgba": [
       {
        "color": "ffffffff"
@@ -327,7 +313,21 @@
       }
      ]
     },
+    "leg_b": {
+     "rgba": [
+      {
+       "color": "ffffffff"
+      }
+     ]
+    },
     "body": {
+     "rgba": [
+      {
+       "color": "ffffffff"
+      }
+     ]
+    },
+    "arm_b": {
      "rgba": [
       {
        "color": "ffffffff"
@@ -454,21 +454,7 @@
       }
      ]
     },
-    "arm_b": {
-     "rgba": [
-      {
-       "color": "ffffffff"
-      }
-     ]
-    },
     "arm_f": {
-     "rgba": [
-      {
-       "color": "ffffffff"
-      }
-     ]
-    },
-    "leg_b": {
      "rgba": [
       {
        "color": "ffffffff"
@@ -482,7 +468,21 @@
       }
      ]
     },
+    "leg_b": {
+     "rgba": [
+      {
+       "color": "ffffffff"
+      }
+     ]
+    },
     "body": {
+     "rgba": [
+      {
+       "color": "ffffffff"
+      }
+     ]
+    },
+    "arm_b": {
      "rgba": [
       {
        "color": "ffffffff"
@@ -609,21 +609,7 @@
       }
      ]
     },
-    "arm_b": {
-     "rgba": [
-      {
-       "color": "ffffffff"
-      }
-     ]
-    },
     "arm_f": {
-     "rgba": [
-      {
-       "color": "ffffffff"
-      }
-     ]
-    },
-    "leg_b": {
      "rgba": [
       {
        "color": "ffffffff"
@@ -637,7 +623,21 @@
       }
      ]
     },
+    "leg_b": {
+     "rgba": [
+      {
+       "color": "ffffffff"
+      }
+     ]
+    },
     "body": {
+     "rgba": [
+      {
+       "color": "ffffffff"
+      }
+     ]
+    },
+    "arm_b": {
      "rgba": [
       {
        "color": "ffffffff"
@@ -766,21 +766,7 @@
       }
      ]
     },
-    "arm_b": {
-     "rgba": [
-      {
-       "color": "ffffffff"
-      }
-     ]
-    },
     "arm_f": {
-     "rgba": [
-      {
-       "color": "ffffffff"
-      }
-     ]
-    },
-    "leg_b": {
      "rgba": [
       {
        "color": "ffffffff"
@@ -794,7 +780,21 @@
       }
      ]
     },
+    "leg_b": {
+     "rgba": [
+      {
+       "color": "ffffffff"
+      }
+     ]
+    },
     "body": {
+     "rgba": [
+      {
+       "color": "ffffffff"
+      }
+     ]
+    },
+    "arm_b": {
      "rgba": [
       {
        "color": "ffffffff"
@@ -1203,21 +1203,7 @@
       }
      ]
     },
-    "arm_b": {
-     "rgba": [
-      {
-       "color": "ffffffff"
-      }
-     ]
-    },
     "arm_f": {
-     "rgba": [
-      {
-       "color": "ffffffff"
-      }
-     ]
-    },
-    "leg_b": {
      "rgba": [
       {
        "color": "ffffffff"
@@ -1231,7 +1217,21 @@
       }
      ]
     },
+    "leg_b": {
+     "rgba": [
+      {
+       "color": "ffffffff"
+      }
+     ]
+    },
     "body": {
+     "rgba": [
+      {
+       "color": "ffffffff"
+      }
+     ]
+    },
+    "arm_b": {
      "rgba": [
       {
        "color": "ffffffff"
@@ -1306,21 +1306,7 @@
       }
      ]
     },
-    "arm_b": {
-     "rgba": [
-      {
-       "color": "ffffffff"
-      }
-     ]
-    },
     "arm_f": {
-     "rgba": [
-      {
-       "color": "ffffffff"
-      }
-     ]
-    },
-    "leg_b": {
      "rgba": [
       {
        "color": "ffffffff"
@@ -1334,7 +1320,21 @@
       }
      ]
     },
+    "leg_b": {
+     "rgba": [
+      {
+       "color": "ffffffff"
+      }
+     ]
+    },
     "body": {
+     "rgba": [
+      {
+       "color": "ffffffff"
+      }
+     ]
+    },
+    "arm_b": {
      "rgba": [
       {
        "color": "ffffffff"
@@ -1439,21 +1439,7 @@
       }
      ]
     },
-    "arm_b": {
-     "rgba": [
-      {
-       "color": "ffffffff"
-      }
-     ]
-    },
     "arm_f": {
-     "rgba": [
-      {
-       "color": "ffffffff"
-      }
-     ]
-    },
-    "leg_b": {
      "rgba": [
       {
        "color": "ffffffff"
@@ -1467,7 +1453,21 @@
       }
      ]
     },
+    "leg_b": {
+     "rgba": [
+      {
+       "color": "ffffffff"
+      }
+     ]
+    },
     "body": {
+     "rgba": [
+      {
+       "color": "ffffffff"
+      }
+     ]
+    },
+    "arm_b": {
      "rgba": [
       {
        "color": "ffffffff"
