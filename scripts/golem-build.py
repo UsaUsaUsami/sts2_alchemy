@@ -1,4 +1,4 @@
-"""Builds the golem's own Spine rig (2026-10-02, user: the golem too, with a reaction to damage) from the parts cut
+﻿"""Builds the golem's own Spine rig (2026-10-02, user: the golem too, with a reaction to damage) from the parts cut
 by rig-cut.py (rig-parts.py --set golem): assets/art/pets/rig/golem.{spine-json,atlas,png}.
 
 The golem uses the Necrobinder's Osty state machine (HomunculusPet), so the rig has Osty's animations: idle_loop,
@@ -18,32 +18,38 @@ ROOT = Path(__file__).resolve().parent.parent
 PARTS = ROOT / "assets/art/character/rig/alchemist/parts"
 OUT = ROOT / "assets/art/pets/rig"
 # Laid out over the original picture (assets/art/pets/golem.png, 340x360; user 2026-10-02: "follow the original
-# image closely"): 1 px of it is 1.58 sheet px, its ground (y 318) is y 0 here, its x 170 is x 0. Squat: a round
-# boulder body as wide as tall, stubby legs mostly behind it, short arms with big fists near the ground.
+# image closely"), measured on a grid of it (artifacts/rig-custom/golem-grid.png): 1 px of it is 1.6 sheet px, its
+# x 172 (the body's middle) is x 0 here and its ground (y 325) is y 0. There the body is a boulder 255 px wide
+# (x 45-300, y 0-240); the near arm hangs in FRONT of the body's left side (top at 55,138, fist down to y 265); the
+# far arm hangs BEHIND the body's right edge (top at about 297,150, fist down to y 275; user: the arms' front and
+# back were reversed); the near leg (x 55-155, y 255-325) and the far leg (x 180-275, y 245-310) show under it.
 # On screen it stands as tall as the old still sprite (PetArt.GolemHeight 190 px): measured, one sheet px times
-# SCALE is about 0.31 px, and the golem is about 455 sheet px tall.
-SCALE = 1.34
+# SCALE is about 0.31 px, and the golem is about 525 sheet px tall.
+SCALE = 1.19
 FAR = "c8c8cc"
+BODY_SCALE = 1.0
+ARM_SCALE = 1.0
+LEG_SCALE, LEG_WIDTH = 0.85, 1.15  # squatter legs, as in the original
 
 BONES = {
     "root": (None, 0, 0, 0),
-    "body": ("root", 55, 249, 90),
-    "arm_b": ("body", -168, 290, -102),
-    "arm_f": ("body", 222, 285, -76),
-    "leg_b": ("root", -95, 132, -90),
-    "leg_f": ("root", 125, 132, -90),
+    "body": ("root", 0, 306, 90),
+    "arm_b": ("body", -190, 300, -94),
+    "arm_f": ("body", 205, 285, -89),
+    "leg_b": ("root", -100, 118, -90),
+    "leg_f": ("root", 100, 128, -90),
     # Chips knocked off when hit (hidden otherwise).
-    "chip1": ("body", 120, 330, 0),
-    "chip2": ("body", -20, 400, 0),
-    "chip3": ("body", 170, 230, 0),
+    "chip1": ("body", 80, 420, 0),
+    "chip2": ("body", -60, 470, 0),
+    "chip3": ("body", 140, 300, 0),
 }
 
 SHOULDER_OVERLAP = 0  # the arms' top stone is drawn whole, in front of the body
 HIP_OVERLAP = 0
 
 
-def arm_slot(slot, bone, part, flip, tint, images):
-    images[slot] = prepare(PARTS / f"{part}.png", flip=flip, tint=tint)
+def arm_slot(slot, bone, part, flip, tint, images, scale_by=1.0, width=1.0):
+    images[slot] = prepare(PARTS / f"{part}.png", flip=flip, tint=tint, scale_by=scale_by, width=width)
     r = BONES[bone][3] + 90
     return (slot, bone, *place(images[slot], BONES[bone][1:3], r, SHOULDER_OVERLAP if "arm" in bone else HIP_OVERLAP), r)
 
@@ -140,15 +146,15 @@ SLOT_COLORS = {"hurt": {s: [(0, WHITE), (0.04, RED), (0.3, WHITE)] for s in STON
 
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
-    images = {"shadow": shadow(460, 60)}
-    slots = [("shadow", "root", 30, 8, 0)]
-    slots.append(arm_slot("leg_f", "leg_f", "GOLEM_LEG", False, FAR, images))
-    slots.append(arm_slot("leg_b", "leg_b", "GOLEM_LEG", False, None, images))
-    images["body"] = prepare(PARTS / "GOLEM_BODY.png")
+    images = {"shadow": shadow(470, 60)}
+    slots = [("shadow", "root", -10, 8, 0)]
+    # Back to front as in the original: far arm and far leg behind the body, then the near leg and near arm.
+    slots.append(arm_slot("arm_f", "arm_f", "GOLEM_ARM", False, FAR, images, ARM_SCALE))
+    slots.append(arm_slot("leg_f", "leg_f", "GOLEM_LEG", False, FAR, images, LEG_SCALE, LEG_WIDTH))
+    images["body"] = prepare(PARTS / "GOLEM_BODY.png", scale_by=BODY_SCALE)
     slots.append(("body", "body", *BONES["body"][1:3], 0))
-    # In the original both arms hang in front of the body's sides; the far one a little darker.
-    slots.append(arm_slot("arm_f", "arm_f", "GOLEM_ARM", True, FAR, images))
-    slots.append(arm_slot("arm_b", "arm_b", "GOLEM_ARM", False, None, images))
+    slots.append(arm_slot("leg_b", "leg_b", "GOLEM_LEG", False, None, images, LEG_SCALE, LEG_WIDTH))
+    slots.append(arm_slot("arm_b", "arm_b", "GOLEM_ARM", False, None, images, ARM_SCALE))
     for i, chip in enumerate(("chip1", "chip2", "chip3")):
         images[chip] = prepare(PARTS / f"PEBBLE_{i + 1}.png")
         slots.append((chip, chip, *BONES[chip][1:3], 0))

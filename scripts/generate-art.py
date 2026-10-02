@@ -66,7 +66,7 @@ def run(e):
     with open(LOGS / f"{e['slug']}.log", "w", encoding="utf-8") as log:
         try:
             # The key visual is attached so the alchemist looks the same in every card.
-            subprocess.run([codex, "exec", "-s", "workspace-write", "-C", str(ROOT), "-i", str(KEY_VISUAL), "-"],
+            subprocess.run([codex, "exec", "--ephemeral", "-s", "workspace-write", "-C", str(ROOT), "-i", str(KEY_VISUAL), "-"],
                            input=task, text=True,
                            encoding="utf-8", stdout=log, stderr=subprocess.STDOUT, timeout=900, cwd=ROOT)
         except subprocess.TimeoutExpired:

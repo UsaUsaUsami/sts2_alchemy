@@ -199,7 +199,7 @@ if "--cut-only" not in sys.argv:
         "attached sheet shows base-game icons for STYLE ONLY: do not copy those objects.\n"
         "Then save the generated image as " + sheet.relative_to(ROOT).as_posix() + " in the current repository "
         "(overwrite if it exists). Do not edit any other file. Reply with the saved path only.\n\n" + cells + "\n")
-    cmd = [codex, "exec", "-s", "workspace-write", "-C", str(ROOT), "-c", f'model_reasoning_effort="{arg("--reasoning", "low")}"']
+    cmd = [codex, "exec", "--ephemeral", "-s", "workspace-write", "-C", str(ROOT), "-c", f'model_reasoning_effort="{arg("--reasoning", "low")}"']
     if REFERENCE.exists():
         cmd += ["-i", str(REFERENCE)]
     cmd.append("-")

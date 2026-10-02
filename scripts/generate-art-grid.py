@@ -83,7 +83,7 @@ task = (
     "Then save the generated image as " + sheet.relative_to(ROOT).as_posix() + " in the current repository "
     "(overwrite if it exists). Do not edit any other file. Reply with the saved path only.\n\n"
     "COMMON STYLE FOR EVERY PANEL:\n" + style + "\n\n" + "\n\n".join(panels) + "\n")
-cmd = [codex, "exec", "-s", "workspace-write", "-C", str(ROOT), "-c", f'model_reasoning_effort="{reasoning}"',
+cmd = [codex, "exec", "--ephemeral", "-s", "workspace-write", "-C", str(ROOT), "-c", f'model_reasoning_effort="{reasoning}"',
        "-i", str(KEY_VISUAL), "-"]
 started = time.time()
 print(f"{len(todo)}枚（{', '.join(e['title'] for e in todo)}）を1回で生成します。")

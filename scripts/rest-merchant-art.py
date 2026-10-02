@@ -47,7 +47,7 @@ if "--cut-only" not in sys.argv:
         "RIGHT HALF (shop): the Alchemist standing, full body, three-quarter view facing RIGHT toward a shopkeeper who "
         "is NOT drawn, relaxed, one hand on a vial at the belt, curious. Feet near the bottom edge, head near the top. "
         "No golem in this half.\n" + (arg("--note", "") or ""))
-    cmd = [codex, "exec", "-s", "workspace-write", "-C", str(ROOT), "-c", 'model_reasoning_effort="low"']
+    cmd = [codex, "exec", "--ephemeral", "-s", "workspace-write", "-C", str(ROOT), "-c", 'model_reasoning_effort="low"']
     for ref in REFS:
         cmd += ["-i", str(ref)]
     cmd.append("-")

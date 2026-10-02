@@ -114,7 +114,7 @@ def run(item):
             "reference as described. Then save the generated image as " + rel + " in the current repository "
             "(overwrite if it exists). Do not edit any other file. Reply with the saved path only.\n\n"
             + BRIEF + "\n" + direction + (f"\nExtra direction: {note}" if note else "") + "\n")
-    cmd = [codex, "exec", "-s", "workspace-write", "-C", str(ROOT)]
+    cmd = [codex, "exec", "--ephemeral", "-s", "workspace-write", "-C", str(ROOT)]
     for ref in REFS:
         cmd += ["-i", str(ref)]
     cmd.append("-")

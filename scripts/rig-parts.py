@@ -223,7 +223,7 @@ task = ("Use your built-in image generation tool to create exactly one image, la
         + sheet.relative_to(ROOT).as_posix() + " (overwrite if it exists). Do not edit any other file. Reply with the "
         "saved path only.\n\n" + BRIEF + "\n".join(f"- {name}: {desc}" for name, desc in PARTS)
         + (f"\nExtra direction: {note}" if note else "") + "\n")
-cmd = [codex, "exec", "-s", "workspace-write", "-C", str(ROOT), "-c", 'model_reasoning_effort="low"']
+cmd = [codex, "exec", "--ephemeral", "-s", "workspace-write", "-C", str(ROOT), "-c", 'model_reasoning_effort="low"']
 for ref in REFS:
     cmd += ["-i", str(ref)]
 cmd.append("-")

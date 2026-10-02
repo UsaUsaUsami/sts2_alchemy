@@ -18,7 +18,9 @@
 4. スモーク：ゴーレム・休憩所・商人の確認項目を骨格用に書き換え（`smoke.ps1`はpets/rigもコピー）。
 5. 確認用：`artifacts/rig-probe/golem-v1-sheet.png`（左はネクロバインダー＝大きさの目安）、`artifacts/rig-probe/rest2-cmp.png`、`artifacts/rig-probe/merchant1-cmp.png`。
 
-6. ユーザー「ゴーレムがデカくてやだ。元画像に丁寧に沿って」→ `rig-parts.py --set golem2`で、元の絵（`assets/art/pets/golem.png`）と同じずんぐりした形の部品を生成し直し（1回）、元の絵に重ねて配置（元の絵の1px＝1.58シート px、脚は胴の後ろ、腕は胴の両脇の手前）。画面の高さは元の1枚絵と同じ190px（SCALE 1.34）。比較：`artifacts/rig-custom/golem-cmp.png`、ゲームでの大きさ：`artifacts/rig-probe/golem-v2-sheet.png`。スモーク405件PASS。**ゲームが起動中で未反映**（終了後に`scripts/update.ps1`）。
+6. ユーザー「ゴーレムがデカくてやだ。元画像に丁寧に沿って」→ `rig-parts.py --set golem2`で、元の絵（`assets/art/pets/golem.png`）と同じずんぐりした形の部品を生成し直し（1回）、元の絵に重ねて配置（元の絵の1px＝1.58シート px、脚は胴の後ろ、腕は胴の両脇の手前）。画面の高さは元の1枚絵と同じ190px（SCALE 1.34）。比較：`artifacts/rig-custom/golem-cmp.png`、ゲームでの大きさ：`artifacts/rig-probe/golem-v2-sheet.png`。スモーク405件PASS。
+7. ユーザー「ゴーレムの手の前後が逆。位置も微妙に違う」→ 元の絵に方眼を引いて部位の位置を測り（`artifacts/rig-custom/golem-grid.png`）、奥の腕（画面右）を胴の後ろ、手前の腕を胴の前に。元の絵の輪郭を重ねて（`artifacts/rig-custom/golem-overlay.py`）胴・腕・脚の位置と大きさを合わせた（腕を大きく、脚は低く幅広に）。画面の高さ190px（SCALE 1.19）。スモーク405件PASS、反映済み（旧版`artifacts/backups/20261002-202433-687`）。確認用：`artifacts/rig-custom/golem-cmp.png`、`artifacts/rig-probe/golem-v3-sheet.png`。
+8. ユーザー「Codexにすべてのチャットを送るのはやめて。確認作業やサブエージェントとして使うときだけ」→ Claude Code側にCodexへ会話を転送する設定はなかった（フックはherdrのセッション報告だけ）。`codex exec`を呼ぶスクリプトすべてに`--ephemeral`を付け、Codexの履歴に残らないようにした（メモリcodex-usage-scope）。
 
 ### 次にやること・返答待ち
 1. **ユーザーが実画面で確認**：ゴーレムの大きさと位置、休憩所の位置（火との距離、思考の吹き出し）、商人の大きさ。

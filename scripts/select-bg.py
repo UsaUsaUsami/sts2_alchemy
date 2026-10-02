@@ -52,7 +52,7 @@ brief = (
     "ascension selector sit) contain only the plain backdrop.\n"
     "Style: Slay the Spire 2 painterly look, minimal thin line work, large flat colour masses with soft brush "
     "texture, dramatic lighting. No text, no logo, no frame, no UI.\n" + (f"Extra direction: {note}\n" if note else ""))
-cmd = [codex, "exec", "-s", "workspace-write", "-C", str(ROOT), "-c", 'model_reasoning_effort="low"']
+cmd = [codex, "exec", "--ephemeral", "-s", "workspace-write", "-C", str(ROOT), "-c", 'model_reasoning_effort="low"']
 for ref in REFS:
     cmd += ["-i", str(ref)]
 cmd.append("-")
