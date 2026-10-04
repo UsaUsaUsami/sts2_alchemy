@@ -135,6 +135,60 @@ public static class RigProbe
                     Log($"captured combat {phase}");
                 }
             }
+            else if (mode == "screens")
+            {
+                // A real alchemist run, the whole window captured on the map and in each workshop screen (UI review,
+                // 2026-10-05): the map with its workshop nodes, the material box, and the four facilities.
+                viewport.QueueFree();
+                visuals.QueueFree();
+                await MegaCrit.Sts2.Core.Assets.PreloadManager.LoadCommonAndMainMenuAssets();
+                MegaCrit.Sts2.Core.Saves.SaveManager.Instance.SetFtuesEnabled(false);
+                var player = MegaCrit.Sts2.Core.Entities.Players.Player.CreateForNewRun<Alchemy.AlchemistCharacter>(MegaCrit.Sts2.Core.Unlocks.UnlockState.all, 1);
+                var run = MegaCrit.Sts2.Core.Runs.RunState.CreateForNewRun([player], MegaCrit.Sts2.Core.Models.ActModel.GetDefaultList().Select(a => a.ToMutable()).ToList(), [], MegaCrit.Sts2.Core.Runs.GameMode.Standard, 0, "ALCHEMY_PROBE_01");
+                MegaCrit.Sts2.Core.Runs.RunManager.Instance.SetUpNewSingleplayer(run, false);
+                await (Task)AccessTools.Method(typeof(MegaCrit.Sts2.Core.Nodes.NGame), "StartRun").Invoke(MegaCrit.Sts2.Core.Nodes.NGame.Instance, [run])!;
+                await Frames(tree, 90);
+                MegaCrit.Sts2.Core.Saves.SaveManager.Instance.SettingsSave.SeenEaDisclaimer = true;
+                foreach (var modal in tree.Root.FindChildren("*", "NEarlyAccessDisclaimer", true, false)) modal.QueueFree();
+                if (MegaCrit.Sts2.Core.Nodes.CommonUi.NModalContainer.Instance is { } modals)
+                    foreach (var child in modals.GetChildren()) child.QueueFree();
+                await Frames(tree, 30);
+                var box = player.GetRelic<Alchemy.MaterialBox>()!;
+                box.Inventory.Counts[0] = 2; box.Inventory.Counts[1] = 3; box.Inventory.Counts[2] = 1; box.Inventory.Counts[3] = 2;
+                box.Inventory.RareCounts[0] = 1; box.Inventory.RareCounts[1] = 1;
+                void Shot(string name) => tree.Root.GetTexture().GetImage().SavePng($"{Out}/{name}.png");
+                async Task Press(string prefix)
+                {
+                    var b = tree.Root.FindChildren("*", "Button", true, false).OfType<Button>().FirstOrDefault(x => x.Text.StartsWith(prefix) && x.IsVisibleInTree());
+                    Log($"press {prefix}: {(b is null ? "missing" : "found")}");
+                    b?.EmitSignal(BaseButton.SignalName.Pressed);
+                    await Frames(tree, 30);
+                }
+                var map = MegaCrit.Sts2.Core.Nodes.Screens.Map.NMapScreen.Instance;
+                Log($"map instance {map is not null} open {map?.IsOpen}");
+                if (map is { IsOpen: false }) { map.Open(); await Frames(tree, 300); }
+                Shot("screens_map");
+                map?.Close(false);
+                await Frames(tree, 30);
+                Shot("screens_run");
+                Alchemy.WorkshopUi.Open();
+                await Frames(tree, 30);
+                Shot("screens_box");
+                AccessTools.Method(typeof(Alchemy.WorkshopUi), "Close").Invoke(null, null);
+                await Frames(tree, 10);
+                Alchemy.WorkshopUi.OpenMapWorkshop();
+                await Frames(tree, 30);
+                Shot("screens_workshop_synthesis");
+                await Press("素材から作る");
+                Shot("screens_workshop_materials");
+                await Press("改造");
+                Shot("screens_workshop_modify");
+                await Press("調薬");
+                Shot("screens_workshop_potion");
+                await Press("付与");
+                Shot("screens_workshop_rare");
+                Log("captured screens");
+            }
             else if (mode == "continue")
             {
                 // Continue the run saved in the isolated profile (rig-probe.ps1 -Save copies one in), the way the main

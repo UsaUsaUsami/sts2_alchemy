@@ -232,6 +232,18 @@ public static class WorkshopUi
         return b;
     }
     // The material's own icon on its button (IconArt); without the file the button stays text only.
+    // A selected tab stays an ordinary, clickable button with a gold frame: showing it as disabled made
+    // "使用可能" read as unusable (2026-10-05).
+    private static Button Tab(string text, Action action, bool selected, Container parent)
+    {
+        var b = Button(text, action, false, parent);
+        if (!selected) return b;
+        var frame = Box(new Color("2b3a44"), new Color("d9b25f"), 2, 8);
+        foreach (var state in new[] { "normal", "hover", "pressed", "focus" }) b.AddThemeStyleboxOverride(state, frame);
+        b.AddThemeColorOverride("font_color", new Color("f2d18b"));
+        b.AddThemeColorOverride("font_hover_color", new Color("f2d18b"));
+        return b;
+    }
     private static Button WithIcon(Button b, Core.Material m) => WithIcon(b, MaterialChoice.Normal(m));
     private static Button WithIcon(Button b, MaterialChoice m)
     {
@@ -291,9 +303,10 @@ public static class WorkshopUi
     }
     private static void MaterialCardSlot(Container parent, CardModel canonical, string name, int count)
     {
-        var wrapper = new VBoxContainer { CustomMinimumSize = new(68, 96) };
+        // The 0.28-scale card is about 110px tall; a shorter slot let the row spill up over the material list (2026-10-05).
+        var wrapper = new VBoxContainer { CustomMinimumSize = new(68, 136) };
         wrapper.Alignment = BoxContainer.AlignmentMode.Center;
-        var stage = new Control { CustomMinimumSize = new(64, 80) };
+        var stage = new Control { CustomMinimumSize = new(64, 112) };
         wrapper.AddChild(stage);
         var holder = MountCard(stage, CreateMaterialPreviewCard(canonical), 0.28f, false);
         if (holder is not null) UpdateCardWhenReady(holder, PileType.None, CardPreviewMode.Normal);
@@ -657,10 +670,15 @@ public static class WorkshopUi
             bool enchantmentReady=currentBox.Inventory.RareCounts.Any(n=>n>0)
                 && currentBox.Owner.Deck.Cards.Any(c=>c is IRareInscribable { AlchemistRareModifier.Length: 0 });
             string S(WorkshopFacility f,bool affordable)=>currentBox.Inventory.FacilityStatus(floor,f,affordable);
-            Button($"錬成\n{S(WorkshopFacility.Synthesis,synthesisReady)}",()=>{upgradeMode=false;rareMode=false;potionMode=false;selectedUpgrade=null;selectedRareCard=null;Refresh();},!upgradeMode&&!rareMode&&!potionMode,modes);
-            Button($"改造\n{S(WorkshopFacility.Modification,modificationReady)}",()=>{upgradeMode=true;rareMode=false;potionMode=false;selectedRecipe=null;selectedRareCard=null;Refresh();},upgradeMode,modes);
-            Button($"調薬\n{S(WorkshopFacility.Brewing,brewingReady)}",()=>{upgradeMode=false;rareMode=false;potionMode=true;selectedRecipe=null;selectedUpgrade=null;Refresh();},potionMode,modes);
-            Button($"付与\n{S(WorkshopFacility.Enchantment,enchantmentReady)}",()=>{upgradeMode=false;rareMode=true;potionMode=false;selectedRecipe=null;selectedUpgrade=null;Refresh();},rareMode,modes);
+            // "素材不足" only when materials are the problem; otherwise say what is (2026-10-05).
+            string SBrew()=>currentBox.Inventory.CanUseFacility(floor,WorkshopFacility.Brewing)&&!currentBox.Owner.HasOpenPotionSlots&&currentBox.Inventory.Counts.Any(n=>n>0)
+                ? "枠が満杯" : S(WorkshopFacility.Brewing,brewingReady);
+            string SRare()=>currentBox.Inventory.CanUseFacility(floor,WorkshopFacility.Enchantment)&&!enchantmentReady
+                ? (currentBox.Inventory.RareCounts.Any(n=>n>0) ? "対象なし" : "希少素材なし") : S(WorkshopFacility.Enchantment,enchantmentReady);
+            Tab($"錬成\n{S(WorkshopFacility.Synthesis,synthesisReady)}",()=>{upgradeMode=false;rareMode=false;potionMode=false;selectedUpgrade=null;selectedRareCard=null;Refresh();},!upgradeMode&&!rareMode&&!potionMode,modes);
+            Tab($"改造\n{S(WorkshopFacility.Modification,modificationReady)}",()=>{upgradeMode=true;rareMode=false;potionMode=false;selectedRecipe=null;selectedRareCard=null;Refresh();},upgradeMode,modes);
+            Tab($"調薬\n{SBrew()}",()=>{upgradeMode=false;rareMode=false;potionMode=true;selectedRecipe=null;selectedUpgrade=null;Refresh();},potionMode,modes);
+            Tab($"付与\n{SRare()}",()=>{upgradeMode=false;rareMode=true;potionMode=false;selectedRecipe=null;selectedUpgrade=null;Refresh();},rareMode,modes);
             if(potionMode) PotionWorkshop();
             else if(rareMode && selectedRareCard is not null) RareConfirmation(selectedRareCard);
             else if(rareMode) RareGallery();
@@ -670,8 +688,8 @@ public static class WorkshopUi
             else
             {
                 var craftModes=new HBoxContainer();content!.AddChild(craftModes);
-                Button("カードから探す",()=>{materialCraftMode=false;craftInputs.Clear();Refresh();},!materialCraftMode,craftModes);
-                Button("素材から作る",()=>{materialCraftMode=true;craftableOnly=false;Refresh();},materialCraftMode,craftModes);
+                Tab("カードから探す",()=>{materialCraftMode=false;craftInputs.Clear();Refresh();},!materialCraftMode,craftModes);
+                Tab("素材から作る",()=>{materialCraftMode=true;craftableOnly=false;Refresh();},materialCraftMode,craftModes);
                 if(materialCraftMode) MaterialCrafting();
                 else RecipeBrowser("完成カードを選ぶ","カードを選ぶと大きく表示し、効果を確認してから錬成できます。");
             }

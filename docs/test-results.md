@@ -1,5 +1,10 @@
 ﻿# テスト結果記録
 
+## 工房・マップのUI修正（2026-10-05）
+- `scripts/smoke.ps1 -Name ui-fix`：**413件PASS・FAIL 0**。
+- `scripts/rig-probe.ps1 -Name ui-screens5 -Mode screens`：マップの凡例に工房の行が出る、選択中のタブが金の枠で押せる見た目、素材一覧の最終行が隠れない、付与が「対象なし」と出ることを画像で確認（`artifacts/rig-probe/ui-screens5/`）。
+- 未実施：実際のクリック・ホバー・コントローラー操作、反映後のゲーム本体での確認。
+
 ## 隔離実機スモーク（2026-10-01、ネクロバインダーの体型・フード・杖頭）
 
 - `scripts/smoke.ps1 -Name rig-necro2`：**405件PASS・FAIL 0**。見た目は`scripts/rig-probe.ps1 -Mode alchemist -Rig necrobinder`で全動作を確認（`artifacts/rig-probe/necro-v2-sheet.png`）。反映済み（旧版`artifacts/backups/20261001-233617-113`）。実際の戦闘画面は未確認。

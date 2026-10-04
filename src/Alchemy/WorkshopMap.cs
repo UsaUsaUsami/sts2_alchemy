@@ -124,9 +124,12 @@ public static class WorkshopMapLabelPatch
     {
         var run=RunManager.Instance.DebugOnlyGetState();
         if(!WorkshopMap.IsWorkshop(run,__instance.Point.coord)) return;
-        var label=new Label { Text="工房",Position=new(-24,34),Size=new(72,28),HorizontalAlignment=HorizontalAlignment.Center,MouseFilter=Control.MouseFilterEnum.Ignore };
-        label.AddThemeFontSizeOverride("font_size",16);
+        // Below the icon, large enough to read, outlined so it holds on the parchment (UI review, 2026-10-05).
+        var label=new Label { Text="工房",Position=new(-28,42),Size=new(80,30),HorizontalAlignment=HorizontalAlignment.Center,MouseFilter=Control.MouseFilterEnum.Ignore };
+        label.AddThemeFontSizeOverride("font_size",20);
         label.AddThemeColorOverride("font_color",new Color("f4d796"));
+        label.AddThemeColorOverride("font_outline_color",new Color("2a1c0c"));
+        label.AddThemeConstantOverride("outline_size",6);
         __instance.AddChild(label);
     }
 }
@@ -145,5 +148,53 @@ public static class WorkshopMapIconPatch
         string? own=IconArt.Packed("workshop_map");
         icon.Texture=ResourceLoader.Load<Texture2D>(own ?? ImageHelper.GetImagePath("atlases/ui_atlas.sprites/map/icons/map_shop.tres"));
         if(own is null) icon.SelfModulate=new Color("e6b86a");
+    }
+}
+
+// The legend lists every node type but the workshop (UI review, 2026-10-05): one row is added to an alchemist's
+// map, taken away again if the screen is reused by another character's run.
+[HarmonyPatch(typeof(NMapScreen),nameof(NMapScreen.Open))]
+public static class WorkshopMapLegendPatch
+{
+    private const string RowName="AlchemyWorkshopLegend";
+    public static void Postfix(NMapScreen __instance)
+    {
+        var items=__instance.GetNodeOrNull<Control>("MapLegend/LegendItems");
+        if(items is null) return;
+        var existing=items.GetNodeOrNull(RowName);
+        bool want=RunManager.Instance.DebugOnlyGetState() is { Players.Count: 1 } run && run.Players[0].Character is AlchemistCharacter;
+        if(!want) { existing?.QueueFree(); return; }
+        if(existing is not null) return;
+        // Same look as the rest site row: its icon size and its label's font.
+        var rest=items.GetNodeOrNull<Control>("RestSiteLegendItem");
+        var restIcon=rest?.GetNodeOrNull<TextureRect>("Icon");
+        var restLabel=rest?.FindChildren("*","Label",true,false).OfType<Label>().FirstOrDefault();
+        var row=new HBoxContainer { Name=RowName,MouseFilter=Control.MouseFilterEnum.Ignore,CustomMinimumSize=rest?.CustomMinimumSize??new Vector2(0,48) };
+        row.AddThemeConstantOverride("separation",10);
+        string? own=IconArt.Packed("workshop_map");
+        var icon=new TextureRect
+        {
+            Texture=ResourceLoader.Load<Texture2D>(own ?? ImageHelper.GetImagePath("atlases/ui_atlas.sprites/map/icons/map_shop.tres")),
+            ExpandMode=TextureRect.ExpandModeEnum.IgnoreSize,StretchMode=TextureRect.StretchModeEnum.KeepAspectCentered,
+            CustomMinimumSize=restIcon is { Size.X: > 0 } ? restIcon.Size : new Vector2(40,40),
+            SelfModulate=own is null ? new Color("e6b86a") : Colors.White,
+        };
+        row.AddChild(new Control { CustomMinimumSize=new Vector2(18,0),MouseFilter=Control.MouseFilterEnum.Ignore });
+        row.AddChild(icon);
+        var text=new Label { Text="工房",VerticalAlignment=VerticalAlignment.Center };
+        if(restLabel is not null)
+        {
+            text.AddThemeFontSizeOverride("font_size",restLabel.GetThemeFontSize("font_size"));
+            text.AddThemeColorOverride("font_color",restLabel.GetThemeColor("font_color"));
+            if(restLabel.GetThemeFont("font") is { } font) text.AddThemeFontOverride("font",font);
+        }
+        row.AddChild(text);
+        items.AddChild(row);
+        // The panel is sized for six rows; grow it by the row added (checked by screenshot, 2026-10-05).
+        const float RowHeight=48;
+        row.CustomMinimumSize=new Vector2(row.CustomMinimumSize.X,RowHeight);
+        var legend=items.GetParent<Control>();
+        legend.Size=new Vector2(legend.Size.X,legend.Size.Y+RowHeight+4);
+        GD.Print($"[Alchemy] map legend: workshop row added (panel {legend.GetClass()} size {legend.Size})");
     }
 }
