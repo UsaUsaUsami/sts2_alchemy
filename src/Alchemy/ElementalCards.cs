@@ -78,13 +78,19 @@ public sealed class Ignition() : ElementCard(1,CardType.Attack,CardRarity.Common
     }
     protected override void OnUpgrade()=>DynamicVars.Damage.UpgradeValueBy(3);
 }
-public sealed class FlashPowder() : ElementCard(1,CardType.Attack,CardRarity.Uncommon,TargetType.AllEnemies,AlchemyPhase.Fire)
+// v0.26 (2026-10-13, user): replaces 閃光火薬, a plain area attack. The alchemist's plain X card (Whirlwind's shape),
+// with one more hit when it transitions.
+public sealed class FireChainBlast() : ElementCard(0,CardType.Attack,CardRarity.Uncommon,TargetType.AllEnemies,AlchemyPhase.Fire)
 {
-    protected override CardModel Artwork=>ModelDb.Card<Thunderclap>();
-    protected override IEnumerable<DynamicVar> CanonicalVars=>[new DamageVar(6,ValueProp.Move)];
-    public override List<(string,string)> Localization=>new CardLoc("閃光火薬","敵全体に{Damage:diff()}ダメージ。\n[gold]火相[/gold]");
-    protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>DamageCmd.Attack(DynamicVars.Damage.BaseValue).FromCard(this,p).TargetingAllOpponents(CombatState!).Execute(c);
-    protected override void OnUpgrade()=>DynamicVars.Damage.UpgradeValueBy(3);
+    protected override bool HasEnergyCostX=>true;
+    protected override IEnumerable<DynamicVar> CanonicalVars=>[new DamageVar(5,ValueProp.Move)];
+    public override List<(string,string)> Localization=>new CardLoc("連鎖爆破","敵全体に{Damage:diff()}ダメージをX回与える。このカードで[gold]相転移[/gold]が起きるなら、さらに1回。\n[gold]火相[/gold]");
+    protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)
+    {
+        int hits=ResolveEnergyXValue()+(WillTransition?1:0);
+        return hits>0?HitAll(c,p,DynamicVars.Damage.BaseValue,hits):Task.CompletedTask;
+    }
+    protected override void OnUpgrade()=>DynamicVars.Damage.UpgradeValueBy(2);
 }
 
 // v0.23: starter-only (Basic). 風の衣 took its reward slot.

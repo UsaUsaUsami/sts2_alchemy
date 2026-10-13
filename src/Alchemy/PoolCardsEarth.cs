@@ -6,6 +6,7 @@ using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
+using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.ValueProps;
 
@@ -56,22 +57,37 @@ public sealed class EarthFortify() : ElementCard(1,CardType.Skill,CardRarity.Unc
     protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p){await CardBlock(p);await ApplySelf<BlockNextTurnPower>(c,DynamicVars["BlockNextTurnPower"].BaseValue);}
     protected override void OnUpgrade()=>DynamicVars["BlockNextTurnPower"].UpgradeValueBy(3);
 }
-public sealed class EarthThornShell() : ElementCard(1,CardType.Power,CardRarity.Uncommon,TargetType.Self,AlchemyPhase.Earth)
+// v0.26 (2026-10-13, user: パッとしない): replaces 棘の外殻 (the base game's thorns). Earth transitions also hit, so
+// the defensive element has an attack of its own. Earth only and small, as a per-transition payoff (原則7).
+public sealed class EarthUpheaval() : ElementCard(1,CardType.Power,CardRarity.Uncommon,TargetType.Self,AlchemyPhase.Earth)
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars=>[new PowerVar<ThornsPower>(3)];
-    protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<ThornsPower>()];
-    public override List<(string,string)> Localization=>new CardLoc("棘の外殻","[gold]トゲ[/gold]{ThornsPower:diff()}を得る。\n[gold]地相[/gold]");
-    protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>ApplySelf<ThornsPower>(c,DynamicVars["ThornsPower"].BaseValue);
-    protected override void OnUpgrade()=>DynamicVars["ThornsPower"].UpgradeValueBy(2);
+    protected override IEnumerable<DynamicVar> CanonicalVars=>[new PowerVar<UpheavalPower>(3)];
+    protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<UpheavalPower>()];
+    public override List<(string,string)> Localization=>new CardLoc("地殻変動","[gold]地相[/gold]へ転移するたび、敵全体に{UpheavalPower:diff()}ダメージを与える。\n[gold]地相[/gold]");
+    protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>ApplySelf<UpheavalPower>(c,DynamicVars["UpheavalPower"].BaseValue);
+    protected override void OnUpgrade()=>DynamicVars["UpheavalPower"].UpgradeValueBy(1);
 }
-// v0.23 (ユーザーレビュー「強すぎる」): 2 cost, 2 per transition (was 1 cost, 3).
-public sealed class EarthMemory() : ElementCard(2,CardType.Skill,CardRarity.Rare,TargetType.Self,AlchemyPhase.Earth)
+public sealed class UpheavalPower : TransitionListenerPower
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars=>[new DynamicVar("Bonus",2)];
+    protected override PowerModel IconSource => ModelDb.Power<ThornsPower>();
+    public override List<(string,string)> Localization => new PowerLoc("地殻変動","地相へ転移するたび、敵全体にダメージを与える。","[gold]地相[/gold]へ転移するたび、敵全体に{Amount}ダメージを与える。");
+    protected override bool Matches(PhaseTransitionContext t) => t.To == AlchemyPhase.Earth;
+    protected override Task OnTransition(PhaseTransitionContext t) => DamageAllEnemies(t.Choice, Amount);
+}
+// v0.26 (2026-10-13, user: パッとしない): replaces 大地の記憶 (block per transition this combat, 原則7). Plays the earth
+// transition effect once for each transition this turn, so it pays for a big turn and grows with 大地の心核 and 賢者の石.
+// An echo is not a transition: it neither counts nor notifies listeners, so it cannot chain.
+public sealed class EarthResonance() : ElementCard(1,CardType.Skill,CardRarity.Rare,TargetType.Self,AlchemyPhase.Earth)
+{
+    protected override IEnumerable<DynamicVar> CanonicalVars=>[new PreviewCountVar("Total",c=>c.TransitionsThisTurn+(c.IsUpgraded?1:0))];
     public override bool GainsBlock=>true;
-    public override List<(string,string)> Localization=>new CardLoc("大地の記憶","この戦闘で起きた[gold]相転移[/gold]1回につき{Bonus:diff()}[gold]ブロック[/gold]を得る。\n[gold]地相[/gold]");
-    protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>TransitionCount>0?Block(p,TransitionCount*DynamicVars["Bonus"].BaseValue):Task.CompletedTask;
-    protected override void OnUpgrade()=>DynamicVars["Bonus"].UpgradeValueBy(1);
+    public override List<(string,string)> Localization=>new CardLoc("地脈の共鳴","このターンに起きた[gold]相転移[/gold]1回につき1回、[gold]地相[/gold]への相転移の効果を発動する（相は変わらない）。{IfUpgraded:show:さらに1回発動する。|}{InCombat:\n（{Total:diff()}回）|}\n[gold]地相[/gold]");
+    protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p)
+    {
+        int times=TransitionsThisTurn+(IsUpgraded?1:0);
+        for(int i=0;i<times;i++) await PhaseTransitions.Echo(c,Owner,this,null,p,AlchemyPhase.Earth);
+    }
+    protected override void OnUpgrade(){}
 }
 // v0.23 (ユーザーレビュー「バリケードと一緒」): like StS1's Calipers, block is kept but loses a fixed amount.
 // The upgrade lowers the loss, so the power keeps its amount as "block lost".

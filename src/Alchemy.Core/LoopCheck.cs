@@ -194,6 +194,7 @@ public static class LoopProfiles
         // v0.25 元素の奔流: X spends all the energy left, so it can be played once a turn at most; its steps draw one
         // card in four. Modelled as costing the turn's energy, with one free move.
         new("AlchElementalTorrent", TurnEnergyCost, LoopPhaseMove.Any),
+        El("FireChainBlast", TurnEnergyCost, F), // v0.26 連鎖爆破: X, like 元素の奔流
         // Workshop
         Dual("Sandstorm", 1, E, A, draw: 1), Dual("Sandstorm+", 1, E, A, draw: 2),
         Dual("Drizzle", 1, W, A, draw: 1), Dual("FireWhirl", 1, F, A),

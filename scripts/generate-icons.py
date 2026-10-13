@@ -98,10 +98,11 @@ GROUPS = {
         ("death_mark_power", FLAT, "死亡 (dies next turn): a plain cracked grey skull"),
         ("drain_miasma_power", FLAT, "吸精の瘴気 (drain on all enemies): a dark crimson cloud of mist"),
     ],
-    # v0.25 (2026-10-13). The shipped icon is a PIL placeholder (scripts/draw-placeholder-icon.py); generate this
-    # group to replace it.
+    # v0.25-0.26 (2026-10-13).
     "powers-v025": [
         ("golden_form_power", FLAT, "黄金化 (material costs are not paid): a plain gold ingot with a soft shine"),
+        ("upheaval_power", FLAT, f"地殻変動 (entering earth hits all enemies): a {EARTH} rock slab cracking upward with "
+         "two small shards flying off"),
     ],
     # Materials, the material reward, and the four element marks for the phase dial (PhaseDial).
     "materials": [

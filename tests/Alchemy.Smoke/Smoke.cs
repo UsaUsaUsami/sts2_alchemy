@@ -483,8 +483,8 @@ public static class Smoke
             Check(box.Combat.Phases.Current==AlchemyPhase.Water && foe.GetPower<WeakPower>()?.Amount==1+PhaseRules.BaseAmount(AlchemyPhase.Water),
                 $"earth to water adds the water transition's weak (weak {foe.GetPower<WeakPower>()?.Amount})");
             int hpBefore=foe.CurrentHp;
-            await Play(cs.CreateCard<FlashPowder>(player),null);
-            Check(box.Combat.Phases.Current==AlchemyPhase.Fire && hpBefore-foe.CurrentHp==6+PhaseRules.BaseAmount(AlchemyPhase.Fire),
+            await Play(cs.CreateCard<PowderImprovisation>(player),foe);
+            Check(box.Combat.Phases.Current==AlchemyPhase.Fire && hpBefore-foe.CurrentHp==8+PhaseRules.BaseAmount(AlchemyPhase.Fire),
                 $"water to fire adds the fire transition's damage (dealt {hpBefore-foe.CurrentHp})");
             // 2026-10-01: the phase dial follows the current phase in combat, with the four marks loaded.
             await Task.Delay(100);
@@ -507,8 +507,8 @@ public static class Smoke
             Check(PhaseAura.Shown==AlchemyPhase.Fire && PhaseAura.Vignette is { } auraEdge && auraEdge.GetParent()==NCombatRoom.Instance,
                 $"the battlefield shows the current phase's aura (shown {PhaseAura.Shown})");
             hpBefore=foe.CurrentHp;
-            await Play(cs.CreateCard<FlashPowder>(player),null);
-            Check(box.Combat.Phases.TransitionCount==2 && hpBefore-foe.CurrentHp==6,"a same-element card does not transition again");
+            await Play(cs.CreateCard<PowderImprovisation>(player),foe);
+            Check(box.Combat.Phases.TransitionCount==2 && hpBefore-foe.CurrentHp==8,"a same-element card does not transition again");
             var tailwind=cs.CreateCard<AirBreeze>(player);
             await CardPileCmd.AddGeneratedCardsToCombat([tailwind],PileType.Hand,player);
             // Count the draw pile: an exhausting card can still sit in the hand when AutoPlay returns.
@@ -566,7 +566,7 @@ public static class Smoke
             Check(box.Combat.Phases.TransitionCount==transitionsBefore+2 && box.Combat.Phases.Current==AlchemyPhase.Fire && box.Combat.Phases.Previous==AlchemyPhase.Earth,
                 "a dual-phase card enters its first then its second element, transitioning twice");
             // Cores are per element (design-axes.md 7.2) and the air draw ignores modifiers (原則5).
-            await Play(cs.CreateCard<FlashPowder>(player),null);
+            await Play(cs.CreateCard<PowderImprovisation>(player),foe);
             await ApplySelfPower<AirCorePower>(1);
             await ApplySelfPower<PreparationPower>(2);
             // Fixture: room in the hand and enough cards in the draw pile, so only the draw rule decides the count.
@@ -580,8 +580,8 @@ public static class Smoke
             Check(airDrawBefore-player.PlayerCombatState.DrawPile.Cards.Count==airCard.DynamicVars.Cards.IntValue+PhaseRules.BaseAmount(AlchemyPhase.Air),
                 $"strengthening does not raise the air transition's draw (drew {airDrawBefore-player.PlayerCombatState.DrawPile.Cards.Count})");
             foe.SetCurrentHpInternal(999);
-            await Play(cs.CreateCard<FlashPowder>(player),null);
-            Check(999-foe.CurrentHp==6+PhaseRules.BaseAmount(AlchemyPhase.Fire)+1,$"the air core charges the next transition out of air (dealt {999-foe.CurrentHp})");
+            await Play(cs.CreateCard<PowderImprovisation>(player),foe);
+            Check(999-foe.CurrentHp==8+PhaseRules.BaseAmount(AlchemyPhase.Fire)+1,$"the air core charges the next transition out of air (dealt {999-foe.CurrentHp})");
             await ApplySelfPower<WaterCorePower>(1);
             int vulnerableBefore=foe.GetPower<VulnerablePower>()?.Amount ?? 0;
             await Play(cs.CreateCard<SoothingMist>(player),foe);
@@ -891,7 +891,7 @@ public static class Smoke
             await ApplySelfPower<PhaseWheelPower>(1);
             await Play(cs.CreateCard<EarthenGuard>(player),null);
             Check(box.Combat.Phases.Current==AlchemyPhase.Water,"a same-element card lets the wheel step earth to water");
-            await Play(cs.CreateCard<FlashPowder>(player),null);
+            await Play(cs.CreateCard<PowderImprovisation>(player),foe);
             Check(box.Combat.Phases.Current==AlchemyPhase.Fire,"a card that transitions itself does not step the wheel");
             await PowerCmd.Remove(player.Creature.GetPower<PhaseWheelPower>()!);
             // v0.23 (card review).
@@ -1023,6 +1023,31 @@ public static class Smoke
                 var expectedTorrent=torrentFrom==AlchemyPhase.None ? AlchemyPhase.Fire : PhaseRules.Next(PhaseRules.Next(PhaseRules.Next(torrentFrom)));
                 Check(box.Combat.Phases.TransitionCount-torrentBefore==(torrentFrom==AlchemyPhase.None?2:3) && box.Combat.Phases.Current==expectedTorrent,
                     $"elemental torrent with X=3 steps the phase three times ({torrentFrom}→{box.Combat.Phases.Current}, {box.Combat.Phases.TransitionCount-torrentBefore} transitions)");
+                // v0.26: the four cards that replaced the plain ones.
+                int turnCount=box.Combat.Phases.TransitionsThisTurn;
+                var implosion=sweepState.CreateCard<FireExplosion>(player);
+                Check(turnCount>=3 && implosion.TryModifyEnergyCostInCombat(implosion,5,out var implosionCost) && implosionCost==Math.Max(0,5-turnCount),
+                    $"implosion costs one less per transition this turn ({turnCount} transitions)");
+                int echoBlock=player.Creature.Block;
+                await PhaseTransitions.Echo(new ThrowingPlayerChoiceContext(),player,null,null,null,AlchemyPhase.Earth);
+                int perEcho=player.Creature.Block-echoBlock;
+                // Already in earth, so the card's own play adds no transition block of its own.
+                await PhaseTransitions.Enter(new ThrowingPlayerChoiceContext(),player,AlchemyPhase.Earth);
+                int resonanceBlock=player.Creature.Block;
+                turnCount=box.Combat.Phases.TransitionsThisTurn;
+                await PlayLoose(sweepState.CreateCard<EarthResonance>(player),null);
+                Check(perEcho>0 && player.Creature.Block-resonanceBlock==turnCount*perEcho,
+                    $"earth resonance plays the earth effect once per transition this turn ({turnCount}×{perEcho}, gained {player.Creature.Block-resonanceBlock})");
+                await ApplySelfPower<UpheavalPower>(3);
+                if(box.Combat.Phases.Current==AlchemyPhase.Earth) await PhaseTransitions.Enter(new ThrowingPlayerChoiceContext(),player,AlchemyPhase.Water);
+                int u0=Health();
+                await PhaseTransitions.Enter(new ThrowingPlayerChoiceContext(),player,AlchemyPhase.Earth);
+                Check(u0-Health()>=3,$"upheaval hits all enemies on entering earth (dealt {u0-Health()})");
+                await PowerCmd.Remove(player.Creature.GetPower<UpheavalPower>()!);
+                player.PlayerCombatState!.Energy=2;
+                int b0=Health();
+                await PlayLoose(sweepState.CreateCard<FireChainBlast>(player),null);
+                Check(box.Combat.Phases.Current==AlchemyPhase.Fire && b0-Health()>=3*5,$"chain blast with X=2 hits three times when it transitions (dealt {b0-Health()})");
             }
             box.Inventory.Counts=[0,0,0,0]; // Leave room in the box for the reward and merchant checks below.
             var replayCard=player.PlayerCombatState.AllCards.OfType<LavaShot>().Single(c=>c.AlchemistRareModifier=="rare.stardust");

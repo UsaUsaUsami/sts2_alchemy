@@ -6,13 +6,14 @@ using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
+using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.MonsterMoves.Intents;
 using MegaCrit.Sts2.Core.ValueProps;
 
 namespace Alchemy;
 
-// Fire reward cards: the attack-heavy element. Ignition and FlashPowder live in ElementalCards.cs.
+// Fire reward cards: the attack-heavy element. Ignition and FireChainBlast live in ElementalCards.cs.
 
 public sealed class FireSpark() : ElementCard(0,CardType.Attack,CardRarity.Common,TargetType.AnyEnemy,AlchemyPhase.Fire)
 {
@@ -38,11 +39,20 @@ public sealed class FireHeat() : ElementCard(1,CardType.Skill,CardRarity.Uncommo
     protected override void OnUpgrade()=>DynamicVars["VigorPower"].UpgradeValueBy(3);
 }
 // v0.23 (ユーザーレビュー「弱い」): one enemy, 4 cost, and a stun like the base game's Whistle (CreatureCmd.Stun).
-public sealed class FireExplosion() : ElementCard(4,CardType.Attack,CardRarity.Rare,TargetType.AnyEnemy,AlchemyPhase.Fire)
+// v0.26 (2026-10-13, user: パッとしない): 5 cost, one less for each transition this turn, so it finishes a big
+// transition turn (design-axes 5) instead of being a plain big hit.
+public sealed class FireExplosion() : ElementCard(5,CardType.Attack,CardRarity.Rare,TargetType.AnyEnemy,AlchemyPhase.Fire)
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars=>[new DamageVar(35,ValueProp.Move)];
+    protected override IEnumerable<DynamicVar> CanonicalVars=>[new DamageVar(32,ValueProp.Move)];
     protected override IEnumerable<IHoverTip> ExtraHoverTips=>[StunIntent.GetStaticHoverTip()];
-    public override List<(string,string)> Localization=>new CardLoc("爆縮","{Damage:diff()}ダメージ。対象を[gold]スタン[/gold]させる。\n[gold]火相[/gold]");
+    public override List<(string,string)> Localization=>new CardLoc("爆縮","{Damage:diff()}ダメージ。対象を[gold]スタン[/gold]させる。このターンに起きた[gold]相転移[/gold]1回につき、コストが1下がる。\n[gold]火相[/gold]");
+    public override bool TryModifyEnergyCostInCombat(CardModel card,decimal originalCost,out decimal modifiedCost)
+    {
+        modifiedCost=originalCost;
+        if(card!=this || TransitionsThisTurn==0) return false;
+        modifiedCost=Math.Max(0,originalCost-TransitionsThisTurn);
+        return true;
+    }
     protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p)
     {
         await Hit(c,p,DynamicVars.Damage.BaseValue);

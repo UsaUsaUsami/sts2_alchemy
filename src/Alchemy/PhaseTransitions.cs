@@ -83,9 +83,11 @@ public static class PhaseTransitions
 
     /// Resolves the current phase's destination effect again without changing the phase. Modifiers apply,
     /// but it is not a transition: it neither counts nor notifies listeners, so echoes cannot chain.
-    public static async Task Echo(PlayerChoiceContext choice, Player owner, CardModel? source = null, Creature? target = null, CardPlay? play = null)
+    /// With phase, resolves that element's effect instead of the current one's (地脈の共鳴).
+    public static async Task Echo(PlayerChoiceContext choice, Player owner, CardModel? source = null, Creature? target = null, CardPlay? play = null,
+        AlchemyPhase? phase = null)
     {
-        var current = owner.GetRelic<MaterialBox>()?.Combat?.Phases.Current ?? AlchemyPhase.None;
+        var current = phase ?? owner.GetRelic<MaterialBox>()?.Combat?.Phases.Current ?? AlchemyPhase.None;
         if (!PhaseRules.IsElement(current)) return;
         var echo = new PhaseTransitionContext(choice, owner, current, current, source, target, play) { IsEcho = true };
         foreach (var modifier in Hooks<IPhaseTransitionModifier>(owner, source)) modifier.ModifyPhaseTransition(echo);
