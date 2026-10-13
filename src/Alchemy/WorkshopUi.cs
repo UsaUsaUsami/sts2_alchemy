@@ -1,4 +1,4 @@
-using Alchemy.Core;
+﻿using Alchemy.Core;
 using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
@@ -92,8 +92,10 @@ public static class WorkshopUi
             if (IsOpen && overlay!.GetParent() == node) node.MoveChild(launcher, overlay.GetIndex());
         }
         var combat = box.Combat;
+        // 2026-10-14 (UI review #8): the phase is the dial's job, so the box no longer repeats it. The furnace is said
+        // as uses left ("0/2" read as either), and why it waits in the neutral phase.
         launcher!.Text = combat is null ? $"素材・工房  {box.Inventory.Total}個"
-            : $"素材 {box.Inventory.Total}個  炉 {combat.FurnaceUsed}/{combat.Limit}\n現在相：{MaterialBox.PhaseName(combat.Phases.Current)}"+(combat.LastTransition.Length>0?$"　（{combat.LastTransition}）":"")
+            : $"素材 {box.Inventory.Total}個\n{FurnaceText(combat)}"
               +(combat.Life.HomunculusAppeared?$"\nゴーレムHP：{LifeAxis.State(box.Owner)?.HomunculusHp ?? 0}":"");
         // Phase colour keeps the current phase readable at a glance; outside combat the button is neutral.
         launcher.AddThemeColorOverride("font_color", PhaseTint(combat?.Phases.Current ?? AlchemyPhase.None));
@@ -107,6 +109,13 @@ public static class WorkshopUi
             if (!WorkshopMap.IsCurrentWorkshop() || box.Owner.RunState.CurrentRoom is not RestSiteRoom) leftWorkshop = false;
             else if (!IsOpen && NMapScreen.Instance is { IsOpen: false, IsTraveling: false }) { leftWorkshop = false; OpenMapWorkshop(); }
         }
+    }
+
+    public static string FurnaceText(HarvestCombat combat)
+    {
+        int left = combat.Limit - combat.FurnaceUsed;
+        return left <= 0 ? "炉：使い切った"
+            : combat.Phases.Current == AlchemyPhase.None ? $"炉 残り{left}回（相に入ると使える）" : $"炉 残り{left}回";
     }
 
     private static Color PhaseTint(AlchemyPhase phase) => phase switch
@@ -392,7 +401,10 @@ public static class WorkshopUi
         previewCards.Add(preview);
         return preview;
     }
-    private static Control DeckCardDisplay(CardModel card,float scale,bool clickable,bool upgraded=false)
+    /// Copies that would modify the same way: same card, upgrade, infusion and inscription.
+    private static string ModifyKey(CardModel card)
+        => $"{card.Id.Entry}+{card.CurrentUpgradeLevel}|{string.Join(",",CurrentInfusion(card))}|{(card as IRareInscribable)?.AlchemistRareModifier}";
+    private static Control DeckCardDisplay(CardModel card,float scale,bool clickable,bool upgraded=false,int copies=1)
     {
         var wrapper=new VBoxContainer { CustomMinimumSize=clickable?new(235,340):new(330,480) };
         wrapper.Alignment=BoxContainer.AlignmentMode.Center;
@@ -407,7 +419,7 @@ public static class WorkshopUi
         if(clickable)
         {
             var current=CurrentInfusion(card);
-            Text(current.Sum()==0?"未改造":$"改造 {current.Sum()}/{InfusionRules.Limit}：{InfusionText(current)}",16,wrapper,new Color("f2d18b"));
+            Text((current.Sum()==0?"未改造":$"改造 {current.Sum()}/{InfusionRules.Limit}：{InfusionText(current)}")+(copies>1?$"　×{copies}枚":""),16,wrapper,new Color("f2d18b"));
         }
         return wrapper;
     }
@@ -506,7 +518,9 @@ public static class WorkshopUi
         var grid=new GridContainer { Columns=3,SizeFlagsHorizontal=Control.SizeFlags.ExpandFill };
         grid.AddThemeConstantOverride("h_separation",10);grid.AddThemeConstantOverride("v_separation",16);
         content!.AddChild(grid);
-        foreach(var card in cards) grid.AddChild(DeckCardDisplay(card,0.62f,true));
+        // 2026-10-14 (UI review #5): identical copies (six plain Strikes) show once with a count; picking it modifies
+        // one of them, which is the same as picking any.
+        foreach(var group in cards.GroupBy(ModifyKey)) grid.AddChild(DeckCardDisplay(group.First(),0.62f,true,copies:group.Count()));
         if(cards.Length==0) Text("改造できるカードはありません。",22);
     }
     private static void UpgradeConfirmation(CardModel card)

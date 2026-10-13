@@ -76,9 +76,10 @@ public static class PhaseDial
             }
         }
         var phase = combat.Phases.Current;
+        // Every frame: the count changes without the phase changing (and the other way round).
+        dial.TooltipText = $"現在相：{MaterialBox.PhaseName(phase)}\n中央の数字：このターンの相転移の回数（{count}回）";
         if (phase == shown) return;
         shown = phase;
-        dial.TooltipText = $"現在相：{MaterialBox.PhaseName(phase)}\nこのターンの相転移：{count}回";
         dial.QueueRedraw();
     }
 
@@ -108,13 +109,24 @@ public static class PhaseDial
             MouseFilter = Control.MouseFilterEnum.Ignore,
         };
         numeral.Size = new Vector2(60, 46);
-        numeral.Position = Centre - numeral.Size / 2;
+        numeral.Position = Centre - numeral.Size / 2 + new Vector2(0, -7); // room for the caption under it
         numeral.PivotOffset = numeral.Size / 2;
         numeral.AddThemeFontSizeOverride("font_size", 34);
         numeral.AddThemeColorOverride("font_color", new Color("fff0c8"));
         numeral.AddThemeColorOverride("font_outline_color", new Color(0.1f, 0.06f, 0.02f));
         numeral.AddThemeConstantOverride("outline_size", 6);
         dial.AddChild(numeral);
+        // 2026-10-14 (UI review #10): the numeral alone did not say what it counts.
+        var caption = new Label
+        {
+            Text = "転移", HorizontalAlignment = HorizontalAlignment.Center, MouseFilter = Control.MouseFilterEnum.Ignore,
+            Size = new Vector2(60, 18), Position = Centre + new Vector2(-30, 14), Name = "Caption",
+        };
+        caption.AddThemeFontSizeOverride("font_size", 13);
+        caption.AddThemeColorOverride("font_color", GoldDim);
+        caption.AddThemeColorOverride("font_outline_color", new Color(0.1f, 0.06f, 0.02f));
+        caption.AddThemeConstantOverride("outline_size", 4);
+        dial.AddChild(caption);
         dial.Draw += () => { under.QueueRedraw(); front.QueueRedraw(); };
         run.AddChild(dial);
     }

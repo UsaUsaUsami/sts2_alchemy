@@ -24,7 +24,8 @@ public sealed class AlchInfusion() : MaterialSpendingCard(0,CardType.Skill,CardR
 {
     protected override bool GivesEnergy=>true;
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new DynamicVar("Energy",1)];
-    public override List<(string,string)> Localization=>new CardLoc("素材投入","通常素材を1個選んで消費する。エナジーを{Energy:diff()}得て、その素材の相へ移る。",("selectionScreenPrompt","消費する素材を選択"));
+    public override List<(string,string)> Localization=>new CardLoc("素材投入","通常素材を1個選んで消費する。エナジーを{Energy:diff()}得て、その素材の相へ移る。",("selectionScreenPrompt","消費する素材を選択"),("unplayableNoMaterial","消費できる通常素材がない。"));
+    internal override string? UnplayableLine=>"unplayableNoMaterial";
     protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p)
     {
         if(await SpendMaterial(c) is not { } m) return;
@@ -70,7 +71,8 @@ public sealed class AlchMaterialBomb() : AlchemyCard(1,CardType.Attack,CardRarit
 public sealed class AlchCatalysis() : AlchemyCard(0,CardType.Skill,CardRarity.Uncommon,TargetType.Self)
 {
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new CardsVar(2),new DynamicVar("Energy",1)];
-    public override List<(string,string)> Localization=>new CardLoc("触媒反応","[gold]エーテル[/gold]を1個消費し、カードを{Cards:diff()}枚引いてエナジーを{Energy:diff()}得る。エーテルがなければ使えない。");
+    public override List<(string,string)> Localization=>new CardLoc("触媒反応","[gold]エーテル[/gold]を1個消費し、カードを{Cards:diff()}枚引いてエナジーを{Energy:diff()}得る。エーテルがなければ使えない。",("unplayableNoEther","エーテルがない。"));
+    internal override string? UnplayableLine=>"unplayableNoEther";
     protected override bool GivesEnergy=>true;
     // Unplayable without ether: a free draw-and-energy card would be loop fuel (原則4).
     protected override bool IsPlayable=>HasMaterial(Material.Ether);

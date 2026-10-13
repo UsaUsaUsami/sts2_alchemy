@@ -60,7 +60,8 @@ public sealed class AlchAlkahest() : ElementCard(2,CardType.Attack,CardRarity.Ra
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new DynamicVar("PerMaterial",3),new DynamicVar("MaxMaterials",MaxMaterials)];
     public override List<(string,string)> Localization=>new CardLoc("アルカヘスト",
         "素材（希少素材も可）を1〜{MaxMaterials}個選んで消費する。{PerMaterial:diff()}×消費した素材の種類数のダメージを、消費した素材の数だけ与える。",
-        ("selectionScreenPrompt","注ぎ込む素材を選択（最大10個）"));
+        ("selectionScreenPrompt","注ぎ込む素材を選択（最大10個）"),("unplayableNoMaterial","注ぎ込む素材がない。"));
+    internal override string? UnplayableLine=>"unplayableNoMaterial";
     // design-axes 4.3 F-2 (未決, settled here): with no material the card cannot be played at all, rather than
     // spending two energy on nothing.
     protected override bool IsPlayable=>HasNormalMaterial || Box?.Inventory is { CanSpendHeld: true } inv && inv.RareCounts.Any(n=>n>0);

@@ -60,6 +60,9 @@ public abstract class AlchemyCard(int cost, CardType type, CardRarity rarity, Ta
     : CustomCardModel(cost, type, rarity, target)
 {
     public virtual AlchemyPhase Element => AlchemyPhase.None;
+    /// The key (in this card's loc) of what the alchemist says when the card is tried while its IsPlayable says no,
+    /// instead of the game's generic "使えない" (UnplayableLinePatch). Null keeps the generic line.
+    internal virtual string? UnplayableLine => null;
     // Placeholder art borrowed from base-game cards until the mod has its own.
     protected virtual CardModel Artwork => Type switch
     {
@@ -159,7 +162,13 @@ public sealed class FurnaceActivation() : AlchemyCard(0, CardType.Skill, CardRar
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust, CardKeyword.Retain];
     public override List<(string, string)> Localization => new CardLoc("炉の起動",
-        $"手札1枚を廃棄し、現在相に対応する素材を{AlchemyState.YieldPerEvent}個得る。無相では使用できない。\n地：鉄、水：薬草、火：火薬、風：エーテル。戦闘全体で{HarvestCombat.FurnaceLimit}回まで（精錬された素材ボックスでは{HarvestCombat.RefinedFurnaceLimit}回）。");
+        $"手札1枚を廃棄し、現在相に対応する素材を{AlchemyState.YieldPerEvent}個得る。無相では使用できない。\n地：鉄、水：薬草、火：火薬、風：エーテル。戦闘全体で{HarvestCombat.FurnaceLimit}回まで（精錬された素材ボックスでは{HarvestCombat.RefinedFurnaceLimit}回）。",
+        ("unplayableNeutral", "無相では炉を使えない。先に属性カードで相に入ろう。"),
+        ("unplayableSpent", "この戦闘の炉はもう使い切った。"),
+        ("unplayableNoCard", "炉にくべる手札がない。"));
+    internal override string? UnplayableLine => Owner?.GetRelic<MaterialBox>()?.Combat is not { } combat ? null
+        : combat.Phases.Current == AlchemyPhase.None ? "unplayableNeutral"
+        : combat.FurnaceUsed >= combat.Limit ? "unplayableSpent" : "unplayableNoCard";
     // Unplayable rather than a silent no-op: playing it in the neutral phase, past the limit or with no
     // other card to feed the furnace would otherwise exhaust the token for nothing.
     protected override bool IsPlayable => Owner?.GetRelic<MaterialBox>()?.Combat is not { } combat

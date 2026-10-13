@@ -6,6 +6,7 @@ using Alchemy;
 using Alchemy.Core;
 using Godot;
 using HarmonyLib;
+using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Modding;
@@ -465,6 +466,15 @@ public static class Smoke
             var tokens=player.PlayerCombatState!.Hand.Cards.OfType<FurnaceActivation>().ToArray();
             Check(tokens.Length==HarvestCombat.FurnaceLimit && tokens.All(t=>!t.CanPlay()),
                 "the starter relic deals the furnace every combat, unplayable in the neutral phase");
+            // 2026-10-14 (UI review #9): trying it says why, not the generic line; the box says it waits for a phase.
+            {
+                tokens[0].CanPlay(out var tokenReason,out var tokenPreventer);
+                var lineMethod=AccessTools.Method(AccessTools.TypeByName("MegaCrit.Sts2.Core.Entities.Cards.UnplayableReasonExtensions"),"GetPlayerDialogueLine");
+                var line=lineMethod.Invoke(null,[tokenReason,tokenPreventer]) as LocString;
+                string lineText=line?.GetFormattedText() ?? "";
+                Check(lineText.Contains("無相"),$"an unplayable furnace in the neutral phase says why ({lineText})");
+                Check(WorkshopUi.FurnaceText(box.Combat!).Contains("相に入ると"),"the material box says the furnace waits for a phase");
+            }
             var card=player.PlayerCombatState!.AllCards.OfType<EarthCore>().Single();
             int before=player.Creature.Block;
             await CardCmd.AutoPlay(new ThrowingPlayerChoiceContext(),card,null,skipCardPileVisuals:true);
