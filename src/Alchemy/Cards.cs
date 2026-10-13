@@ -163,9 +163,9 @@ public sealed class FurnaceActivation() : AlchemyCard(0, CardType.Skill, CardRar
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust, CardKeyword.Retain];
     public override List<(string, string)> Localization => new CardLoc("炉の起動",
         $"手札1枚を廃棄し、現在相に対応する素材を{AlchemyState.YieldPerEvent}個得る。無相では使用できない。\n地：鉄、水：薬草、火：火薬、風：エーテル。戦闘全体で{HarvestCombat.FurnaceLimit}回まで（精錬された素材ボックスでは{HarvestCombat.RefinedFurnaceLimit}回）。",
-        ("unplayableNeutral", "無相では炉を使えない。先に属性カードで相に入ろう。"),
-        ("unplayableSpent", "この戦闘の炉はもう使い切った。"),
-        ("unplayableNoCard", "炉にくべる手札がない。"));
+        ("unplayableNeutral", "無相だ。"),
+        ("unplayableSpent", "炉はもう使い切った。"),
+        ("unplayableNoCard", "くべる手札がない。"));
     internal override string? UnplayableLine => Owner?.GetRelic<MaterialBox>()?.Combat is not { } combat ? null
         : combat.Phases.Current == AlchemyPhase.None ? "unplayableNeutral"
         : combat.FurnaceUsed >= combat.Limit ? "unplayableSpent" : "unplayableNoCard";
