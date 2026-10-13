@@ -170,11 +170,11 @@ public static class Smoke
                 Check(inscribedLoaded.GetDescriptionForPile(PileType.None).Contains("保留"),"an inscribed crafted card shows its inscription text");
                 var rewardPool=ModelDb.CardPool<AlchemyCardPool>().AllCards.Where(c=>c.Rarity is CardRarity.Common or CardRarity.Uncommon or CardRarity.Rare).ToArray();
                 GD.Print($"ALCHEMIST_STAT pool={rewardPool.Length} common={rewardPool.Count(c=>c.Rarity==CardRarity.Common)} uncommon={rewardPool.Count(c=>c.Rarity==CardRarity.Uncommon)} rare={rewardPool.Count(c=>c.Rarity==CardRarity.Rare)} attack={rewardPool.Count(c=>c.Type==CardType.Attack)} skill={rewardPool.Count(c=>c.Type==CardType.Skill)} power={rewardPool.Count(c=>c.Type==CardType.Power)}");
-                // v0.22 (design-axes 4.3, 8): the 60 of v0.21 plus four follow-up cards.
-                Check(rewardPool.Length==64 && rewardPool.Count(c=>c.Rarity==CardRarity.Common)==15 && rewardPool.Count(c=>c.Rarity==CardRarity.Uncommon)==26
-                    && rewardPool.Count(c=>c.Rarity==CardRarity.Rare)==23,"reward pool is 64 cards: 15 common, 26 uncommon, 23 rare");
-                Check(rewardPool.Count(c=>c.Type==CardType.Power)==12 && !rewardPool.Any(c=>c.Type==CardType.Power && c.Rarity==CardRarity.Common),
-                    "twelve powers, none of them common, as in the base pools");
+                // v0.22 (design-axes 4.3, 8): the 60 of v0.21 plus four follow-up cards; v0.25: 黄金化 and 元素の奔流.
+                Check(rewardPool.Length==66 && rewardPool.Count(c=>c.Rarity==CardRarity.Common)==15 && rewardPool.Count(c=>c.Rarity==CardRarity.Uncommon)==26
+                    && rewardPool.Count(c=>c.Rarity==CardRarity.Rare)==25,"reward pool is 66 cards: 15 common, 26 uncommon, 25 rare");
+                Check(rewardPool.Count(c=>c.Type==CardType.Power)==13 && !rewardPool.Any(c=>c.Type==CardType.Power && c.Rarity==CardRarity.Common),
+                    "thirteen powers, none of them common, as in the base pools");
                 int ElementCount(AlchemyPhase e)=>rewardPool.Count(c=>c is AlchemyCard a && a.Element==e);
                 // v0.23: the three starter cards left the pool (Basic); 岩盤 (earth) and そよ風, 風の衣 (air) took their slots.
                 Check(ElementCount(AlchemyPhase.Earth)==12 && ElementCount(AlchemyPhase.Water)==12 && ElementCount(AlchemyPhase.Fire)==15
@@ -958,6 +958,7 @@ public static class Smoke
                 catch(Exception ex) { throw new Exception("reward card plays "+canonical.Id.Entry,ex); }
                 // The wheel would step every later same-element card away from its own element.
                 if(player.Creature.GetPower<PhaseWheelPower>() is { } sweptWheel) await PowerCmd.Remove(sweptWheel);
+                if(player.Creature.GetPower<GoldenFormPower>() is { } sweptGold) await PowerCmd.Remove(sweptGold);
                 if(played is AlchemyCard { Element: not AlchemyPhase.None } sweptElemental)
                     Check(box.Combat!.Phases.Current==sweptElemental.Element,"reward card plays and enters its element "+canonical.Id.Entry);
                 else Check(true,"reward card plays "+canonical.Id.Entry);
@@ -998,6 +999,30 @@ public static class Smoke
                 Check(catalysis.CanPlay(),"catalysis is playable with an ether");
                 await PlayLoose(catalysis,null);
                 Check(box.Inventory.Counts[(int)Alchemy.Core.Material.Ether]==0 && box.Inventory.Counts[(int)Alchemy.Core.Material.Iron]==1,"catalysis spends the ether, not the iron");
+                // v0.25 黄金化: material costs are checked but not taken, except by cards that give energy.
+                await PlayLoose(sweepState.CreateCard<AlchGoldenForm>(player),null);
+                Check(player.Creature.GetPower<GoldenFormPower>() is not null,"golden form applies its power");
+                box.Inventory.Counts=[1,0,1,1];
+                int g0=Health();
+                await PlayLoose(sweepState.CreateCard<AlchMaterialBomb>(player),null);
+                await PlayLoose(sweepState.CreateCard<EarthIronBulwark>(player),null);
+                Check(box.Inventory.Counts[(int)Alchemy.Core.Material.Powder]==1 && box.Inventory.Counts[(int)Alchemy.Core.Material.Iron]==1 && g0-Health()>=16,
+                    $"under golden form the bomb and the bulwark get their charged effect without spending (dealt {g0-Health()})");
+                await PlayLoose(sweepState.CreateCard<AlchCatalysis>(player),null);
+                Check(box.Inventory.Counts[(int)Alchemy.Core.Material.Ether]==0,"golden form still takes the ether of catalysis, which gives energy");
+                box.Inventory.Counts=[0,0,0,0];
+                int bulwarkBlock=player.Creature.Block;
+                await PlayLoose(sweepState.CreateCard<EarthIronBulwark>(player),null);
+                Check(player.Creature.Block-bulwarkBlock<13,"golden form still needs the material to be held");
+                await PowerCmd.Remove(player.Creature.GetPower<GoldenFormPower>()!);
+                // v0.25 元素の奔流: X steps of the phase cycle, each a transition.
+                int torrentBefore=box.Combat!.Phases.TransitionCount;
+                var torrentFrom=box.Combat.Phases.Current;
+                player.PlayerCombatState!.Energy=3;
+                await PlayLoose(sweepState.CreateCard<AlchElementalTorrent>(player),foe0);
+                var expectedTorrent=torrentFrom==AlchemyPhase.None ? AlchemyPhase.Fire : PhaseRules.Next(PhaseRules.Next(PhaseRules.Next(torrentFrom)));
+                Check(box.Combat.Phases.TransitionCount-torrentBefore==(torrentFrom==AlchemyPhase.None?2:3) && box.Combat.Phases.Current==expectedTorrent,
+                    $"elemental torrent with X=3 steps the phase three times ({torrentFrom}→{box.Combat.Phases.Current}, {box.Combat.Phases.TransitionCount-torrentBefore} transitions)");
             }
             box.Inventory.Counts=[0,0,0,0]; // Leave room in the box for the reward and merchant checks below.
             var replayCard=player.PlayerCombatState.AllCards.OfType<LavaShot>().Single(c=>c.AlchemistRareModifier=="rare.stardust");

@@ -159,6 +159,7 @@ public static class LoopProfiles
         => new(id, cost, LoopPhaseMove.Element, e, Draw: draw, Energy: energy, Exhaust: exhaust);
     private static LoopCard Dual(string id, int cost, AlchemyPhase first, AlchemyPhase second, int draw = 0)
         => new(id, cost, LoopPhaseMove.Dual, second, first, Draw: draw);
+    private const int TurnEnergyCost = LoopCheck.TurnEnergy;
     private const AlchemyPhase E = AlchemyPhase.Earth, W = AlchemyPhase.Water, F = AlchemyPhase.Fire, A = AlchemyPhase.Air;
 
     public static readonly IReadOnlyList<LoopCard> All = [
@@ -190,6 +191,9 @@ public static class LoopProfiles
         new("AlchPhaseWheel", 3, IsPower: true, PowerAdvance: LoopAdvance.IfNoTransition),
         new("AlchPhaseWheel+", 2, IsPower: true, PowerAdvance: LoopAdvance.IfNoTransition),
         El("AirElementBlade", 5, A), El("AirElementBlade@0", 0, A), // F-3 with all four materials and a rare held
+        // v0.25 元素の奔流: X spends all the energy left, so it can be played once a turn at most; its steps draw one
+        // card in four. Modelled as costing the turn's energy, with one free move.
+        new("AlchElementalTorrent", TurnEnergyCost, LoopPhaseMove.Any),
         // Workshop
         Dual("Sandstorm", 1, E, A, draw: 1), Dual("Sandstorm+", 1, E, A, draw: 2),
         Dual("Drizzle", 1, W, A, draw: 1), Dual("FireWhirl", 1, F, A),

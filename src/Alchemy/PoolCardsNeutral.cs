@@ -22,6 +22,7 @@ public abstract class MaterialSpendingCard(int cost, CardType type, CardRarity r
 
 public sealed class AlchInfusion() : MaterialSpendingCard(0,CardType.Skill,CardRarity.Common,TargetType.Self)
 {
+    protected override bool GivesEnergy=>true;
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new DynamicVar("Energy",1)];
     public override List<(string,string)> Localization=>new CardLoc("素材投入","通常素材を1個選んで消費する。エナジーを{Energy:diff()}得て、その素材の相へ移る。",("selectionScreenPrompt","消費する素材を選択"));
     protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p)
@@ -70,6 +71,7 @@ public sealed class AlchCatalysis() : AlchemyCard(0,CardType.Skill,CardRarity.Un
 {
     protected override IEnumerable<DynamicVar> CanonicalVars=>[new CardsVar(2),new DynamicVar("Energy",1)];
     public override List<(string,string)> Localization=>new CardLoc("触媒反応","[gold]エーテル[/gold]を1個消費し、カードを{Cards:diff()}枚引いてエナジーを{Energy:diff()}得る。エーテルがなければ使えない。");
+    protected override bool GivesEnergy=>true;
     // Unplayable without ether: a free draw-and-energy card would be loop fuel (原則4).
     protected override bool IsPlayable=>HasMaterial(Material.Ether);
     protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p)

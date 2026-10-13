@@ -87,7 +87,17 @@ public abstract class AlchemyCard(int cost, CardType type, CardRarity rarity, Ta
     protected bool HasNormalMaterial => Box?.Inventory is { CanSpendHeld: true } inventory && inventory.Counts.Any(n => n > 0);
     protected bool HasMaterial(Material m) => Box?.Inventory is { CanSpendHeld: true } inventory && inventory.Counts[(int)m] > 0;
     /// Spends one of the material the card names (design-axes 6.2). No selection screen: the kind is fixed.
-    protected bool TrySpend(Material m) => Box?.Inventory.TryConsume(m) == true;
+    protected bool TrySpend(Material m) => Consume(m);
+    /// Cards that turn a material into energy. 黄金化 still takes their material: a free 0-cost energy card is loop
+    /// fuel (原則4; 素材投入 x2 or 触媒反応 alone in a thin deck would never stop).
+    protected virtual bool GivesEnergy => false;
+    /// 黄金化 (2026-10-13, user): while it is up, a card's material costs are checked but not taken.
+    internal bool KeepsMaterials => !GivesEnergy && Owner?.Creature?.GetPower<GoldenFormPower>() is not null;
+    /// Every material a card spends in combat goes through these two, so 黄金化 covers them all.
+    internal bool Consume(Material m, int amount = 1) => Box?.Inventory is { } inventory
+        && (KeepsMaterials ? inventory.CanSpendHeld && amount > 0 && inventory.Counts[(int)m] >= amount : inventory.TryConsume(m, amount));
+    internal bool ConsumeRare(RareMaterial m, int amount = 1) => Box?.Inventory is { } inventory
+        && (KeepsMaterials ? inventory.CanSpendHeld && amount > 0 && inventory.RareCounts[(int)m] >= amount : inventory.TryConsumeRare(m, amount));
 
     protected async Task Hit(PlayerChoiceContext c, CardPlay p, decimal damage, int hits = 1)
     {
@@ -116,7 +126,7 @@ public abstract class AlchemyCard(int cost, CardType type, CardRarity rarity, Ta
         => MaterialChooser.Choose(c, Owner, SelectionScreenPrompt, ownedOnly, optional);
     /// Picks an owned normal material and removes it from the run inventory.
     protected async Task<Material?> SpendMaterial(PlayerChoiceContext c)
-        => await ChooseMaterial(c, ownedOnly: true) is { } m && Box!.Inventory.TryConsume(m) ? m : null;
+        => await ChooseMaterial(c, ownedOnly: true) is { } m && Consume(m) ? m : null;
 }
 
 /// <summary>

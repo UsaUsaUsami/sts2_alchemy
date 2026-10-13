@@ -102,7 +102,7 @@ md += ["## 概要", "",
        f"- 工房の錬成：**{len(crafted)}種**", f"- エンシェント：{len(ancient)}枚、トークン・一時カード：{len(tokens)}枚",
        "",
        "## 初期デッキ", "",
-       "ストライク×3、ディフェンド×3、土壁・鎮静の霧・即席錬成の9枚。", "",
+       "ストライク×5、ディフェンド×5、土壁・鎮静の霧・即席錬成の13枚。", "",
        table(sorted([r for r in rows if r["cls"] in STARTER], key=order), show_rarity=True), ""]
 for rarity in ["Common", "Uncommon", "Rare"]:
     items = sorted([r for r in pool if r["rarity"] == rarity], key=order)

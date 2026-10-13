@@ -103,7 +103,7 @@ public sealed class InstantAlchemy() : AlchemyCard(1,CardType.Skill,CardRarity.B
         foreach(var x in choices)x.Owner=null!;
         if(chosen is null) return;
         Material material=chosen switch{IronImprovisation=>Material.Iron,HerbImprovisation=>Material.Herb,PowderImprovisation=>Material.Powder,_=>Material.Ether};
-        if(!box.Inventory.TryConsume(material)) return;
+        if(!Consume(material)) return;
         CardModel result=chosen switch{IronImprovisation=>CombatState!.CreateCard<IronImprovisation>(Owner),HerbImprovisation=>CombatState!.CreateCard<HerbImprovisation>(Owner),PowderImprovisation=>CombatState!.CreateCard<PowderImprovisation>(Owner),_=>CombatState!.CreateCard<EtherImprovisation>(Owner)};
         await CardPileCmd.AddGeneratedCardsToCombat([result],PileType.Hand,Owner);
     }

@@ -86,7 +86,7 @@ public sealed class AlchAlkahest() : ElementCard(2,CardType.Attack,CardRarity.Ra
         int total=0,kinds=0;
         foreach(var (m,count) in spent)
         {
-            bool ok=m.Class==MaterialClass.Normal ? box.Inventory.TryConsume(m.NormalMaterial,count) : box.Inventory.TryConsumeRare(m.RareMaterial,count);
+            bool ok=m.Class==MaterialClass.Normal ? Consume(m.NormalMaterial,count) : ConsumeRare(m.RareMaterial,count);
             if(ok){ total+=count; kinds++; }
         }
         if(total>0) await Hit(c,p,DynamicVars["PerMaterial"].IntValue*kinds,hits:total);
@@ -163,4 +163,48 @@ public sealed class CruciblePower : AlchemyPower
         if (participants.Contains(Owner) && Owner.Player is { } player && CrucibleTrickle.Grant(player, "crucible", combatState.RoundNumber)) Flash();
         return Task.CompletedTask;
     }
+}
+
+// v0.25 (2026-10-13, user): a Form card and an X-cost card, like every base-game character has. Numbers are prototype values.
+
+/// <summary>
+/// 黄金化. The alchemist's Form: material costs stop being paid for the rest of the combat. The box never grows, so
+/// the run economy is untouched; collecting the materials and the spenders is the price (原則3). Cards that turn a
+/// material into energy are left out (AlchemyCard.GivesEnergy), since those would loop.
+/// </summary>
+public sealed class AlchGoldenForm() : AlchemyCard(3,CardType.Power,CardRarity.Rare,TargetType.Self)
+{
+    protected override IEnumerable<IHoverTip> ExtraHoverTips=>[HoverTipFactory.FromPower<GoldenFormPower>()];
+    public override List<(string,string)> Localization=>new CardLoc("黄金化","カードが素材を消費するとき、素材は減らない（その素材を持っている必要はある）。エナジーを得るカードは除く。");
+    protected override Task OnPlay(PlayerChoiceContext c,CardPlay p)=>ApplySelf<GoldenFormPower>(c,1);
+    protected override void OnUpgrade()=>EnergyCost.UpgradeBy(-1);
+}
+
+/// <summary>The effect lives in AlchemyCard.Consume; the power only marks that it is up.</summary>
+public sealed class GoldenFormPower : AlchemyPower
+{
+    public override PowerStackType StackType => PowerStackType.Single;
+    protected override PowerModel IconSource => ModelDb.Power<VoidFormPower>();
+    public override List<(string,string)> Localization => new PowerLoc("黄金化",
+        "カードが素材を消費するとき、素材は減らない。エナジーを得るカードは除く。",
+        "カードが素材を消費するとき、素材は減らない（その素材を持っている必要はある）。エナジーを得るカードは除く。");
+}
+
+/// <summary>
+/// 元素の奔流. Steps the phase X times (Cascade's shape: the X runs the character's own engine). Every step is a
+/// normal transition, so it fuels 連鎖反応 and オーバードライブ. Energy bounds X, and only one step in four draws, so
+/// it cannot feed a loop.
+/// </summary>
+public sealed class AlchElementalTorrent() : AlchemyCard(0,CardType.Skill,CardRarity.Rare,TargetType.AnyEnemy)
+{
+    protected override bool HasEnergyCostX=>true;
+    public override List<(string,string)> Localization=>new CardLoc("元素の奔流","相を{IfUpgraded:show:X+1|X}回進める（地→水→火→風→地）。無相なら、1回目で[gold]地相[/gold]へ移る。");
+    protected override async Task OnPlay(PlayerChoiceContext c,CardPlay p)
+    {
+        int steps=ResolveEnergyXValue()+(IsUpgraded?1:0);
+        if(steps<=0) return;
+        if(CurrentPhase==AlchemyPhase.None){ await PhaseTransitions.Enter(c,Owner,AlchemyPhase.Earth,this,p.Target,p); steps--; }
+        await PhaseTransitions.Advance(c,Owner,steps,this,p.Target,p);
+    }
+    protected override void OnUpgrade(){}
 }
